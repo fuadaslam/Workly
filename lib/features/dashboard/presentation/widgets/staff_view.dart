@@ -1,0 +1,1390 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/utils/contact_utils.dart';
+import '../../../../features/attendance/presentation/widgets/attendance_card.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../features/auth/presentation/providers/profile_provider.dart';
+import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
+import '../../../../features/dashboard/domain/models/work_order.dart';
+import '../pages/task_detail_screen.dart';
+
+import '../../../../core/theme/pattern_painter.dart';
+import 'profile_view.dart';
+import '../pages/notifications_screen.dart';
+import '../../../../core/providers/locale_provider.dart';
+import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../features/leaves/presentation/widgets/leave_widgets.dart';
+import '../../../../features/leaves/presentation/providers/leave_provider.dart';
+
+class StaffView extends StatefulWidget {
+  const StaffView({super.key});
+
+  @override
+  State<StaffView> createState() => _StaffViewState();
+}
+
+class _StaffViewState extends State<StaffView> {
+  int _tabIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 800) {
+          // Desktop Layout
+          // Map _tabIndex (0, 1, 3, 4) to Rail Index (0, 1, 2, 3)
+          final railIndex = _tabIndex > 2 ? _tabIndex - 1 : _tabIndex;
+
+          return Scaffold(
+            backgroundColor: AppTheme.backgroundLight,
+            body: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: railIndex,
+                  onDestinationSelected: (idx) {
+                    // Map Rail Index (0, 1, 2, 3) back to _tabIndex (0, 1, 3, 4)
+                    final newIndex = idx > 1 ? idx + 1 : idx;
+                    setState(() => _tabIndex = newIndex);
+                  },
+                  labelType: NavigationRailLabelType.all,
+                  leading: Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: FloatingActionButton(
+                       onPressed: () => _showAddTaskModal(context),
+                       backgroundColor: AppTheme.emeraldGreen,
+                       elevation: 4,
+                       shape: const CircleBorder(),
+                       child: const Icon(Icons.add, color: Colors.white),
+                    ),
+                  ),
+                  destinations: const [
+                    NavigationRailDestination(
+                      icon: Icon(Icons.home_outlined),
+                      selectedIcon: Icon(Icons.home, color: AppTheme.emeraldGreen),
+                      label: Text('Home'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.calendar_month_outlined),
+                      selectedIcon: Icon(Icons.calendar_month, color: AppTheme.emeraldGreen),
+                      label: Text('Leaves'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.assignment_outlined),
+                      selectedIcon: Icon(Icons.assignment, color: AppTheme.emeraldGreen),
+                      label: Text('Tasks'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.person_outline),
+                      selectedIcon: Icon(Icons.person, color: AppTheme.emeraldGreen),
+                      label: Text('Profile'),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: _buildBody(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          // Mobile Layout
+          return Scaffold(
+            backgroundColor: AppTheme.backgroundLight,
+            body: _buildBody(),
+            floatingActionButton: Container(
+               height: 64,
+               width: 64,
+               margin: const EdgeInsets.only(top: 30),
+               child: FloatingActionButton(
+                onPressed: () {
+                   _showAddTaskModal(context);
+                },
+                backgroundColor: AppTheme.emeraldGreen,
+                elevation: 4,
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add, color: Colors.white, size: 32),
+               ),
+            ),
+            floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                   BoxShadow(
+                     color: Colors.black.withOpacity(0.05),
+                     blurRadius: 10,
+                     offset: const Offset(0, -5),
+                   ),
+                ],
+              ),
+              child: NavigationBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                indicatorColor: Colors.transparent, // Disable pill indicator for custom look
+                selectedIndex: _tabIndex,
+                onDestinationSelected: (idx) {
+                  // If tapping the Spacer (index 2), ignore or handle if possible
+                  if (idx == 2) return; 
+                  setState(() => _tabIndex = idx);
+                },
+                destinations: [
+                  _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0),
+                  _buildNavItem(Icons.calendar_month_outlined, Icons.calendar_month, 'Leaves', 1),
+                  const SizedBox(width: 48), // Spacer for FAB
+                  _buildNavItem(Icons.assignment_outlined, Icons.assignment, 'Tasks', 3),
+                  _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 4),
+                ],
+              ),
+            ),
+          );
+        }
+      },
+    );
+  }
+  
+  Widget _buildNavItem(IconData unselected, IconData selected, String label, int index) {
+    final isSelected = _tabIndex == index;
+    return NavigationDestination(
+      icon: Icon(unselected, color: Colors.grey),
+      selectedIcon: Icon(selected, color: AppTheme.emeraldGreen),
+      label: label,
+    );
+  }
+
+  Widget _buildBody() {
+    switch (_tabIndex) {
+      case 0:
+        return _HomeTab(
+          onProfileTap: () => setState(() => _tabIndex = 4),
+          onSwitchToTasks: () => setState(() => _tabIndex = 3),
+        );
+      case 1:
+         return const _LeavesView();
+      case 3:
+         return const _TasksView(); 
+      case 4:
+         return const ProfileView();
+      default:
+        return _HomeTab(
+          onProfileTap: () => setState(() => _tabIndex = 4),
+          onSwitchToTasks: () => setState(() => _tabIndex = 3),
+        );
+    }
+  }
+
+  void _showAddTaskModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const CreateTaskSheet(),
+    );
+  }
+}
+
+class CreateTaskSheet extends StatefulWidget {
+  const CreateTaskSheet({super.key});
+
+  @override
+  State<CreateTaskSheet> createState() => _CreateTaskSheetState();
+}
+
+class _CreateTaskSheetState extends State<CreateTaskSheet> {
+  final _clientController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _serviceController = TextEditingController();
+  String _priority = 'Medium';
+  bool _isLoading = false;
+
+  Future<void> _createTask(WidgetRef ref) async {
+    if (_clientController.text.isEmpty || 
+        _phoneController.text.isEmpty ||
+        _serviceController.text.isEmpty) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final repo = ref.read(workOrderRepositoryProvider);
+      await repo.createWorkOrder(
+        clientName: _clientController.text.trim(),
+        clientPhoneNumber: _phoneController.text.trim(),
+        serviceType: _serviceController.text.trim(),
+        priority: _priority,
+      );
+      
+      ref.invalidate(myWorkOrdersProvider);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task Created Successfully')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Create New Task / إنشاء مهمة', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _clientController,
+                decoration: const InputDecoration(labelText: 'Client Name / اسم العميل', prefixIcon: Icon(Icons.person)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Client Phone / رقم الهاتف', prefixIcon: Icon(Icons.phone)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _serviceController,
+                decoration: const InputDecoration(labelText: 'Service Type / نوع الخدمة', prefixIcon: Icon(Icons.work)),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _priority,
+                decoration: const InputDecoration(labelText: 'Priority / الأولوية', prefixIcon: Icon(Icons.flag)),
+                items: const [
+                  DropdownMenuItem(value: 'High', child: Text('High')),
+                  DropdownMenuItem(value: 'Medium', child: Text('Medium')),
+                  DropdownMenuItem(value: 'Low', child: Text('Low')),
+                ],
+                onChanged: (v) => setState(() => _priority = v!),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : () => _createTask(ref),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.emeraldGreen,
+                      padding: const EdgeInsets.symmetric(vertical: 16)),
+                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Create Task'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+
+class _HomeTab extends ConsumerWidget {
+  final VoidCallback? onProfileTap;
+  final VoidCallback? onSwitchToTasks;
+
+  const _HomeTab({this.onProfileTap, this.onSwitchToTasks});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    final userName = profileAsync.value?.name ?? 'Staff Member';
+    final userRole = profileAsync.value?.role.name.toUpperCase().replaceAll('_', ' ') ?? 'FIELD OPERATIONS SPECIALIST';
+
+    final statsAsync = ref.watch(dashboardStatsProvider);
+
+    return SingleChildScrollView(
+      child: ResponsiveLayout(
+        maxWidth: 1000,
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+             // 1. Header with Green Background
+               Stack(
+                 children: [
+                  // Pattern Overlay
+                   Positioned.fill(
+                     child: ClipRRect(
+                       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+                       child: CustomPaint(
+                         painter: MashrabiyaPatternPainter(color: Colors.white.withOpacity(0.05)),
+                       ),
+                     ),
+                   ),
+                   Container(
+                     padding: const EdgeInsets.fromLTRB(24, 60, 24, 80), // Extra bottom padding for overlap
+                     decoration: const BoxDecoration(
+                       color: AppTheme.emeraldGreen,
+                       borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+                     ),
+                     child: Row(
+                 children: [
+                   GestureDetector(
+                     onTap: onProfileTap,
+                     child: const CircleAvatar(
+                       radius: 26,
+                       backgroundColor: Colors.white24,
+                       child: Icon(Icons.person, color: Colors.white, size: 30),
+                     ),
+                   ),
+                   const SizedBox(width: 16),
+                   Expanded(
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text(
+                           userName,
+                           style: const TextStyle(
+                             color: Colors.white,
+                             fontSize: 18,
+                             fontWeight: FontWeight.bold,
+                           ),
+                         ),
+                         Text(
+                           userRole,
+                           style: TextStyle(
+                             color: Colors.white.withOpacity(0.8),
+                             fontSize: 10,
+                             letterSpacing: 1.0,
+                           ),
+                         ),
+                         const SizedBox(height: 4),
+                         // ID Badge or similar
+                         Container(
+                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                           decoration: BoxDecoration(
+                             color: Colors.black12,
+                             borderRadius: BorderRadius.circular(4),
+                           ),
+                           child: Text(
+                             'ID: ${profileAsync.value?.id.substring(0,8).toUpperCase() ?? "---"}',
+                             style: const TextStyle(color: Colors.white70, fontSize: 10),
+                           ),
+                         )
+                       ],
+                     ),
+                   ),
+                   Row(
+                     children: [
+                        IconButton(
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                          }, 
+                          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                          style: IconButton.styleFrom(backgroundColor: Colors.white12),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => _showLanguageBottomSheet(context, ref),
+                          icon: const Icon(Icons.translate, color: Colors.white),
+                          style: IconButton.styleFrom(backgroundColor: Colors.white12),
+                        ),
+                     ],
+                   )
+                 ],
+               ),
+             ),
+           ],
+         ),
+  
+             // 2. Overlapping Content (All shifted up together)
+             Transform.translate(
+               offset: const Offset(0, -50),
+               child: Column(
+                 children: [
+                   // Cards
+                   Padding(
+                     padding: const EdgeInsets.symmetric(horizontal: 24),
+                     child: Column(
+                       children: [
+                         const AttendanceCard(),
+                         const SizedBox(height: 12),
+                         _buildWorksSummaryCard(context, statsAsync.value?['pending'] ?? 0),
+                         const SizedBox(height: 12),
+                         _buildLeavesSummaryCard(context, ref),
+                       ],
+                     ),
+                   ),
+  
+                   const SizedBox(height: 12), // Reduced Status Spacing
+  
+                   // 3. Performance
+                   Padding(
+                     padding: const EdgeInsets.symmetric(horizontal: 24),
+                     child: Column(
+                       children: [
+                         _buildSectionHeader('PERFORMANCE / الأداء'),
+                         const SizedBox(height: 8),
+                         Row(
+                           children: [
+                             Expanded(child: _buildStatCard(
+                               icon: Icons.check_circle,
+                               value: '${statsAsync.value?['completed'] ?? 0} Tasks',
+                               label: 'Completed Overall',
+                               badge: '+${statsAsync.value?['completedThisWeek'] ?? 0}',
+                               badgeColor: AppTheme.emeraldLight,
+                               badgeTextColor: AppTheme.emeraldGreen,
+                             )),
+                             const SizedBox(width: 12),
+                             Expanded(child: _buildStatCard(
+                               icon: Icons.access_time_filled,
+                               value: statsAsync.value?['avgResponseTime'] ?? '---',
+                               label: 'Avg. Response Time',
+                               badge: '-5%',
+                               badgeColor: AppTheme.errorRedLight,
+                               badgeTextColor: AppTheme.errorRed,
+                               isGold: true,
+                             )),
+                           ],
+                         ),
+                       ],
+                     ),
+                   ),
+  
+                   const SizedBox(height: 12),
+  
+                   // 4. Quick Access
+                   Padding(
+                     padding: const EdgeInsets.symmetric(horizontal: 24),
+                     child: Column(
+                        children: [
+                           _buildSectionHeader('QUICK ACCESS / وصول سريع'),
+                           const SizedBox(height: 8),
+                           Row(
+                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                             children: [
+                               _buildQuickAccessItem(context, Icons.qr_code_scanner, 'Scan Doc', AppTheme.emeraldGreen),
+                               _buildQuickAccessItem(context, Icons.assignment, 'Daily Report', AppTheme.accentGold),
+                               _buildQuickAccessItem(context, Icons.chat_bubble, 'Support', AppTheme.darkBlue),
+                             ],
+                           ),
+                        ],
+                     ),
+                   ),
+                   
+                   const SizedBox(height: 20),
+                 ],
+               ),
+             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Row(
+      children: [
+        Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0)),
+      ],
+    );
+  }
+
+  Widget _buildWorksSummaryCard(BuildContext context, int pendingCount) {
+    return Card(
+      elevation: 4,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.work_outline, color: AppTheme.emeraldGreen),
+                    const SizedBox(width: 8),
+                    Text("MY WORKS / أعمالي", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen, fontSize: 12)),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: AppTheme.emeraldLight, borderRadius: BorderRadius.circular(12)),
+                  child: const Text('Active', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold))
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppTheme.emeraldLight.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: const Border(left: BorderSide(color: AppTheme.emeraldGreen, width: 4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
+                    const Text('ASSIGNED TASKS', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text('$pendingCount Tasks Pending', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                  const Text('Check your task list for details', style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                   if (onSwitchToTasks != null) {
+                     onSwitchToTasks!();
+                   } else {
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please switch to Tasks tab')));
+                   }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.emeraldGreen,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('View All Works'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLeavesSummaryCard(BuildContext context, WidgetRef ref) {
+    return Card(
+      elevation: 4,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, color: AppTheme.accentGold),
+                    const SizedBox(width: 8),
+                    Text("LEAVES / الإجازات", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentGold, fontSize: 12)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                       Text('${ref.watch(leaveBalanceProvider)} Days / أيام', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                       const Text('Annual Leave Balance / رصيد الإجازات', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                     showModalBottomSheet(
+                       context: context,
+                       isScrollControlled: true,
+                       builder: (context) => ApplyLeaveForm(onSuccess: () {
+                         // Refresh data if needed
+                       }),
+                     );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentGold,
+                    foregroundColor: Colors.white, 
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Apply'),
+                )
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String value,
+    required String label,
+    required String badge,
+    required Color badgeColor,
+    required Color badgeTextColor,
+    bool isGold = false,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isGold ? AppTheme.accentGoldLight : AppTheme.emeraldLight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: isGold ? AppTheme.accentGold : AppTheme.emeraldGreen, size: 20),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(badge, style: TextStyle(color: badgeTextColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+            Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessItem(BuildContext context, IconData icon, String label, Color color) {
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          if (label == 'Daily Report') {
+            onSwitchToTasks?.call();
+          } else if (label == 'Support') {
+            ContactUtils.openWhatsApp('966500000000', message: 'Assalamu Alaikum, I need operational support.');
+          } else if (label == 'Scan Doc') {
+             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scanner module initializing...')));
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4), // Gap
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.withOpacity(0.1)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                 padding: const EdgeInsets.all(12),
+                 decoration: BoxDecoration(
+                   color: color,
+                   shape: BoxShape.circle,
+                   boxShadow: [
+                     BoxShadow(color: color.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                   ],
+                 ),
+                 child: Icon(icon, color: Colors.white, size: 24),
+              ),
+              const SizedBox(height: 12),
+              Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+              const Text('مسح مستند', style: TextStyle(fontSize: 10, color: Colors.grey)), // Arabic subtitle mock
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  void _showLanguageBottomSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final currentLocale = ref.watch(localeProvider);
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.language, color: AppTheme.emeraldGreen),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Select Language / اختر اللغة',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.darkBlue,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildLanguageOption(context, ref, 'English', 'En', 'en', currentLocale.languageCode == 'en'),
+              const SizedBox(height: 12),
+              _buildLanguageOption(context, ref, 'Arabic / العربية', 'Ar', 'ar', currentLocale.languageCode == 'ar'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption(BuildContext context, WidgetRef ref, String label, String displayCode, String languageCode, bool isSelected) {
+    return InkWell(
+      onTap: () {
+        ref.read(localeProvider.notifier).state = Locale(languageCode);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text('Language settings updated'), backgroundColor: AppTheme.emeraldGreen),
+        );
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.emeraldGreen.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                displayCode,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppTheme.darkBlue,
+              ),
+            ),
+            const Spacer(),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: AppTheme.emeraldGreen),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Reusing and adapting the Tasks Tab logic for the "Inbox/Docs" tab
+class _TasksView extends StatefulWidget {
+  const _TasksView();
+
+  @override
+  State<_TasksView> createState() => _TasksViewState();
+}
+
+class _TasksViewState extends State<_TasksView> {
+  String _selectedFilter = 'All';
+  final TextEditingController _searchController = new TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundLight,
+      body: SafeArea(
+        child: ResponsiveLayout(
+          maxWidth: 1000,
+          padding: EdgeInsets.zero,
+          child: Consumer(
+            builder: (context, ref, child) {
+              final workOrdersAsync = ref.watch(myWorkOrdersProvider);
+
+              return Column(
+                children: [
+                  // Header & Search
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    color: AppTheme.backgroundLight,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                         const Text(
+                           'My Work Inbox / صندوق المهام',
+                           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                         ),
+                         const SizedBox(height: 20),
+                         // Search Bar
+                         Container(
+                           decoration: BoxDecoration(
+                             color: Colors.white,
+                             borderRadius: BorderRadius.circular(16),
+                             boxShadow: [
+                               BoxShadow(
+                                 color: Colors.black.withOpacity(0.05),
+                                 blurRadius: 10,
+                                 offset: const Offset(0, 4),
+                               ),
+                             ],
+                           ),
+                           child: TextField(
+                             controller: _searchController,
+                             onChanged: (v) => setState(() => _searchQuery = v),
+                             decoration: InputDecoration(
+                               hintText: 'Search Passport, ID, Client...',
+                               prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                               suffixIcon: _searchQuery.isNotEmpty 
+                                 ? IconButton(
+                                     icon: const Icon(Icons.close, size: 18),
+                                     onPressed: () {
+                                       _searchController.clear();
+                                       setState(() => _searchQuery = '');
+                                     },
+                                   )
+                                 : null,
+                               border: InputBorder.none,
+                               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                               hintStyle: TextStyle(color: Colors.grey[400]),
+                             ),
+                           ),
+                         ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Filter Chips
+                  SizedBox(
+                    height: 40,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      children: [
+                        _buildFilterChip('All'),
+                        _buildFilterChip('High'),
+                        _buildFilterChip('Pending'),
+                        _buildFilterChip('Completed'),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+  
+                  // Task List
+                  Expanded(
+                    child: workOrdersAsync.when(
+                      data: (orders) {
+                        final filteredOrders = orders.where((o) {
+                          // Priority/Status Filter
+                          bool matchesFilter = true;
+                          if (_selectedFilter == 'High') matchesFilter = o.priority == PriorityLevel.high;
+                          else if (_selectedFilter == 'Pending') matchesFilter = o.status == WorkStatus.pending;
+                          else if (_selectedFilter == 'Completed') matchesFilter = o.status == WorkStatus.completed;
+  
+                          if (!matchesFilter) return false;
+  
+                          // Search Query Filter
+                          if (_searchQuery.isEmpty) return true;
+                          final query = _searchQuery.toLowerCase();
+                          final clientName = (o.clientName ?? '').toLowerCase();
+                          final phone = (o.clientPhoneNumber ?? '').toLowerCase();
+                          final service = (o.serviceType ?? '').toLowerCase();
+                          
+                          return clientName.contains(query) || 
+                                 phone.contains(query) || 
+                                 service.contains(query);
+                        }).toList();
+  
+                        if (filteredOrders.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.search_off, size: 64, color: Colors.grey.shade300),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _searchQuery.isEmpty ? 'No tasks found' : 'No results for "$_searchQuery"',
+                                  style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+  
+                        return ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          itemCount: filteredOrders.length,
+                          itemBuilder: (context, index) {
+                            return _buildTaskCard(context, ref, filteredOrders[index]);
+                          },
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, st) => Center(child: Text('Error: $e')),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    final isSelected = _selectedFilter == label;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (v) => setState(() => _selectedFilter = label),
+        backgroundColor: Colors.white,
+        selectedColor: AppTheme.emeraldGreen.withOpacity(0.2),
+        checkmarkColor: AppTheme.emeraldGreen,
+        labelStyle: TextStyle(
+          color: isSelected ? AppTheme.emeraldGreen : Colors.grey,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+                color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade200)),
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(BuildContext context, WidgetRef ref, WorkOrder order) {
+    Color statusColor;
+    switch (order.priority) {
+      case PriorityLevel.high:
+        statusColor = AppTheme.errorRed;
+        break;
+      case PriorityLevel.medium:
+        statusColor = AppTheme.accentGold;
+        break;
+      case PriorityLevel.low:
+        statusColor = AppTheme.emeraldGreen;
+        break;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+               builder: (_) => TaskDetailScreen(
+                 taskId: order.id,
+                 clientName: order.clientName ?? 'Unknown',
+                 clientPhone: order.clientPhoneNumber,
+                 priority: order.priority.name,
+                 initialStatus: order.status.name,
+               )
+            )
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      order.serviceType ?? 'General Task',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: AppTheme.darkBlue),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      order.priority.name.toUpperCase(),
+                      style: TextStyle(
+                          color: statusColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.person, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(order.clientName ?? "N/A",
+                      style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  if (order.clientPhoneNumber != null) ...[
+                    const SizedBox(width: 12),
+                    const Icon(Icons.phone, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      order.clientPhoneNumber!,
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.phone_outlined, size: 16, color: AppTheme.emeraldGreen),
+                      onPressed: () => ContactUtils.callNumber(order.clientPhoneNumber),
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.message, size: 16, color: Colors.green),
+                      onPressed: () {
+                        final message = "Assalamu Alaikum, update on your ${order.serviceType}: Status is ${order.status.name.toUpperCase()}.";
+                        ContactUtils.openWhatsApp(order.clientPhoneNumber, message: message);
+                      },
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    child: Text(order.status.name.toUpperCase(),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: order.status == WorkStatus.completed
+                                ? AppTheme.emeraldGreen
+                                : AppTheme.accentGold)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 16, color: Colors.grey),
+                    onPressed: () => _showUpdateWorkModal(context, ref, order),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showUpdateWorkModal(BuildContext context, WidgetRef ref, WorkOrder order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _UpdateWorkSheet(order: order),
+    );
+  }
+}
+
+class _UpdateWorkSheet extends ConsumerStatefulWidget {
+  final WorkOrder order;
+  const _UpdateWorkSheet({required this.order});
+
+  @override
+  ConsumerState<_UpdateWorkSheet> createState() => _UpdateWorkSheetState();
+}
+
+class _UpdateWorkSheetState extends ConsumerState<_UpdateWorkSheet> {
+  late String _status;
+  final TextEditingController _totalController = TextEditingController();
+  final TextEditingController _paidController = TextEditingController();
+  double balance = 0.0;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.order.status == WorkStatus.pending
+        ? 'Pending'
+        : (widget.order.status == WorkStatus.inProgress ? 'In-Progress' : 'Completed');
+    _totalController.addListener(_calcBalance);
+    _paidController.addListener(_calcBalance);
+    _loadPaymentData();
+  }
+
+  Future<void> _loadPaymentData() async {
+    final repo = ref.read(workOrderRepositoryProvider);
+    final payment = await repo.getPaymentForWorkOrder(widget.order.id);
+    if (payment != null && mounted) {
+      setState(() {
+        _totalController.text = payment['total_amount']?.toString() ?? '';
+        _paidController.text = payment['paid_amount']?.toString() ?? '';
+      });
+      _calcBalance();
+    }
+  }
+
+  void _calcBalance() {
+    final total = double.tryParse(_totalController.text) ?? 0.0;
+    final paid = double.tryParse(_paidController.text) ?? 0.0;
+    setState(() {
+      balance = total - paid;
+    });
+  }
+
+  Future<void> _updateStatus() async {
+    setState(() => _isLoading = true);
+    try {
+      final repo = ref.read(workOrderRepositoryProvider);
+      await repo.updateWorkOrderStatus(widget.order.id, _status);
+      
+      final total = double.tryParse(_totalController.text) ?? 0.0;
+      final paid = double.tryParse(_paidController.text) ?? 0.0;
+      
+      if (total > 0 || paid > 0) {
+        await repo.updatePayment(widget.order.id, total, paid);
+      }
+      
+      ref.invalidate(myWorkOrdersProvider);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _launchWhatsApp() async {
+    final clientName = widget.order.clientName ?? "Client";
+    final message = "Update on your ${widget.order.serviceType}: Status is now $_status.";
+    await ContactUtils.openWhatsApp(widget.order.clientPhoneNumber, message: message);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Update: ${widget.order.serviceType}', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 20),
+          DropdownButtonFormField<String>(
+            value: _status,
+            decoration: const InputDecoration(labelText: 'Work Status', border: OutlineInputBorder()),
+            items: const [
+              DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+              DropdownMenuItem(value: 'In-Progress', child: Text('In-Progress')),
+              DropdownMenuItem(value: 'Completed', child: Text('Completed')),
+            ],
+            onChanged: (v) => setState(() => _status = v!),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                  child: TextField(
+                      controller: _totalController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Total Fee (SAR)'))),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: TextField(
+                      controller: _paidController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Paid Today'))),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Remaining Balance:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('SAR ${balance.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                  child: ElevatedButton(
+                      onPressed: _isLoading ? null : _updateStatus,
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen),
+                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Update Status'))),
+              const SizedBox(width: 12),
+              IconButton(
+                  onPressed: _launchWhatsApp,
+                  icon: const Icon(Icons.message, color: Colors.green),
+                  style: IconButton.styleFrom(side: const BorderSide(color: Colors.green))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeavesView extends ConsumerWidget {
+  const _LeavesView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+     return Scaffold(
+      backgroundColor: AppTheme.backgroundLight,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => ApplyLeaveForm(onSuccess: () {}),
+          );
+        },
+        label: const Text('Apply Leave'),
+        icon: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppTheme.accentGold,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: ResponsiveLayout(
+            maxWidth: 1000,
+            padding: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                 Padding(
+                   padding: const EdgeInsets.all(24.0),
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                        const Text(
+                          'Leave Management / إدارة الإجازات',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        // Balance Card
+                        _buildBalanceCard(context, ref),
+                        const SizedBox(height: 24),
+  
+                        // Upcoming Holidays
+                        const UpcomingHolidaysList(),
+                        const SizedBox(height: 24),
+  
+                        // History Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Leave History / أرشيف الإجازات',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                            ),
+                            // Filter button could go here
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // History List
+                        const LeaveHistoryList(),
+                        const SizedBox(height: 80), // Space for FAB
+                     ],
+                   ),
+                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBalanceCard(BuildContext context, WidgetRef ref) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppTheme.accentGold, Color(0xFFC49A00)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+           BoxShadow(color: AppTheme.accentGold.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+           Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+               const Text('Annual Bal. / رصيد سنوي', style: TextStyle(color: Colors.white, fontSize: 14)),
+               const SizedBox(height: 8),
+               Text('${ref.watch(leaveBalanceProvider)} Days', style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+               const SizedBox(height: 4),
+               Text('Valid until Dec 31, ${DateTime.now().year}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+             ],
+           ),
+           Container(
+             padding: const EdgeInsets.all(16),
+             decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+             child: const Icon(Icons.beach_access, color: Colors.white, size: 36),
+           ),
+        ],
+      ),
+    );
+  }
+}

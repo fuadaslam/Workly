@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "ultra-sound-202607"
+  },
+  "targets": {
+    "ultra-sound-202607": {
+      "hosting": {
+        "app": [
+          "saudi-service-manager"
+        ],
+        "old-site": [
+          "ultra-sound-202607"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

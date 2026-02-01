@@ -1,0 +1,23 @@
+<svg width="400" height="200" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="none"/>
+  
+  <g transform="translate(40, 50)">
+    <path d="M45 10 L65 20 L65 40 L45 50 L25 40 L25 20 Z" fill="#FFC107" opacity="0.8"/>
+    <path d="M60 5 L85 18 L85 45 L60 58 L35 45 L35 18 Z" fill="#FFD54F" opacity="0.6"/>
+    
+    <rect x="35" y="35" width="50" height="25" rx="12.5" fill="#263238"/>
+    <rect x="48" y="35" width="8" height="25" fill="#FFC107"/>
+    <rect x="65" y="35" width="8" height="25" fill="#FFC107"/>
+    
+    <circle cx="80" cy="42" r="3" fill="white"/>
+    <path d="M82 35 Q88 25 95 25" stroke="#263238" stroke-width="2" fill="none"/>
+  </g>
+
+  <text x="145" y="115" font-family="Arial, sans-serif" font-weight="900" font-size="48" fill="#263238">
+    Fir<tspan fill="#FFC107">z</tspan>bee
+  </text>
+  
+  <text x="147" y="140" font-family="Arial, sans-serif" font-size="12" letter-spacing="4" fill="#546E7A" text-transform="uppercase">
+    DIGITAL SOLUTIONS
+  </text>
+</svg>
