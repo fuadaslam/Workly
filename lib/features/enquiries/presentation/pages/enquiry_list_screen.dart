@@ -8,6 +8,8 @@ import '../providers/enquiry_provider.dart';
 import 'add_enquiry_screen.dart';
 import 'enquiry_detail_screen.dart';
 import 'enquiry_summary_screen.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
+import 'package:service_manager_app/core/widgets/infinite_scroll_list.dart';
 
 class EnquiryListScreen extends ConsumerStatefulWidget {
   const EnquiryListScreen({super.key});
@@ -83,16 +85,13 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final enquiriesAsync = ref.watch(filteredEnquiriesProvider);
     final filter = ref.watch(enquiryFilterProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Enquiry Tracker', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.surfaceWhite,
-        foregroundColor: AppTheme.emeraldGreen,
-        elevation: 0,
+      appBar: WorkqlyAppBar(
+        title: 'Enquiry Tracker',
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart_rounded),
@@ -105,30 +104,11 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
           const SizedBox(width: 4),
         ],
       ),
-      body: Column(
-        children: [
-          _buildSearchAndFilter(filter),
-          Expanded(
-            child: enquiriesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-              data: (enquiries) {
-                if (enquiries.isEmpty) {
-                  return _buildEmptyState();
-                }
-                return RefreshIndicator(
-                  color: const Color(0xFF0D1B2E),
-                  onRefresh: () async => ref.invalidate(allEnquiriesProvider),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    itemCount: enquiries.length,
-                    itemBuilder: (ctx, i) => _buildCard(enquiries[i]),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+      body: InfiniteScrollList<Enquiry>(
+        provider: paginatedEnquiriesProvider,
+        filterWidget: _buildSearchAndFilter(filter),
+        emptyState: _buildEmptyState(),
+        itemBuilder: (ctx, enquiry) => _buildCard(enquiry),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
@@ -139,7 +119,7 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
               context,
               MaterialPageRoute(builder: (_) => const AddEnquiryScreen()),
             );
-            if (created == true) ref.invalidate(allEnquiriesProvider);
+            if (created == true) ref.read(paginatedEnquiriesProvider.notifier).refresh();
           },
           backgroundColor: AppTheme.emeraldGreen,
           icon: const Icon(Icons.add, color: Colors.white),
@@ -255,7 +235,7 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
           context,
           MaterialPageRoute(builder: (_) => EnquiryDetailScreen(enquiry: e)),
         );
-        if (updated == true) ref.invalidate(allEnquiriesProvider);
+        if (updated == true) ref.read(paginatedEnquiriesProvider.notifier).refresh();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),

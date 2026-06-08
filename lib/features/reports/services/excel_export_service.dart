@@ -155,22 +155,6 @@ class ExcelExportService {
       _sectionHeader(sheet, nextRow, 0, 6, 'APPLIED FILTERS');
       nextRow++;
 
-      void filterRow0(String label, List<String> values) {
-        if (values.isEmpty) return;
-        final labelCell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: nextRow));
-        labelCell.value = TextCellValue(label);
-        labelCell.cellStyle = CellStyle(bold: true, backgroundColorHex: _lightBg);
-
-        final valCell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: nextRow));
-        valCell.value = TextCellValue(values.join(', '));
-        valCell.cellStyle = CellStyle(backgroundColorHex: _lightBg);
-        sheet.merge(
-          CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: nextRow),
-          CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: nextRow),
-        );
-        // ignore: unnecessary_statements — nextRow is captured by closure
-      }
-
       int filterRow = nextRow;
       void writeFilter(String label, List<String> values) {
         if (values.isEmpty) return;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/enquiry_provider.dart';
 import '../../../reports/presentation/report_export_screen.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class EnquirySummaryScreen extends ConsumerWidget {
   const EnquirySummaryScreen({super.key});
@@ -13,11 +14,8 @@ class EnquirySummaryScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Enquiry Summary', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.surfaceWhite,
-        foregroundColor: AppTheme.emeraldGreen,
-        elevation: 0,
+      appBar: WorkqlyAppBar(
+        title: 'Enquiry Summary',
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download_outlined),

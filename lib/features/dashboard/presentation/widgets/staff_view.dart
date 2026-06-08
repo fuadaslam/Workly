@@ -84,13 +84,7 @@ class _StaffViewState extends State<StaffView> {
                   ],
                 ),
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      child: _buildBody(),
-                    ),
-                  ),
+                  child: _buildBody(),
                 ),
               ],
             ),
@@ -318,10 +312,7 @@ class _HomeTab extends ConsumerWidget {
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-      child: ResponsiveLayout(
-        maxWidth: 1000,
-        padding: EdgeInsets.zero,
-        child: Column(
+      child: Column(
           children: [
              // 1. Header with Green Background
                Stack(
@@ -424,10 +415,13 @@ class _HomeTab extends ConsumerWidget {
          ),
   
              // 2. Overlapping Content (All shifted up together)
-             Transform.translate(
-               offset: const Offset(0, -50),
-               child: Column(
-                 children: [
+             ResponsiveLayout(
+               maxWidth: 1000,
+               padding: EdgeInsets.zero,
+               child: Transform.translate(
+                 offset: const Offset(0, -50),
+                 child: Column(
+                   children: [
                    // Cards
                    Padding(
                      padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -502,9 +496,9 @@ class _HomeTab extends ConsumerWidget {
                  ],
                ),
              ),
+             ),
           ],
         ),
-      ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import '../../../features/dashboard/presentation/providers/dashboard_provider.da
 import '../../../features/enquiries/presentation/providers/enquiry_provider.dart';
 import '../../../features/enquiries/presentation/pages/enquiry_detail_screen.dart';
 import '../../../features/dashboard/presentation/pages/task_detail_screen.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class GlobalSearchScreen extends ConsumerStatefulWidget {
   const GlobalSearchScreen({super.key});
@@ -35,12 +36,9 @@ class _GlobalSearchScreenState extends ConsumerState<GlobalSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surfaceWhite,
-        foregroundColor: AppTheme.emeraldGreen,
-        elevation: 0,
+      appBar: WorkqlyAppBar(
         titleSpacing: 0,
-        title: TextField(
+        titleWidget: TextField(
           controller: _ctrl,
           focusNode: _focus,
           decoration: InputDecoration(

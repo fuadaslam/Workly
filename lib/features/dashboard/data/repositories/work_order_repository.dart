@@ -27,6 +27,7 @@ class WorkOrderRepository {
     int pageSize = 20, 
     String? status,
     String? staffId,
+    String? clientName,
   }) async {
     var query = _client
         .from('work_orders')
@@ -38,6 +39,10 @@ class WorkOrderRepository {
     
     if (status != null) {
       query = query.eq('status', status);
+    }
+
+    if (clientName != null) {
+      query = query.eq('client_name', clientName);
     }
 
     final response = await query

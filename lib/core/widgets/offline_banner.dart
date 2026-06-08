@@ -14,15 +14,11 @@ class _OfflineBannerState extends State<OfflineBanner> with SingleTickerProvider
   bool _isOffline = false;
   late StreamSubscription<List<ConnectivityResult>> _sub;
   late AnimationController _controller;
-  late Animation<double> _slideAnim;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _slideAnim = Tween<double>(begin: -1, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
 
     _sub = Connectivity().onConnectivityChanged.listen((results) {
       final offline = results.every((r) => r == ConnectivityResult.none);

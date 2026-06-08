@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/enquiry_repository.dart';
 import '../../domain/models/enquiry.dart';
 import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
-
+import '../../../../core/pagination/pagination_state.dart';
 final enquiryRepositoryProvider = Provider((ref) {
   return EnquiryRepository(ref.watch(supabaseClientProvider));
 });
@@ -36,26 +36,20 @@ class EnquiryFilter {
 
 final enquiryFilterProvider = StateProvider<EnquiryFilter>((ref) => const EnquiryFilter());
 
-final filteredEnquiriesProvider = Provider<AsyncValue<List<Enquiry>>>((ref) {
-  final all = ref.watch(allEnquiriesProvider);
+final paginatedEnquiriesProvider = StateNotifierProvider<PaginationNotifier<Enquiry>, PaginationState<Enquiry>>((ref) {
+  final repository = ref.watch(enquiryRepositoryProvider);
   final filter = ref.watch(enquiryFilterProvider);
 
-  return all.whenData((list) {
-    return list.where((e) {
-      if (filter.status != null && filter.status!.isNotEmpty) {
-        final statusStr = e.finalStatus.name;
-        if (!statusStr.toLowerCase().contains(filter.status!.toLowerCase())) return false;
-      }
-      if (filter.service != null && filter.service!.isNotEmpty) {
-        if (e.natureOfEnquiry != filter.service) return false;
-      }
-      if (filter.searchQuery.isNotEmpty) {
-        final q = filter.searchQuery.toLowerCase();
-        return (e.clientName?.toLowerCase().contains(q) ?? false) ||
-            (e.contactNumber?.contains(q) ?? false) ||
-            (e.enquiryCode.toLowerCase().contains(q));
-      }
-      return true;
-    }).toList();
-  });
+  return PaginationNotifier<Enquiry>(
+    fetchItems: (offset, limit) async {
+      return await repository.getPaginatedEnquiries(
+        offset: offset,
+        limit: limit,
+        status: filter.status,
+        service: filter.service,
+        searchQuery: filter.searchQuery,
+      );
+    },
+    limit: 20,
+  );
 });

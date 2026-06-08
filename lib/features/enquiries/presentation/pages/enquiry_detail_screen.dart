@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class EnquiryDetailScreen extends ConsumerStatefulWidget {
   final Enquiry enquiry;
@@ -181,11 +182,8 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: Text(_enquiry.enquiryCode, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.surfaceWhite,
-        foregroundColor: AppTheme.emeraldGreen,
-        elevation: 0,
+      appBar: WorkqlyAppBar(
+        title: _enquiry.enquiryCode,
         actions: [
           if (_editing) ...[
             TextButton(

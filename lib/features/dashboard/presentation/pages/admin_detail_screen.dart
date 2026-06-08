@@ -9,6 +9,7 @@ import 'client_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/app_section_header.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class AdminDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> admin;
@@ -86,20 +87,11 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppTheme.darkBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          isStaff ? l10n.staffDetails : l10n.adminDetails,
-          style: const TextStyle(color: AppTheme.darkBlue, fontWeight: FontWeight.bold),
-        ),
+      appBar: WorkqlyAppBar(
+        title: isStaff ? l10n.staffDetails : l10n.adminDetails,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.emeraldGreen),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               ref.invalidate(staffWorkOrdersProvider(widget.admin['id']));
               ref.invalidate(allProfilesProvider);
@@ -108,12 +100,12 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
           if (!_isEditing)
             IconButton(
               onPressed: () => setState(() => _isEditing = true),
-              icon: const Icon(Icons.edit_outlined, color: AppTheme.darkBlue),
+              icon: const Icon(Icons.edit_outlined),
             ),
           if (_isEditing)
             IconButton(
               onPressed: _isSaving ? null : _saveChanges,
-              icon: _isSaving 
+              icon: _isSaving
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.check, color: AppTheme.emeraldGreen),
             ),

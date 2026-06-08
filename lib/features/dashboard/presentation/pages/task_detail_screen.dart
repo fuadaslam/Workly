@@ -8,6 +8,7 @@ import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/app_section_header.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class TaskDetailScreen extends ConsumerStatefulWidget {
   final String taskId;
@@ -135,28 +136,16 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        centerTitle: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppTheme.darkBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
+      appBar: WorkqlyAppBar(
+        titleWidget: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.taskDetails,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.darkBlue),
-            ),
-            Text(
-              '#${widget.taskId.length > 8 ? widget.taskId.substring(0, 8) : widget.taskId}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
+            Text(l10n.taskDetails, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.darkBlue)),
+            Text('#${widget.taskId.length > 8 ? widget.taskId.substring(0, 8) : widget.taskId}', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           ],
         ),
         actions: [
-          _buildActionButton(Icons.phone_outlined, Colors.blue, 
+          _buildActionButton(Icons.phone_outlined, Colors.blue,
             () => ContactUtils.callNumber(widget.clientPhone)),
           _buildActionButton(Icons.message_outlined, Colors.green, () {
             final message = "Update on Task #${widget.taskId.substring(0, 8)}: Status is now $_status.";

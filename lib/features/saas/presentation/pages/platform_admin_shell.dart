@@ -22,48 +22,30 @@ class PlatformAdminShell extends ConsumerWidget {
 
     return Scaffold(
       body: IndexedStack(index: currentTab, children: tabs),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceWhite,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, -2))],
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _tab(context, ref, 0, Icons.business_outlined, Icons.business, 'Organizations'),
-                _tab(context, ref, 1, Icons.layers_outlined, Icons.layers, 'Plans'),
-                _tab(context, ref, 2, Icons.manage_accounts_outlined, Icons.manage_accounts, 'Console'),
-              ],
-            ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: currentTab,
+        onDestinationSelected: (idx) => ref.read(_platformTabProvider.notifier).state = idx,
+        backgroundColor: AppTheme.surfaceWhite,
+        indicatorColor: AppTheme.emeraldGreen.withValues(alpha: 0.12),
+        height: 68,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.business_outlined),
+            selectedIcon: Icon(Icons.business_rounded, color: AppTheme.emeraldGreen),
+            label: 'Organizations',
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tab(BuildContext context, WidgetRef ref, int idx, IconData icon, IconData activeIcon, String label) {
-    final current = ref.watch(_platformTabProvider);
-    final selected = current == idx;
-    return GestureDetector(
-      onTap: () => ref.read(_platformTabProvider.notifier).state = idx,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(selected ? activeIcon : icon,
-              color: selected ? AppTheme.emeraldGreen : Colors.grey, size: 22),
-          const SizedBox(height: 2),
-          Text(label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                color: selected ? AppTheme.emeraldGreen : Colors.grey,
-              )),
-        ]),
+          NavigationDestination(
+            icon: Icon(Icons.layers_outlined),
+            selectedIcon: Icon(Icons.layers_rounded, color: AppTheme.emeraldGreen),
+            label: 'Plans',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.manage_accounts_outlined),
+            selectedIcon: Icon(Icons.manage_accounts_rounded, color: AppTheme.emeraldGreen),
+            label: 'Console',
+          ),
+        ],
       ),
     );
   }

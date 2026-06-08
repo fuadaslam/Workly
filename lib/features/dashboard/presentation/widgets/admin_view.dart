@@ -9,6 +9,7 @@ import '../../../../core/providers/locale_provider.dart';
 import 'assignment_sheet.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../attendance/presentation/widgets/attendance_monitor.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class AdminView extends ConsumerStatefulWidget {
   const AdminView({super.key});
@@ -70,11 +71,9 @@ class _AdminViewState extends ConsumerState<AdminView> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Operations Tracking'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.darkBlue,
-        elevation: 0,
+      appBar: WorkqlyAppBar(
+        title: 'Operations Tracking',
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             onPressed: () => _showLanguagePicker(context, ref),
@@ -88,9 +87,13 @@ class _AdminViewState extends ConsumerState<AdminView> {
                 useSafeArea: true,
                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                 builder: (context) => Scaffold(
-                  appBar: AppBar(
-                    title: const Text('Staff Attendance'),
-                    leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                  appBar: WorkqlyAppBar(
+                    title: 'Staff Attendance',
+                    leading: IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      color: AppTheme.darkBlue,
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ),
                   body: const AttendanceMonitor(),
                 ),
@@ -173,9 +176,28 @@ class _AdminViewState extends ConsumerState<AdminView> {
                       const SizedBox(height: 24),
                       _buildSectionHeader('Recent Staff Activity'),
                       const SizedBox(height: 12),
-                      _buildStaffActivityLog('Ahmed updated "Iqama Renewal" status to In-Progress', '2 mins ago', Colors.blue),
-                      _buildStaffActivityLog('Saeed uploaded a document for "New Work Visa"', '15 mins ago', AppTheme.emeraldGreen),
-                      _buildStaffActivityLog('Khalid checked in at Olaya Office', '1 hour ago', AppTheme.accentGold),
+                      Consumer(
+                        builder: (ctx, cRef, _) {
+                          return cRef.watch(recentActivityProvider).when(
+                            loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen)),
+                            error: (_, __) => const SizedBox.shrink(),
+                            data: (activities) {
+                              if (activities.isEmpty) {
+                                return const Text('No recent activity', style: TextStyle(color: Colors.grey, fontSize: 13));
+                              }
+                              return Column(
+                                children: activities.map((a) {
+                                  return _buildStaffActivityLog(
+                                    '${a['name']} ${a['action']}',
+                                    _formatActivityTime(a['time'] as String?),
+                                    _getActivityColor(a['action'] as String? ?? ''),
+                                  );
+                                }).toList(),
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ],
                   );
                 },
@@ -303,6 +325,25 @@ class _AdminViewState extends ConsumerState<AdminView> {
         ),
       ),
     );
+  }
+
+  String _formatActivityTime(String? isoTime) {
+    if (isoTime == null) return '';
+    final dt = DateTime.tryParse(isoTime);
+    if (dt == null) return '';
+    final diff = DateTime.now().difference(dt.toLocal());
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} mins ago';
+    if (diff.inHours < 24) return '${diff.inHours} hr${diff.inHours == 1 ? '' : 's'} ago';
+    return '${diff.inDays} day${diff.inDays == 1 ? '' : 's'} ago';
+  }
+
+  Color _getActivityColor(String action) {
+    final lower = action.toLowerCase();
+    if (lower.contains('completed')) return AppTheme.emeraldGreen;
+    if (lower.contains('pending')) return AppTheme.statAmber;
+    if (lower.contains('cancelled')) return AppTheme.errorRed;
+    return AppTheme.statBlue;
   }
 
   Widget _buildStaffActivityLog(String text, String time, Color color) {

@@ -15,6 +15,32 @@ class EnquiryRepository {
     return (response as List).map((j) => Enquiry.fromJson(j)).toList();
   }
 
+  Future<List<Enquiry>> getPaginatedEnquiries({
+    required int offset,
+    required int limit,
+    String? status,
+    String? service,
+    String searchQuery = '',
+  }) async {
+    var query = _client.from('enquiries').select('*, profiles:responsible_staff_id(name)');
+
+    if (status != null && status.isNotEmpty) {
+      query = query.eq('final_status', status);
+    }
+    if (service != null && service.isNotEmpty) {
+      query = query.eq('nature_of_enquiry', service);
+    }
+    if (searchQuery.isNotEmpty) {
+      query = query.or('client_name.ilike.%$searchQuery%,enquiry_code.ilike.%$searchQuery%,contact_number.ilike.%$searchQuery%');
+    }
+
+    final response = await query
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+
+    return (response as List).map((j) => Enquiry.fromJson(j)).toList();
+  }
+
   Future<List<Enquiry>> getEnquiriesByStaff(String staffId) async {
     final response = await _client
         .from('enquiries')

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -66,11 +67,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Change Password / تغيير كلمة المرور'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: WorkqlyAppBar(title: 'Change Password'),
       body: ResponsiveLayout(
         maxWidth: 800,
         padding: EdgeInsets.zero,

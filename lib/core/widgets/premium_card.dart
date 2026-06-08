@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class PremiumCard extends StatelessWidget {
   final Widget child;
@@ -6,8 +7,9 @@ class PremiumCard extends StatelessWidget {
   final Color? color;
   final double? borderRadius;
   final List<BoxShadow>? boxShadow;
-   final Border? border;
+  final Border? border;
   final EdgeInsetsGeometry? margin;
+  final VoidCallback? onTap;
 
   const PremiumCard({
     super.key,
@@ -18,27 +20,45 @@ class PremiumCard extends StatelessWidget {
     this.boxShadow,
     this.border,
     this.margin,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final radius = borderRadius ?? 20.0;
+
+    final defaultColor = isDark ? AppTheme.darkCard : Colors.white;
+
+    final defaultBorder = isDark
+        ? Border.all(color: AppTheme.darkBorder, width: 1)
+        : Border.all(color: const Color(0x0D000000), width: 1);
+
+    final defaultShadow = AppTheme.cardShadow(isDark);
+
+    Widget card = Container(
       margin: margin,
       padding: padding ?? const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color ?? Colors.white,
-        borderRadius: BorderRadius.circular(borderRadius ?? 20),
-        border: border,
-        boxShadow: boxShadow ??
-            [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 15,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        color: color ?? defaultColor,
+        borderRadius: BorderRadius.circular(radius),
+        border: border ?? defaultBorder,
+        boxShadow: boxShadow ?? defaultShadow,
       ),
       child: child,
     );
+
+    if (onTap != null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(radius),
+          child: card,
+        ),
+      );
+    }
+
+    return card;
   }
 }

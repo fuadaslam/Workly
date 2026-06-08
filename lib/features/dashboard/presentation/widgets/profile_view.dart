@@ -9,6 +9,7 @@ import '../../../../features/auth/presentation/pages/change_password_screen.dart
 import '../../../../features/dashboard/presentation/pages/notifications_screen.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
@@ -71,11 +72,7 @@ class ProfileView extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('My Profile / ملفي الشخصي'),
-        backgroundColor: AppTheme.backgroundLight,
-        centerTitle: false,
-      ),
+      appBar: WorkqlyAppBar(title: 'My Profile'),
       body: profileAsync.when(
         data: (profile) {
           if (profile == null) {
@@ -237,6 +234,21 @@ class ProfileView extends ConsumerWidget {
                     'Version 1.0.0',
                     style: TextStyle(color: Colors.grey[400], fontSize: 12),
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Powered by ',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                      Image.asset(
+                        'assets/images/Logo Xoviq.png',
+                        height: 24,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),

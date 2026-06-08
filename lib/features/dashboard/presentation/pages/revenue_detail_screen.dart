@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/dashboard_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class RevenueDetailScreen extends ConsumerStatefulWidget {
   const RevenueDetailScreen({super.key});
@@ -23,21 +24,11 @@ class _RevenueDetailScreenState extends ConsumerState<RevenueDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text(
-          'Revenue Analytics',
-          style: TextStyle(color: AppTheme.darkBlue, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppTheme.darkBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: WorkqlyAppBar(
+        title: 'Revenue Analytics',
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.emeraldGreen),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: () => ref.refresh(financialStatsProvider),
           ),
         ],

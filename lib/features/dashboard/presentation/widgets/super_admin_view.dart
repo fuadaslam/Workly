@@ -61,39 +61,40 @@ class SuperAdminView extends ConsumerWidget {
       });
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? AppTheme.darkBackground : AppTheme.backgroundLight;
+    final navBg      = isDark ? AppTheme.darkSurface    : Colors.white;
+    final selectedColor   = isDark ? AppTheme.accentGold   : AppTheme.emeraldGreen;
+    final unselectedColor = isDark ? AppTheme.darkSubtext  : Colors.grey;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 800) {
           // Desktop Layout
           return Scaffold(
-            backgroundColor: AppTheme.backgroundLight,
+            backgroundColor: scaffoldBg,
             body: Row(
               children: [
                 NavigationRail(
                   selectedIndex: currentIndex < tabs.length ? currentIndex : 0,
                   onDestinationSelected: (idx) => ref.read(superAdminTabIndexProvider.notifier).state = idx,
                   labelType: NavigationRailLabelType.all,
-                  selectedLabelTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.emeraldGreen),
-                  unselectedLabelTextStyle: const TextStyle(fontSize: 11, color: Colors.grey),
-                  selectedIconTheme: const IconThemeData(color: AppTheme.emeraldGreen),
-                  unselectedIconTheme: const IconThemeData(color: Colors.grey),
+                  backgroundColor: navBg,
+                  selectedLabelTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: selectedColor),
+                  unselectedLabelTextStyle: TextStyle(fontSize: 11, color: unselectedColor),
+                  selectedIconTheme: IconThemeData(color: selectedColor),
+                  unselectedIconTheme: IconThemeData(color: unselectedColor),
                   destinations: tabs.map((t) => NavigationRailDestination(
                     icon: t.icon as Icon, 
                     label: Text(t.label!),
                   )).toList(),
                 ),
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      child: _buildCurrentTab(currentIndex, isSuperAdmin),
-                    ),
-                  ),
+                  child: _buildCurrentTab(currentIndex, isSuperAdmin),
                 ),
               ],
             ),
-             floatingActionButton: (currentIndex == 0 || currentIndex == 1) 
+             floatingActionButton: (currentIndex == 0 || currentIndex == 1)
               ? FloatingActionButton.extended(
                   onPressed: () {
                     showModalBottomSheet(
@@ -103,13 +104,14 @@ class SuperAdminView extends ConsumerWidget {
                       builder: (context) => const AssignmentSheet(),
                     );
                   },
-                  backgroundColor: AppTheme.emeraldGreen,
+                  backgroundColor: selectedColor,
+                  foregroundColor: isDark ? Colors.black : Colors.white,
                   elevation: 6,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  icon: const Icon(Icons.assignment_add, color: Colors.white, size: 24),
+                  icon: Icon(Icons.assignment_add, color: isDark ? Colors.black : Colors.white, size: 24),
                   label: Text(
-                    l10n.assignWork, 
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                    l10n.assignWork,
+                    style: TextStyle(color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                   ),
                 )
               : null,
@@ -117,9 +119,9 @@ class SuperAdminView extends ConsumerWidget {
         } else {
           // Mobile Layout
           return Scaffold(
-            backgroundColor: AppTheme.backgroundLight,
+            backgroundColor: scaffoldBg,
             body: _buildCurrentTab(currentIndex, isSuperAdmin),
-            floatingActionButton: (currentIndex == 0 || currentIndex == 1) 
+            floatingActionButton: (currentIndex == 0 || currentIndex == 1)
                 ? FloatingActionButton.extended(
                     onPressed: () {
                       showModalBottomSheet(
@@ -129,33 +131,33 @@ class SuperAdminView extends ConsumerWidget {
                         builder: (context) => const AssignmentSheet(),
                       );
                     },
-                    backgroundColor: AppTheme.emeraldGreen,
+                    backgroundColor: selectedColor,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
                     elevation: 6,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    icon: const Icon(Icons.assignment_add, color: Colors.white, size: 24),
+                    icon: Icon(Icons.assignment_add, color: isDark ? Colors.black : Colors.white, size: 24),
                     label: Text(
-                      l10n.assignWork, 
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                      l10n.assignWork,
+                      style: TextStyle(color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                     ),
                   )
                 : null,
             bottomNavigationBar: Container(
               decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
+                color: navBg,
+                border: Border(top: BorderSide(color: isDark ? AppTheme.darkBorder : const Color(0xFFF1F5F9), width: 1)),
+                boxShadow: isDark
+                    ? null
+                    : const [BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, -4))],
               ),
               child: BottomNavigationBar(
                 currentIndex: currentIndex < tabs.length ? currentIndex : 0,
                 onTap: (idx) => ref.read(superAdminTabIndexProvider.notifier).state = idx,
                 type: BottomNavigationBarType.fixed,
-                backgroundColor: Colors.white,
-                selectedItemColor: AppTheme.emeraldGreen,
-                unselectedItemColor: Colors.grey,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                selectedItemColor: selectedColor,
+                unselectedItemColor: unselectedColor,
                 selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
                 unselectedLabelStyle: const TextStyle(fontSize: 11),
                 items: tabs,
@@ -884,13 +886,13 @@ class _BranchManagementTab extends ConsumerWidget {
     final officesAsync = ref.watch(filteredOfficesProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _HeaderSection(title: l10n.regionalOffices, subtitle: l10n.branchManagement.toUpperCase(), showDate: false),
-          Expanded(
+    return Column(
+      children: [
+        _HeaderSection(title: l10n.regionalOffices, subtitle: l10n.branchManagement.toUpperCase(), showDate: false),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: 1000,
+            padding: EdgeInsets.zero,
             child: RefreshIndicator(
               color: const Color(0xFF0D1B2E),
               onRefresh: () async {
@@ -1001,10 +1003,10 @@ class _BranchManagementTab extends ConsumerWidget {
             ),
           ),
         ),
-        ],
       ),
-    );
-  }
+    ],
+  );
+}
 
   Widget _buildPerformanceDashboard(BuildContext context, List<Map<String, dynamic>> offices) {
     if (offices.isEmpty) return const SizedBox();
@@ -1487,21 +1489,21 @@ class _LeaveManagementTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _HeaderSection(
-            title: l10n.leaveManagement, 
-            subtitle: l10n.leaves.toUpperCase(),
-            showDate: false,
-          ),
-          const Expanded(
+    return Column(
+      children: [
+        _HeaderSection(
+          title: l10n.leaveManagement, 
+          subtitle: l10n.leaves.toUpperCase(),
+          showDate: false,
+        ),
+        const Expanded(
+          child: ResponsiveLayout(
+            maxWidth: 1000,
+            padding: EdgeInsets.zero,
             child: AdminLeaveList(),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1517,16 +1519,16 @@ class _AdminManagementTab extends ConsumerWidget {
     final filteredAdminsAsync = ref.watch(isStaffView ? filteredStaffProvider : filteredAdminsProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _HeaderSection(
-            title: isStaffView ? l10n.staffCommandCenter : l10n.totalControlHub, 
-            subtitle: (isStaffView ? l10n.manageStaff : l10n.manageAdmins).toUpperCase()
-          ),
-          Expanded(
+    return Column(
+      children: [
+        _HeaderSection(
+          title: isStaffView ? l10n.staffCommandCenter : l10n.totalControlHub, 
+          subtitle: (isStaffView ? l10n.manageStaff : l10n.manageAdmins).toUpperCase()
+        ),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: 1000,
+            padding: EdgeInsets.zero,
             child: RefreshIndicator(
               color: const Color(0xFF0D1B2E),
               onRefresh: () async {
@@ -1637,10 +1639,10 @@ class _AdminManagementTab extends ConsumerWidget {
             ),
           ),
         ),
-        ],
       ),
-    );
-  }
+    ],
+  );
+}
 
   Widget _buildFilterChip(WidgetRef ref, String label) {
     final currentFilter = ref.watch(adminRoleFilterProvider);
@@ -2002,16 +2004,16 @@ class _AgentManagementTab extends ConsumerWidget {
     final filteredAgentsAsync = ref.watch(filteredAgentsProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _HeaderSection(
-            title: l10n.agents, 
-            subtitle: l10n.allAgents.toUpperCase()
-          ),
-          Expanded(
+    return Column(
+      children: [
+        _HeaderSection(
+          title: l10n.agents, 
+          subtitle: l10n.allAgents.toUpperCase()
+        ),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: 1000,
+            padding: EdgeInsets.zero,
             child: RefreshIndicator(
               color: const Color(0xFF0D1B2E),
               onRefresh: () async {
@@ -2065,12 +2067,15 @@ class _AgentManagementTab extends ConsumerWidget {
                   const SizedBox(height: 20),
                   filteredAgentsAsync.when(
                     data: (profiles) {
-                      if (profiles.isEmpty) return Center(child: Text(l10n.noAgentsFound));
+                      if (profiles.isEmpty) return _buildEmptyAgentsState(context, ref, l10n);
                       return Column(
                         children: profiles.map((p) => const _AdminManagementTab()._buildLargeAdminCard(context, ref, p)).toList(),
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () => const Padding(
+                      padding: EdgeInsets.only(top: 60),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
                     error: (e, _) => Text('${l10n.errorLoading}: $e'),
                   ),
                 ],
@@ -2078,7 +2083,49 @@ class _AgentManagementTab extends ConsumerWidget {
             ),
           ),
         ),
-        ],
+      ),
+    ],
+  );
+}
+
+  Widget _buildEmptyAgentsState(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppTheme.emeraldGreen.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.support_agent_outlined, size: 40, color: AppTheme.emeraldGreen.withValues(alpha: 0.5)),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              l10n.noAgentsFound,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first agent to get started',
+              style: TextStyle(fontSize: 14, color: AppTheme.darkBlue.withValues(alpha: 0.45)),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => const _AdminManagementTab()._showAddAdminDialog(context, ref, isAgent: true),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+              label: Text(l10n.newLabel),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.emeraldGreen,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2096,13 +2143,13 @@ class _AccessControlTab extends ConsumerWidget {
     final financialStats = ref.watch(financialStatsProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _HeaderSection(title: l10n.accessSecurity, subtitle: l10n.accessPermissions.toUpperCase(), showDate: false),
-          Expanded(
+    return Column(
+      children: [
+        _HeaderSection(title: l10n.accessSecurity, subtitle: l10n.accessPermissions.toUpperCase(), showDate: false),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: 1000,
+            padding: EdgeInsets.zero,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -2212,8 +2259,8 @@ class _AccessControlTab extends ConsumerWidget {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -2381,13 +2428,13 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
    @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _HeaderSection(title: l10n.systemAuthority, subtitle: l10n.systemLogs.toUpperCase(), showDate: false),
-          Expanded(
+    return Column(
+      children: [
+        _HeaderSection(title: l10n.systemAuthority, subtitle: l10n.systemLogs.toUpperCase(), showDate: false),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: 1000,
+            padding: EdgeInsets.zero,
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               physics: const BouncingScrollPhysics(),
@@ -2434,8 +2481,8 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

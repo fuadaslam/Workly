@@ -6,6 +6,7 @@ import '../../../../core/services/notification_service.dart';
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
 import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class AddEnquiryScreen extends ConsumerStatefulWidget {
   const AddEnquiryScreen({super.key});
@@ -30,7 +31,6 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   DateTime? _dateOfEnquiry;
   DateTime? _followUpDate;
   String? _responsibleStaffId;
-  String? _responsibleStaffName;
 
   @override
   void dispose() {
@@ -113,11 +113,8 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('New Enquiry', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.surfaceWhite,
-        foregroundColor: AppTheme.emeraldGreen,
-        elevation: 0,
+      appBar: WorkqlyAppBar(
+        title: 'New Enquiry',
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -171,7 +168,6 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
                         onChanged: (v) {
                           setState(() {
                             _responsibleStaffId = v;
-                            _responsibleStaffName = profiles.firstWhere((p) => p['id'] == v, orElse: () => {})['name'];
                           });
                         },
                         hint: const Text('Select staff member'),

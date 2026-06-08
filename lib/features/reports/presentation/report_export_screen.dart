@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../data/report_repository.dart';
 import '../services/excel_export_service.dart';
 import '../../dashboard/presentation/providers/dashboard_provider.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 enum _ReportRange { thisWeek, lastWeek, thisMonth, lastMonth, custom }
 
@@ -185,11 +186,8 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
     final activeFilters = _filters.activeCount;
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Export Report', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.surfaceWhite,
-        foregroundColor: AppTheme.emeraldGreen,
-        elevation: 0,
+      appBar: WorkqlyAppBar(
+        title: 'Export Report',
         actions: [
           if (activeFilters > 0)
             TextButton.icon(

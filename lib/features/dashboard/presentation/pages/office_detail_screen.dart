@@ -10,6 +10,7 @@ import 'client_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/app_section_header.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class OfficeDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> office;
@@ -139,14 +140,8 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: Text(l10n.officeDetails, style: const TextStyle(color: AppTheme.darkBlue, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppTheme.darkBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
+      appBar: WorkqlyAppBar(
+        title: l10n.officeDetails,
         actions: [
           if (!_isEditing)
             IconButton(
@@ -155,7 +150,7 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
               tooltip: l10n.editOffice,
             ),
           if (_isEditing)
-             IconButton(
+            IconButton(
               onPressed: _saveChanges,
               icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.check, color: AppTheme.emeraldGreen),
               tooltip: l10n.save,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -9,13 +10,7 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Notifications / الإشعارات'),
-        backgroundColor: Colors.white,
-        centerTitle: false,
-        elevation: 0,
-        scrolledUnderElevation: 2,
-      ),
+      appBar: WorkqlyAppBar(title: 'Notifications'),
       body: ResponsiveLayout(
         maxWidth: 800,
         padding: EdgeInsets.zero,

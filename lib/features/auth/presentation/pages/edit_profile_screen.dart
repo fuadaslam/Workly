@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/profile.dart' as model;
 import '../providers/profile_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   final model.Profile profile;
@@ -72,11 +73,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Edit Profile / تعديل الملف'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: WorkqlyAppBar(title: 'Edit Profile'),
       body: ResponsiveLayout(
         maxWidth: 800,
         padding: EdgeInsets.zero,

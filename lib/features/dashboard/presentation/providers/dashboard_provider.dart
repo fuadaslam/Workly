@@ -8,6 +8,7 @@ import '../../domain/models/task_history.dart';
 import '../../../attendance/data/attendance_repository.dart';
 
 import '../../data/repositories/profile_repository.dart';
+import '../../../../core/pagination/pagination_state.dart';
 
 final supabaseClientProvider = Provider((ref) => Supabase.instance.client);
 
@@ -34,6 +35,20 @@ final allWorkOrdersProvider = FutureProvider<List<WorkOrder>>((ref) async {
 final staffWorkOrdersProvider = FutureProvider.family<List<WorkOrder>, String>((ref, staffId) async {
   final repo = ref.watch(workOrderRepositoryProvider);
   return repo.getWorkOrdersByStaff(staffId);
+});
+
+final paginatedClientWorkOrdersProvider = StateNotifierProvider.family<PaginationNotifier<WorkOrder>, PaginationState<WorkOrder>, String>((ref, clientName) {
+  final repository = ref.watch(workOrderRepositoryProvider);
+  return PaginationNotifier<WorkOrder>(
+    fetchItems: (offset, limit) async {
+      return await repository.getPaginatedWorkOrders(
+        page: offset ~/ limit,
+        pageSize: limit,
+        clientName: clientName,
+      );
+    },
+    limit: 20,
+  );
 });
 
 final staffProfilesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
@@ -313,6 +328,70 @@ final pendingApprovalsCountProvider = FutureProvider<int>((ref) async {
       .eq('status', 'Pending')
       .count(CountOption.exact);
   return response.count;
+});
+
+/// Work order counts per month for the last 6 months (index 0 = oldest, 5 = current).
+final monthlyWorkOrderTrendProvider = FutureProvider<List<double>>((ref) async {
+  final client = Supabase.instance.client;
+  final now = DateTime.now();
+  final sixMonthsAgo = DateTime(now.year, now.month - 5, 1);
+  final response = await client
+      .from('work_orders')
+      .select('created_at')
+      .gte('created_at', sixMonthsAgo.toIso8601String());
+  final counts = List.filled(6, 0.0);
+  for (final order in response) {
+    final created = DateTime.tryParse(order['created_at'] as String? ?? '');
+    if (created == null) continue;
+    final monthsAgo = (now.year - created.year) * 12 + (now.month - created.month);
+    if (monthsAgo >= 0 && monthsAgo < 6) counts[5 - monthsAgo]++;
+  }
+  return counts;
+});
+
+/// Completion rate per service type (top 4 by volume).
+final serviceTypeKpiProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final client = Supabase.instance.client;
+  final response = await client.from('work_orders').select('service_type, status');
+  final Map<String, Map<String, int>> byType = {};
+  for (final order in response) {
+    final raw = (order['service_type'] as String?)?.trim() ?? '';
+    final type = raw.isEmpty ? 'Other' : raw;
+    byType.putIfAbsent(type, () => {'total': 0, 'completed': 0});
+    byType[type]!['total'] = (byType[type]!['total'] ?? 0) + 1;
+    if ((order['status'] as String? ?? '') == 'Completed') {
+      byType[type]!['completed'] = (byType[type]!['completed'] ?? 0) + 1;
+    }
+  }
+  final result = byType.entries.map((e) {
+    final label = e.key.length > 7 ? e.key.substring(0, 7).toUpperCase() : e.key.toUpperCase();
+    final percent = e.value['total']! > 0
+        ? (e.value['completed']! / e.value['total']!).clamp(0.0, 1.0)
+        : 0.0;
+    return {'label': label, 'fullLabel': e.key, 'percent': percent, 'total': e.value['total']!};
+  }).toList()
+    ..sort((a, b) => (b['total'] as int).compareTo(a['total'] as int));
+  return result.take(4).toList();
+});
+
+/// Last 5 recently updated work orders for the activity feed.
+final recentActivityProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final client = Supabase.instance.client;
+  final response = await client
+      .from('work_orders')
+      .select('client_name, service_type, status, updated_at, profiles!assigned_staff_id(name)')
+      .order('updated_at', ascending: false)
+      .limit(5);
+  return (response as List).map<Map<String, dynamic>>((order) {
+    final staffName = (order['profiles'] as Map?)?['name'] as String? ?? 'Staff';
+    final service = (order['service_type'] as String?) ?? 'task';
+    final clientName = (order['client_name'] as String?) ?? '';
+    final status = (order['status'] as String?) ?? '';
+    final action = clientName.isNotEmpty
+        ? 'updated "$service" for $clientName → $status'
+        : 'updated "$service" → $status';
+    return {'name': staffName, 'action': action, 'time': order['updated_at'] as String?};
+  }).toList();
 });
 
 final workOrderByIdProvider = FutureProvider.family<WorkOrder?, String>((ref, id) async {

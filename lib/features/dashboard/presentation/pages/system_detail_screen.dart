@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class SystemDetailScreen extends StatelessWidget {
   final String title;
@@ -24,15 +25,7 @@ class SystemDetailScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppTheme.darkBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: WorkqlyAppBar(title: title),
       body: SingleChildScrollView(
         child: ResponsiveLayout(
           maxWidth: 800,

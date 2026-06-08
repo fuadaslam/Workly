@@ -10,7 +10,7 @@ class ResponsiveLayout extends StatelessWidget {
     super.key,
     required this.child,
     this.maxWidth = 1000,
-    this.padding = const EdgeInsets.all(20),
+    this.padding = EdgeInsets.zero,
     this.center = true,
   });
 
@@ -22,7 +22,8 @@ class ResponsiveLayout extends StatelessWidget {
     );
 
     if (center) {
-      content = Center(
+      content = Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: content,
