@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/pages/login_screen.dart';
 import '../providers/onboarding_provider.dart';
@@ -19,7 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<OnboardingContent> _contents = [
     OnboardingContent(
       title: 'Effortless Management',
-      description: 'Streamline your service operations with our intuitive platform designed for Saudi excellence.',
+      description: 'Streamline your service operations with our intuitive platform designed for modern teams.',
       icon: Icons.auto_graph_rounded,
       color: AppTheme.emeraldGreen,
     ),
@@ -37,7 +38,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     OnboardingContent(
       title: 'Ready to Lead',
-      description: 'Join the most advanced service management tool in the Kingdom. Efficiency starts here.',
+      description: 'Join the most advanced service management platform. Efficiency starts here.',
       icon: Icons.verified_user_rounded,
     color: AppTheme.accentGold,
     ),
@@ -77,18 +78,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  color: _contents[index].color.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  _contents[index].icon,
-                                  size: 100,
-                                  color: _contents[index].color,
-                                ),
-                              ),
+                              index == 0
+                                  ? SvgPicture.asset(
+                                      'assets/images/worqly_logo.svg',
+                                      width: 160,
+                                      height: 160,
+                                    )
+                                  : Container(
+                                      padding: const EdgeInsets.all(32),
+                                      decoration: BoxDecoration(
+                                        color: _contents[index].color.withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        _contents[index].icon,
+                                        size: 100,
+                                        color: _contents[index].color,
+                                      ),
+                                    ),
                               const SizedBox(height: 60),
                               Text(
                                 _contents[index].title,

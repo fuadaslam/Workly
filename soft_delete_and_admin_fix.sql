@@ -6,6 +6,10 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT t
 -- 2. Create an RPC to safely create an auth user from the admin dashboard
 -- This requires the 'service_role' or high privileges, so we use 'SECURITY DEFINER'.
 -- WARNING: Only expose this if you have proper RLS/checks!
+
+-- First, drop any potentially conflicting overloaded versions (e.g. if office was previously TEXT)
+DROP FUNCTION IF EXISTS public.create_user_admin(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+
 CREATE OR REPLACE FUNCTION public.create_user_admin(
     new_email TEXT,
     new_password TEXT,
@@ -37,7 +41,7 @@ BEGIN
         crypt(new_password, gen_salt('bf')),
         now(),
         '{"provider":"email","providers":["email"]}',
-        format('{"full_name":"%s"}', full_name)::jsonb,
+        jsonb_build_object('full_name', full_name),
         now(),
         now(),
         '',
@@ -53,7 +57,7 @@ BEGIN
     
     UPDATE public.profiles
     SET 
-        role = user_role,
+        role = user_role::public.app_role,
         phone_number = phone,
         office_id = office,
         name = full_name

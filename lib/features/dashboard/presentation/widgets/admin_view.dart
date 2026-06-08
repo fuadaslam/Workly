@@ -67,7 +67,6 @@ class _AdminViewState extends ConsumerState<AdminView> {
   Widget build(BuildContext context) {
     final workOrdersAsync = ref.watch(allWorkOrdersProvider);
     final staffAsync = ref.watch(staffProfilesProvider);
-    final currentLocale = ref.watch(localeProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
@@ -255,7 +254,7 @@ class _AdminViewState extends ConsumerState<AdminView> {
                 Expanded(child: Text(order.serviceType ?? 'General Service', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                   child: Text(order.status.name.toUpperCase(), style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ],

@@ -104,7 +104,7 @@ class ProfileView extends ConsumerWidget {
                             border: Border.all(color: AppTheme.emeraldGreen, width: 2),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -133,7 +133,7 @@ class ProfileView extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppTheme.emeraldGreen.withOpacity(0.1),
+                            color: AppTheme.emeraldGreen.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -209,11 +209,11 @@ class ProfileView extends ConsumerWidget {
                     onTap: () {
                       showAboutDialog(
                         context: context,
-                        applicationName: 'Saudi Service Manager',
+                        applicationName: 'Worqly',
                         applicationVersion: '1.0.0',
-                        applicationIcon: const Icon(Icons.settings, color: AppTheme.emeraldGreen, size: 40),
+                        applicationIcon: const Icon(Icons.work_rounded, color: AppTheme.emeraldGreen, size: 40),
                         children: [
-                          const Text('Dedicated to managing services efficiently in Saudi Arabia.'),
+                          const Text('Intelligent service management platform for modern teams, by xoviq Labs.'),
                         ],
                       );
                     },
@@ -276,7 +276,7 @@ class ProfileView extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -285,7 +285,7 @@ class ProfileView extends ConsumerWidget {
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppTheme.backgroundLight,
             shape: BoxShape.circle,
           ),

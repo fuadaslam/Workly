@@ -1,4 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum WorkStatus { pending, inProgress, completed }
 enum PriorityLevel { high, medium, low }
@@ -14,6 +13,9 @@ class WorkOrder {
   final String? assignedStaffName;
   final String? assignedOfficeId;
   final String? assignedOfficeName;
+  final String? agentId;
+  final String? agentName;
+  final double? agentFee;
   final PriorityLevel priority;
   final WorkStatus status;
   final DateTime? createdAt;
@@ -30,6 +32,9 @@ class WorkOrder {
     this.assignedStaffName,
     this.assignedOfficeId,
     this.assignedOfficeName,
+    this.agentId,
+    this.agentName,
+    this.agentFee,
     required this.priority,
     required this.status,
     this.createdAt,
@@ -48,6 +53,9 @@ class WorkOrder {
       assignedStaffName: json['profiles']?['name'],
       assignedOfficeId: json['assigned_office_id'],
       assignedOfficeName: json['offices']?['name'] ?? json['profiles']?['offices']?['name'],
+      agentId: json['agent_id'],
+      agentName: json['agent_profiles']?['name'],
+      agentFee: json['agent_fee'] != null ? (json['agent_fee'] as num).toDouble() : null,
       priority: _parsePriority(json['priority']),
       status: _parseStatus(json['status']),
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
@@ -87,6 +95,8 @@ class WorkOrder {
       'service_type': serviceType,
       'assigned_staff_id': assignedStaffId,
       'assigned_office_id': assignedOfficeId,
+      'agent_id': agentId,
+      'agent_fee': agentFee,
       'priority': priority.name,
       'status': status.name,
       'created_at': createdAt?.toIso8601String(),

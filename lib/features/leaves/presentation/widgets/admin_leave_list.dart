@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/leave_request.dart';
 import '../providers/leave_provider.dart';
-import '../../../../core/widgets/responsive_layout.dart';
 
 class AdminLeaveList extends ConsumerStatefulWidget {
   const AdminLeaveList({super.key});
@@ -56,6 +55,7 @@ class _AdminLeaveListState extends ConsumerState<AdminLeaveList> {
                   ),
                 )
               : RefreshIndicator(
+                  color: const Color(0xFF0D1B2E),
                   onRefresh: () => ref.read(adminLeaveProvider.notifier).loadAllLeaves(),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
@@ -109,9 +109,9 @@ class _LeaveRequestCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   backgroundColor: AppTheme.emeraldLight,
-                  child: const Icon(Icons.person, color: AppTheme.emeraldGreen),
+                  child: Icon(Icons.person, color: AppTheme.emeraldGreen),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -263,7 +263,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

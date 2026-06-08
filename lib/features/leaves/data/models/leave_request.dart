@@ -44,11 +44,11 @@ class LeaveRequest {
       userId: json['user_id'],
       userName: json['profiles']?['name'],
       type: _parseType(json['leave_type']),
-      startDate: DateTime.parse(json['start_date']),
-      endDate: DateTime.parse(json['end_date']),
+      startDate: json['start_date'] != null ? DateTime.parse(json['start_date'] as String) : DateTime.now(),
+      endDate: json['end_date'] != null ? DateTime.parse(json['end_date'] as String) : DateTime.now(),
       reason: json['reason'] ?? '',
       status: _parseStatus(json['status']),
-      requestedAt: DateTime.parse(json['created_at']),
+      requestedAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now(),
     );
   }
 

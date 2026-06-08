@@ -20,7 +20,7 @@ void main() {
     
     // Sign in to bypass RLS for testing
     await client.auth.signInWithPassword(
-      email: 'superadmin@example.com',
+      email: 'superadmin@system.com',
       password: '123456',
     );
     

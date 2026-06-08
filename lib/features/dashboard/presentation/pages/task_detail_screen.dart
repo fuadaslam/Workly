@@ -5,6 +5,9 @@ import '../../../../core/utils/contact_utils.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../core/widgets/premium_card.dart';
+import '../../../../core/widgets/app_section_header.dart';
+import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 
 class TaskDetailScreen extends ConsumerStatefulWidget {
   final String taskId;
@@ -29,12 +32,14 @@ class TaskDetailScreen extends ConsumerStatefulWidget {
 class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   late String _status;
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _agentFeeController = TextEditingController();
+  String? _selectedAgentId;
   bool _isSaving = false;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    // Normalize status string to match dropdown items (Capitalized)
     _status = _normalizeStatus(widget.initialStatus);
   }
 
@@ -46,175 +51,165 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     return 'Pending';
   }
   
-  // Mock Data for Documents
-  List<Map<String, dynamic>> _documents = [
-    {'title': 'Passport / جواز السفر', 'icon': Icons.book, 'color': Colors.blueGrey, 'verified': true},
-    {'title': 'CR / السجل التجاري', 'icon': Icons.article, 'color': Colors.brown, 'verified': true},
-    {'title': 'Medical / التقرير الطبي', 'icon': Icons.monitor_heart, 'color': Colors.teal, 'verified': false},
+  List<Map<String, dynamic>> _getDocuments(AppLocalizations l10n) => [
+    {'title': l10n.passport, 'icon': Icons.book, 'color': Colors.blueGrey, 'verified': true},
+    {'title': l10n.crNumber, 'icon': Icons.article, 'color': Colors.brown, 'verified': true},
+    {'title': l10n.medicalReport, 'icon': Icons.monitor_heart, 'color': Colors.teal, 'verified': false},
   ];
 
   Future<void> _updateTask() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isSaving = true);
     try {
       final repo = ref.read(workOrderRepositoryProvider);
-      // Map display status back to API status
-      // 'Pending', 'In Progress', 'Completed'
       String apiStatus = 'Pending';
       if (_status == 'In Progress') apiStatus = 'In-Progress';
       if (_status == 'Completed') apiStatus = 'Completed';
       
       await repo.updateWorkOrderStatus(widget.taskId, apiStatus);
       
-      // Save Daily Update Note if provided
+      if (_selectedAgentId != null || _agentFeeController.text.isNotEmpty) {
+        final fee = double.tryParse(_agentFeeController.text);
+        await repo.updateWorkOrderAgent(widget.taskId, agentId: _selectedAgentId, agentFee: fee);
+      }
+      
       if (_notesController.text.isNotEmpty) {
         await repo.addTaskHistory(
           widget.taskId,
-          'Manual Update / تحديث يدوي',
+          'Manual Update',
           description: _notesController.text,
           status: apiStatus,
         );
       } else {
-        // Log status change even if no note
         await repo.addTaskHistory(
           widget.taskId,
-          'Status Changed to $_status / تم تغيير الحالة إلى $_status',
+          'Status Changed to $_status',
           status: apiStatus,
         );
       }
       
-      ref.invalidate(myWorkOrdersProvider); // Refresh list
-      ref.invalidate(taskHistoryProvider(widget.taskId)); // Refresh timeline
+      ref.invalidate(myWorkOrdersProvider);
+      ref.invalidate(taskHistoryProvider(widget.taskId));
       
       if (mounted) {
         _notesController.clear();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Task Updated to $_status')),
+          SnackBar(content: Text(l10n.taskUpdated(_getStatusLabel(_status, l10n)))),
         );
-        // We don't necessarily need to pop if we want to see the timeline update
-        // Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l10n.error}: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
   
-  void _deleteDocument(int index) {
-    setState(() {
-      _documents.removeAt(index);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document Removed')));
+  void _deleteDocument(int index, AppLocalizations l10n) {
+    // Mock delete logic
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.documentRemoved)));
   }
 
-  void _addDocumentMock() {
-    setState(() {
-      _documents.add({
-        'title': 'New Doc ${DateTime.now().second}',
-        'icon': Icons.description,
-        'color': Colors.orangeAccent,
-        'verified': false
-      });
-    });
+  void _addDocumentMock(AppLocalizations l10n) {
+     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.scannerInitializing)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
+    // Initialize data once
+    ref.listen(workOrderByIdProvider(widget.taskId), (previous, next) {
+      if (next.hasValue && next.value != null && !_initialized) {
+        final order = next.value!;
+        setState(() {
+          _selectedAgentId = order.agentId;
+          if (order.agentFee != null) {
+            _agentFeeController.text = order.agentFee!.toString();
+          }
+          _initialized = true;
+        });
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        backgroundColor: AppTheme.backgroundLight,
+        backgroundColor: Colors.white,
         centerTitle: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppTheme.darkBlue),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Task Details / تفاصيل المهمة',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            Text(
+              l10n.taskDetails,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.darkBlue),
             ),
             Text(
-              '#${widget.taskId.length > 8 ? widget.taskId.substring(0, 8) : widget.taskId}...',
+              '#${widget.taskId.length > 8 ? widget.taskId.substring(0, 8) : widget.taskId}',
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.phone_outlined, color: Colors.blue),
-              onPressed: () => ContactUtils.callNumber(widget.clientPhone),
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.message_outlined, color: Colors.green),
-              onPressed: () {
-                final message = "Update on Task #${widget.taskId.substring(0, 8)}: Status is now $_status.";
-                ContactUtils.openWhatsApp(widget.clientPhone, message: message);
-              },
-            ),
-          )
+          _buildActionButton(Icons.phone_outlined, Colors.blue, 
+            () => ContactUtils.callNumber(widget.clientPhone)),
+          _buildActionButton(Icons.message_outlined, Colors.green, () {
+            final message = "Update on Task #${widget.taskId.substring(0, 8)}: Status is now $_status.";
+            ContactUtils.openWhatsApp(widget.clientPhone, message: message);
+          }),
+          const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        child: ResponsiveLayout(
+      body: RefreshIndicator(
+        color: const Color(0xFF0D1B2E),
+        onRefresh: () async {
+          ref.invalidate(taskHistoryProvider(widget.taskId));
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ResponsiveLayout(
           maxWidth: 1000,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionHeader('General Information / معلومات عامة'),
-              const SizedBox(height: 12),
-              _buildInfoCard(),
+              const SizedBox(height: 20),
+              AppSectionHeader(title: l10n.generalInfo),
+              const SizedBox(height: 8),
+              _buildInfoCard(l10n),
               const SizedBox(height: 24),
               
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildSectionHeader('Documents / المستندات'),
-                  TextButton.icon(
-                    onPressed: _addDocumentMock,
-                    icon: const Icon(Icons.add_circle, size: 16),
-                    label: const Text('Add / إضافة'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.emeraldGreen,
-                      textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
+              AppSectionHeader(
+                title: l10n.documents,
+                actionLabel: l10n.uploadNew,
+                onActionPressed: () => _addDocumentMock(l10n),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
-                  return _buildDocumentsGrid(crossAxisCount);
+                  return _buildDocumentsGrid(crossAxisCount, l10n);
                 },
               ),
               
               const SizedBox(height: 24),
-              _buildSectionHeader('Timeline / الخط الزمني'),
-              const SizedBox(height: 12),
-              _buildTimeline(),
+              AppSectionHeader(title: l10n.transferToAgent),
+              const SizedBox(height: 8),
+              _buildAgentTransferSection(l10n),
 
               const SizedBox(height: 24),
-              _buildSectionHeader('Daily Update Notes / تحديث يومي'),
-              const SizedBox(height: 12),
-              _buildNotesInput(),
+              AppSectionHeader(title: l10n.timeline),
+              const SizedBox(height: 8),
+              _buildTimeline(l10n),
+
+              const SizedBox(height: 24),
+              AppSectionHeader(title: l10n.dailyUpdateNotes),
+              const SizedBox(height: 8),
+              _buildNotesInput(l10n),
               
               const SizedBox(height: 30),
               SizedBox(
@@ -230,10 +225,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                      : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.save, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text('Save Changes / حفظ التغييرات', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    children: [
+                      const Icon(Icons.save, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(l10n.saveChanges, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -243,43 +238,38 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: AppTheme.darkBlue,
       ),
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildActionButton(IconData icon, Color color, VoidCallback onPressed) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
+        color: color.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
       ),
+      child: IconButton(
+        icon: Icon(icon, color: color, size: 20),
+        onPressed: onPressed,
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(AppLocalizations l10n) {
+    return PremiumCard(
       child: Column(
         children: [
-          _buildInfoRow('Case ID / رقم القضية', '#${widget.taskId}', false),
+          _buildInfoRow(l10n.caseId, '#${widget.taskId}', false),
           const Divider(height: 24),
-          _buildInfoRow('Client / العميل', widget.clientName, false),
+          _buildInfoRow(l10n.clientName, widget.clientName, false),
           const Divider(height: 24),
-          _buildInfoRow('Priority / الأولوية', widget.priority.toUpperCase(), true),
+          _buildInfoRow(l10n.priority, _getPriorityLabel(widget.priority, l10n), true),
           const Divider(height: 24),
-          // Status Dropdown
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Status / الحالة', style: TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.w500)),
+              Text(l10n.status, style: const TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.w500)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
@@ -290,7 +280,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   child: DropdownButton<String>(
                     value: _status,
                     items: ['Pending', 'In Progress', 'Completed'].map((e) {
-                      return DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)));
+                      return DropdownMenuItem(
+                        value: e, 
+                        child: Text(_getStatusLabel(e, l10n), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))
+                      );
                     }).toList(),
                     onChanged: (v) => setState(() => _status = v!),
                   ),
@@ -303,6 +296,22 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     );
   }
 
+  String _getPriorityLabel(String priority, AppLocalizations l10n) {
+    final p = priority.toLowerCase();
+    if (p == 'high') return l10n.high;
+    if (p == 'medium') return l10n.medium;
+    if (p == 'low') return l10n.low;
+    return priority;
+  }
+
+  String _getStatusLabel(String status, AppLocalizations l10n) {
+    final s = status.toLowerCase();
+    if (s == 'pending') return l10n.pending;
+    if (s == 'in progress') return l10n.inProgress;
+    if (s == 'completed') return l10n.completed;
+    return status;
+  }
+
   Widget _buildInfoRow(String label, String value, bool isBadge) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -313,7 +322,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: AppTheme.accentGold.withOpacity(0.2),
+              color: AppTheme.accentGold.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -334,7 +343,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     );
   }
 
-  Widget _buildDocumentsGrid(int crossAxisCount) {
+  Widget _buildDocumentsGrid(int crossAxisCount, AppLocalizations l10n) {
+    final docs = _getDocuments(l10n);
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -344,14 +354,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         mainAxisSpacing: 12,
         childAspectRatio: 1.1,
       ),
-      itemCount: _documents.length + 1,
+      itemCount: docs.length,
       itemBuilder: (context, index) {
-        if (index == _documents.length) {
-          return GestureDetector(onTap: _addDocumentMock, child: _buildUploadItem());
-        }
-        final doc = _documents[index];
+        final doc = docs[index];
         return GestureDetector(
-          onLongPress: () => _deleteDocument(index),
+          onLongPress: () => _deleteDocument(index, l10n),
           child: _buildDocItem(doc['title'], doc['icon'], doc['verified'], doc['color']),
         );
       },
@@ -359,98 +366,66 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   }
 
   Widget _buildDocItem(String title, IconData icon, bool verified, Color color) {
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          height: double.infinity, 
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [color, color.withOpacity(0.6)],
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.white, size: 40),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  title, 
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return PremiumCard(
+      padding: EdgeInsets.zero,
+      color: color,
+      child: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            height: double.infinity, 
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [color, color.withValues(alpha: 0.6)],
               ),
-            ],
-          ),
-        ),
-        if (verified)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
-              child: const Icon(Icons.check, color: Colors.white, size: 14),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: Colors.white, size: 40),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    title, 
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
-        if (!verified)
-           Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
-              child: const Icon(Icons.hourglass_top, color: Colors.white, size: 14),
+          if (verified)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                child: const Icon(Icons.check, color: Colors.white, size: 14),
+              ),
             ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildUploadItem() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.upload_file, color: Colors.grey, size: 30),
-          SizedBox(height: 8),
-          Text('UPLOAD NEW / رفع ملف', style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildTimeline() {
+  Widget _buildTimeline(AppLocalizations l10n) {
     final historyAsync = ref.watch(taskHistoryProvider(widget.taskId));
 
     return historyAsync.when(
       data: (history) {
         if (history.isEmpty) {
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: const Center(
+          return PremiumCard(
+            child: Center(
               child: Text(
-                'No history recorded yet / لا يوجد سجل مسجل بعد',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+                l10n.noHistoryFound,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ),
           );
@@ -463,7 +438,6 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             final isLast = index == history.length - 1;
             final isFirst = index == 0;
 
-            // Format date: Today, Yesterday, or Mar 15, 2024
             String dateStr;
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
@@ -471,16 +445,16 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             final itemDate = DateTime(item.createdAt.year, item.createdAt.month, item.createdAt.day);
 
             if (itemDate == today) {
-              dateStr = 'Today / اليوم';
+              dateStr = l10n.today;
             } else if (itemDate == yesterday) {
-              dateStr = 'Yesterday / أمس';
+              dateStr = l10n.yesterday;
             } else {
               dateStr = DateFormat('MMM dd, yyyy').format(item.createdAt);
             }
 
             return _buildTimelineItem(
               title: item.title,
-              subtitle: item.description ?? 'No details provided / لا توجد تفاصيل',
+              subtitle: item.description ?? '',
               date: dateStr,
               isActive: isFirst,
               isLast: isLast,
@@ -489,7 +463,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => Center(child: Text('Error loading history: $e')),
+      error: (e, s) => Center(child: Text('${l10n.errorLoadingHistory}: $e')),
     );
   }
 
@@ -510,9 +484,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: isActive ? Colors.green : Colors.grey.shade300,
+                  color: isActive ? AppTheme.emeraldGreen : Colors.grey.shade300,
                   shape: BoxShape.circle,
-                  border: isActive ? Border.all(color: Colors.green.withOpacity(0.3), width: 4) : null,
+                  border: isActive ? Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.3), width: 4) : null,
                 ),
               ),
               if (!isLast)
@@ -540,15 +514,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.bold, 
                             fontSize: 14,
-                            color: isActive ? Colors.black : Colors.grey[700]
+                            color: isActive ? AppTheme.darkBlue : Colors.grey[700]
                           ),
                         ),
                       ),
                       Text(date, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  ],
                 ],
               ),
             ),
@@ -558,21 +534,67 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     );
   }
 
-  Widget _buildNotesInput() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+  Widget _buildAgentTransferSection(AppLocalizations l10n) {
+    final agentsAsync = ref.watch(filteredAgentsProvider);
+    
+    return PremiumCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.transfer_within_a_station, color: AppTheme.emeraldGreen, size: 20),
+              const SizedBox(width: 8),
+              Text(l10n.mentionAgent, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          agentsAsync.when(
+            data: (agents) => DropdownButtonFormField<String?>(
+              value: _selectedAgentId,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.agents,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('No Agent')),
+                ...agents.map((a) => DropdownMenuItem(
+                  value: a['id'] as String,
+                  child: Text('${a['name'] ?? 'Unknown'} (${a['phone_number'] ?? 'No Phone'})'),
+                )),
+              ],
+              onChanged: (v) => setState(() => _selectedAgentId = v),
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Text('${l10n.error}: $e'),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _agentFeeController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: l10n.agentFee,
+              prefixIcon: const Icon(Icons.monetization_on_outlined),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              hintText: '0.00',
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildNotesInput(AppLocalizations l10n) {
+    return PremiumCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextField(
         controller: _notesController,
         maxLines: 4,
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           border: InputBorder.none,
-          hintText: 'Enter today\'s status updates here... / أدخل تحديثات الحالة اليومية هنا...',
-          hintStyle: TextStyle(fontSize: 12, color: Colors.grey),
+          hintText: l10n.notesHint,
+          hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ),
     );

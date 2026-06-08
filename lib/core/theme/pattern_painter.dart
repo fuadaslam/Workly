@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:service_manager_app/core/theme/app_theme.dart';
 
 class MashrabiyaPatternPainter extends CustomPainter {
   final Color color;

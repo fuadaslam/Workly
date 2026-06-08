@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/contact_utils.dart';
 import '../providers/dashboard_provider.dart';
 import '../../domain/models/work_order.dart';
 import 'task_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../core/widgets/premium_card.dart';
+import '../../../../core/widgets/app_section_header.dart';
 
 class ClientDetailScreen extends ConsumerStatefulWidget {
   final String clientName;
@@ -35,6 +37,7 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final workOrdersAsync = ref.watch(allWorkOrdersProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
@@ -45,13 +48,19 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
           icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppTheme.darkBlue),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Client Details',
-          style: TextStyle(color: AppTheme.darkBlue, fontWeight: FontWeight.bold),
+        title: Text(
+          l10n.clientDetails,
+          style: const TextStyle(color: AppTheme.darkBlue, fontWeight: FontWeight.bold),
         ),
       ),
-      body: SingleChildScrollView(
-        child: ResponsiveLayout(
+      body: RefreshIndicator(
+        color: const Color(0xFF0D1B2E),
+        onRefresh: () async {
+          ref.invalidate(allWorkOrdersProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ResponsiveLayout(
           maxWidth: 1000,
           padding: EdgeInsets.zero,
           child: Column(
@@ -64,35 +73,30 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('CONTACT INFO'),
-                    const SizedBox(height: 12),
-                    _buildInfoCard(),
+                    AppSectionHeader(title: l10n.contactInfo),
+                    const SizedBox(height: 8),
+                    _buildInfoCard(l10n),
                     const SizedBox(height: 24),
                     
-                    _buildSectionHeader('PROJECT HISTORY / سجل المشاريع'),
-                    const SizedBox(height: 12),
+                    AppSectionHeader(title: l10n.projectHistory),
+                    const SizedBox(height: 8),
                     workOrdersAsync.when(
                       data: (orders) {
                         final clientOrders = orders.where((o) => o.clientName == widget.clientName).toList();
-                        return _buildWorkHistoryList(clientOrders);
+                        return _buildWorkHistoryList(clientOrders, l10n);
                       },
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Text('Error: $e'),
+                      error: (e, _) => Text('${l10n.error}: $e'),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
+        ),
       ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
     );
   }
 
@@ -103,13 +107,16 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
       color: Colors.white,
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.emeraldLight.withOpacity(0.5),
-              shape: BoxShape.circle,
+          Hero(
+            tag: 'client_${widget.clientName}',
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.emeraldLight.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person, size: 40, color: AppTheme.emeraldGreen),
             ),
-            child: const Icon(Icons.person, size: 40, color: AppTheme.emeraldGreen),
           ),
           const SizedBox(height: 15),
           Text(
@@ -145,23 +152,18 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
     );
   }
 
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
+  Widget _buildInfoCard(AppLocalizations l10n) {
+    return PremiumCard(
       child: Column(
         children: [
-          _buildDetailRow(Icons.person_outline, 'Client Name', widget.clientName),
+          _buildDetailRow(Icons.person_outline, l10n.clientName, widget.clientName, l10n),
           if (widget.clientPhone != null) ...[
             const Divider(height: 30),
             _buildDetailRow(
               Icons.phone_outlined, 
-              'Phone Number', 
+              l10n.phoneNumber, 
               widget.clientPhone!, 
+              l10n,
               onCall: () => _callNumber(widget.clientPhone),
               onWhatsApp: () => _openWhatsApp(widget.clientPhone),
             ),
@@ -171,7 +173,7 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, {VoidCallback? onCall, VoidCallback? onWhatsApp}) {
+  Widget _buildDetailRow(IconData icon, String label, String value, AppLocalizations l10n, {VoidCallback? onCall, VoidCallback? onWhatsApp}) {
     return Row(
       children: [
         Container(
@@ -194,30 +196,30 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
            IconButton(
              onPressed: onWhatsApp,
              icon: const Icon(Icons.message, size: 18, color: Colors.green),
+             tooltip: l10n.whatsapp,
            ),
         if (onCall != null)
            IconButton(
              onPressed: onCall,
              icon: const Icon(Icons.phone_outlined, size: 18, color: AppTheme.emeraldGreen),
+             tooltip: l10n.call,
            ),
       ],
     );
   }
 
-  Widget _buildWorkHistoryList(List<WorkOrder> orders) {
+  Widget _buildWorkHistoryList(List<WorkOrder> orders, AppLocalizations l10n) {
     if (orders.isEmpty) {
-      return const Center(child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Text('No work history found.', style: TextStyle(color: Colors.grey)),
-      ));
+      return PremiumCard(
+        child: Center(child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Text(l10n.noWorkHistory, style: const TextStyle(color: Colors.grey)),
+        )),
+      );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
+    return PremiumCard(
+      padding: EdgeInsets.zero,
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -238,8 +240,13 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
                   )),
                 );
             },
-            title: Text(order.serviceType ?? 'General Service', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            subtitle: Text('Status: ${order.status.name.toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            shape: index == 0 
+              ? const RoundedRectangleBorder(borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)))
+              : index == orders.length - 1
+                ? const RoundedRectangleBorder(borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)))
+                : null,
+            title: Text(order.serviceType ?? l10n.generalService, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            subtitle: Text('${l10n.status}: ${order.status.name.toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
             trailing: const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
           );
         },

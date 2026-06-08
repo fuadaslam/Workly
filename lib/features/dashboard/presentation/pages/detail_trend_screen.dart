@@ -38,7 +38,7 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.emeraldGreen),
             onPressed: () {
-               ref.refresh(staffPerformanceProvider);
+               ref.invalidate(staffPerformanceProvider);
             },
           ),
         ],
@@ -83,7 +83,7 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -125,7 +125,7 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -172,7 +172,7 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.emeraldGreen.withOpacity(0.1),
+                  color: AppTheme.emeraldGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.show_chart, color: AppTheme.emeraldGreen),
@@ -245,8 +245,8 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
                       show: true,
                       gradient: LinearGradient(
                         colors: [
-                          AppTheme.emeraldGreen.withOpacity(0.2),
-                          AppTheme.emeraldGreen.withOpacity(0.0),
+                          AppTheme.emeraldGreen.withValues(alpha: 0.2),
+                          AppTheme.emeraldGreen.withValues(alpha: 0.0),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -273,7 +273,7 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
           ),
           child: Row(
             children: [
@@ -313,7 +313,7 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),

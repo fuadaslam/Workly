@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand Colors matching the uploaded design
-  static const Color emeraldGreen = Color(0xFF0E693F); // Deep Saudi Green
-  static const Color emeraldLight = Color(0xFFE6F4EA); // Light green for backgrounds
+  // Brand Colors — Worqly by xoviq Labs
+  static const Color emeraldGreen = Color(0xFF0D1B2E); // Worqly Navy
+  static const Color emeraldLight = Color(0xFFEEF2F7); // Light navy tint
   
   static const Color accentGold = Color(0xFFD4AF37); // Premium Gold
   static const Color accentGoldLight = Color(0xFFFEF9C3);
@@ -27,7 +27,6 @@ class AppTheme {
         primary: emeraldGreen,
         secondary: accentGold,
         surface: surfaceWhite,
-        background: backgroundLight,
         onPrimary: Colors.white,
         onSurface: darkBlue,
         error: errorRed,
@@ -75,12 +74,12 @@ class AppTheme {
       ),
       
       // Chip Theme
-      chipTheme: ChipThemeData(
+      chipTheme: const ChipThemeData(
         backgroundColor: emeraldLight,
-        labelStyle: const TextStyle(color: emeraldGreen, fontWeight: FontWeight.w600),
-        shape: const StadiumBorder(),
+        labelStyle: TextStyle(color: emeraldGreen, fontWeight: FontWeight.w600),
+        shape: StadiumBorder(),
         side: BorderSide.none,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       
       // FAB Theme
@@ -142,6 +141,105 @@ class AppTheme {
       dividerTheme: DividerThemeData(
         color: Colors.grey.shade200,
         thickness: 1,
+      ),
+    );
+  }
+
+  static ThemeData get darkTheme {
+    const darkSurface = Color(0xFF1E2530);
+    const darkBackground = Color(0xFF141920);
+    const darkCard = Color(0xFF252D3A);
+    const darkBorder = Color(0xFF2E3847);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: const ColorScheme.dark(
+        primary: accentGold,
+        secondary: accentGold,
+        surface: darkCard,
+        onPrimary: Colors.black,
+        onSurface: Colors.white,
+        error: errorRed,
+      ),
+      scaffoldBackgroundColor: darkBackground,
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme).apply(
+        bodyColor: Colors.white,
+        displayColor: accentGold,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: darkSurface,
+        foregroundColor: accentGold,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: accentGold),
+      ),
+      cardTheme: CardThemeData(
+        color: darkCard,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: darkBorder, width: 1),
+        ),
+      ),
+      chipTheme: const ChipThemeData(
+        backgroundColor: darkBorder,
+        labelStyle: TextStyle(color: accentGold, fontWeight: FontWeight.w600),
+        shape: StadiumBorder(),
+        side: BorderSide.none,
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: accentGold,
+        foregroundColor: Colors.black,
+        elevation: 4,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkCard,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: darkBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: darkBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: accentGold, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        hintStyle: const TextStyle(color: Colors.grey),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accentGold,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: accentGold,
+          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+        ),
+      ),
+      iconTheme: const IconThemeData(color: accentGold, size: 24),
+      dividerTheme: const DividerThemeData(color: darkBorder, thickness: 1),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: darkSurface,
+        selectedItemColor: accentGold,
+        unselectedItemColor: Colors.grey,
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: accentGold,
+        unselectedLabelColor: Colors.grey,
+        indicatorColor: accentGold,
       ),
     );
   }

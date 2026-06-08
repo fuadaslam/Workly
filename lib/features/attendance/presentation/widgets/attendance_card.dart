@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/theme/pattern_painter.dart';
 import '../providers/attendance_provider.dart';
 
 class AttendanceCard extends ConsumerWidget {
@@ -15,13 +14,13 @@ class AttendanceCard extends ConsumerWidget {
 
     return Card(
       elevation: 8,
-      shadowColor: AppTheme.emeraldGreen.withOpacity(0.2),
+      shadowColor: AppTheme.emeraldGreen.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: AppTheme.emeraldGreen.withOpacity(0.1), width: 1),
+          border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.1), width: 1),
         ),
         child: Stack(
           children: [
@@ -33,7 +32,7 @@ class AttendanceCard extends ConsumerWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: AppTheme.emeraldGreen.withOpacity(0.05),
+                  color: AppTheme.emeraldGreen.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -45,7 +44,7 @@ class AttendanceCard extends ConsumerWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: AppTheme.accentGold.withOpacity(0.05),
+                  color: AppTheme.accentGold.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -90,7 +89,7 @@ class AttendanceCard extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -112,10 +111,10 @@ class AttendanceCard extends ConsumerWidget {
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                             decoration: BoxDecoration(
-                              color: isCheckedIn ? AppTheme.emeraldGreen.withOpacity(0.05) : const Color(0xFFFFF7ED), // Orange tint for warning
+                              color: isCheckedIn ? AppTheme.emeraldGreen.withValues(alpha: 0.05) : const Color(0xFFFFF7ED), // Orange tint for warning
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: isCheckedIn ? AppTheme.emeraldGreen.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                                color: isCheckedIn ? AppTheme.emeraldGreen.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
                               ),
                             ),
                             child: Row(
@@ -139,7 +138,7 @@ class AttendanceCard extends ConsumerWidget {
                                       if (isCheckedIn)
                                         Text(
                                           'Since ${DateFormat('hh:mm a').format(DateTime.parse(session['check_in_time']).toLocal())}',
-                                          style: TextStyle(fontSize: 12, color: AppTheme.emeraldGreen.withOpacity(0.8)),
+                                          style: TextStyle(fontSize: 12, color: AppTheme.emeraldGreen.withValues(alpha: 0.8)),
                                         )
                                       else
                                         Text(
@@ -171,7 +170,7 @@ class AttendanceCard extends ConsumerWidget {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isCheckedIn ? AppTheme.errorRed : AppTheme.emeraldGreen,
                                 elevation: isCheckedIn ? 0 : 4,
-                                shadowColor: AppTheme.emeraldGreen.withOpacity(0.4),
+                                shadowColor: AppTheme.emeraldGreen.withValues(alpha: 0.4),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
                               child: controllerState.isLoading 

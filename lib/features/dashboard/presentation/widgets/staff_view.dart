@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/contact_utils.dart';
 import '../../../../features/attendance/presentation/widgets/attendance_card.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -15,6 +14,7 @@ import 'profile_view.dart';
 import '../pages/notifications_screen.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../core/widgets/premium_card.dart';
 import '../../../../features/leaves/presentation/widgets/leave_widgets.dart';
 import '../../../../features/leaves/presentation/providers/leave_provider.dart';
 
@@ -30,6 +30,7 @@ class _StaffViewState extends State<StaffView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 800) {
@@ -59,26 +60,26 @@ class _StaffViewState extends State<StaffView> {
                        child: const Icon(Icons.add, color: Colors.white),
                     ),
                   ),
-                  destinations: const [
+                  destinations: [
                     NavigationRailDestination(
-                      icon: Icon(Icons.home_outlined),
-                      selectedIcon: Icon(Icons.home, color: AppTheme.emeraldGreen),
-                      label: Text('Home'),
+                      icon: const Icon(Icons.home_outlined),
+                      selectedIcon: const Icon(Icons.home, color: AppTheme.emeraldGreen),
+                      label: Text(l10n.home),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.calendar_month_outlined),
-                      selectedIcon: Icon(Icons.calendar_month, color: AppTheme.emeraldGreen),
-                      label: Text('Leaves'),
+                      icon: const Icon(Icons.calendar_month_outlined),
+                      selectedIcon: const Icon(Icons.calendar_month, color: AppTheme.emeraldGreen),
+                      label: Text(l10n.leaves),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.assignment_outlined),
-                      selectedIcon: Icon(Icons.assignment, color: AppTheme.emeraldGreen),
-                      label: Text('Tasks'),
+                      icon: const Icon(Icons.assignment_outlined),
+                      selectedIcon: const Icon(Icons.assignment, color: AppTheme.emeraldGreen),
+                      label: Text(l10n.tasks),
                     ),
                     NavigationRailDestination(
-                      icon: Icon(Icons.person_outline),
-                      selectedIcon: Icon(Icons.person, color: AppTheme.emeraldGreen),
-                      label: Text('Profile'),
+                      icon: const Icon(Icons.person_outline),
+                      selectedIcon: const Icon(Icons.person, color: AppTheme.emeraldGreen),
+                      label: Text(l10n.profile),
                     ),
                   ],
                 ),
@@ -118,7 +119,7 @@ class _StaffViewState extends State<StaffView> {
               decoration: BoxDecoration(
                 boxShadow: [
                    BoxShadow(
-                     color: Colors.black.withOpacity(0.05),
+                     color: Colors.black.withValues(alpha: 0.05),
                      blurRadius: 10,
                      offset: const Offset(0, -5),
                    ),
@@ -135,11 +136,11 @@ class _StaffViewState extends State<StaffView> {
                   setState(() => _tabIndex = idx);
                 },
                 destinations: [
-                  _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0),
-                  _buildNavItem(Icons.calendar_month_outlined, Icons.calendar_month, 'Leaves', 1),
+                  _buildNavItem(Icons.home_outlined, Icons.home, l10n.home, 0),
+                  _buildNavItem(Icons.calendar_month_outlined, Icons.calendar_month, l10n.leaves, 1),
                   const SizedBox(width: 48), // Spacer for FAB
-                  _buildNavItem(Icons.assignment_outlined, Icons.assignment, 'Tasks', 3),
-                  _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 4),
+                  _buildNavItem(Icons.assignment_outlined, Icons.assignment, l10n.tasks, 3),
+                  _buildNavItem(Icons.person_outline, Icons.person, l10n.profile, 4),
                 ],
               ),
             ),
@@ -150,7 +151,6 @@ class _StaffViewState extends State<StaffView> {
   }
   
   Widget _buildNavItem(IconData unselected, IconData selected, String label, int index) {
-    final isSelected = _tabIndex == index;
     return NavigationDestination(
       icon: Icon(unselected, color: Colors.grey),
       selectedIcon: Icon(selected, color: AppTheme.emeraldGreen),
@@ -205,7 +205,9 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
   Future<void> _createTask(WidgetRef ref) async {
     if (_clientController.text.isEmpty || 
         _phoneController.text.isEmpty ||
-        _serviceController.text.isEmpty) return;
+        _serviceController.text.isEmpty) {
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -235,6 +237,7 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Consumer(
       builder: (context, ref, child) {
         return Padding(
@@ -243,31 +246,31 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Create New Task / إنشاء مهمة', style: Theme.of(context).textTheme.titleLarge),
+              Text(l10n.createNewTask, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
               const SizedBox(height: 20),
               TextField(
                 controller: _clientController,
-                decoration: const InputDecoration(labelText: 'Client Name / اسم العميل', prefixIcon: Icon(Icons.person)),
+                decoration: InputDecoration(labelText: l10n.clientName, prefixIcon: const Icon(Icons.person)),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Client Phone / رقم الهاتف', prefixIcon: Icon(Icons.phone)),
+                decoration: InputDecoration(labelText: l10n.clientPhone, prefixIcon: const Icon(Icons.phone)),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: _serviceController,
-                decoration: const InputDecoration(labelText: 'Service Type / نوع الخدمة', prefixIcon: Icon(Icons.work)),
+                decoration: InputDecoration(labelText: l10n.serviceType, prefixIcon: const Icon(Icons.work)),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _priority,
-                decoration: const InputDecoration(labelText: 'Priority / الأولوية', prefixIcon: Icon(Icons.flag)),
-                items: const [
-                  DropdownMenuItem(value: 'High', child: Text('High')),
-                  DropdownMenuItem(value: 'Medium', child: Text('Medium')),
-                  DropdownMenuItem(value: 'Low', child: Text('Low')),
+                decoration: InputDecoration(labelText: l10n.priority, prefixIcon: const Icon(Icons.flag)),
+                items: [
+                  DropdownMenuItem(value: 'High', child: Text(l10n.high)),
+                  DropdownMenuItem(value: 'Medium', child: Text(l10n.medium)),
+                  DropdownMenuItem(value: 'Low', child: Text(l10n.low)),
                 ],
                 onChanged: (v) => setState(() => _priority = v!),
               ),
@@ -278,8 +281,9 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
                   onPressed: _isLoading ? null : () => _createTask(ref),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.emeraldGreen,
-                      padding: const EdgeInsets.symmetric(vertical: 16)),
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Create Task'),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(l10n.createNewTask),
                 ),
               ),
             ],
@@ -299,13 +303,21 @@ class _HomeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final profileAsync = ref.watch(profileProvider);
     final userName = profileAsync.value?.name ?? 'Staff Member';
     final userRole = profileAsync.value?.role.name.toUpperCase().replaceAll('_', ' ') ?? 'FIELD OPERATIONS SPECIALIST';
 
     final statsAsync = ref.watch(dashboardStatsProvider);
 
-    return SingleChildScrollView(
+    return RefreshIndicator(
+      color: const Color(0xFF0D1B2E),
+      onRefresh: () async {
+        ref.invalidate(dashboardStatsProvider);
+        ref.invalidate(leaveProvider);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
       child: ResponsiveLayout(
         maxWidth: 1000,
         padding: EdgeInsets.zero,
@@ -319,7 +331,7 @@ class _HomeTab extends ConsumerWidget {
                      child: ClipRRect(
                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
                        child: CustomPaint(
-                         painter: MashrabiyaPatternPainter(color: Colors.white.withOpacity(0.05)),
+                         painter: MashrabiyaPatternPainter(color: Colors.white.withValues(alpha: 0.05)),
                        ),
                      ),
                    ),
@@ -355,7 +367,7 @@ class _HomeTab extends ConsumerWidget {
                          Text(
                            userRole,
                            style: TextStyle(
-                             color: Colors.white.withOpacity(0.8),
+                             color: Colors.white.withValues(alpha: 0.8),
                              fontSize: 10,
                              letterSpacing: 1.0,
                            ),
@@ -378,12 +390,24 @@ class _HomeTab extends ConsumerWidget {
                    ),
                    Row(
                      children: [
-                        IconButton(
-                          onPressed: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-                          }, 
-                          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                          style: IconButton.styleFrom(backgroundColor: Colors.white12),
+                        Consumer(
+                          builder: (ctx, cRef, _) {
+                            final pendingCount = cRef.watch(myWorkOrdersProvider).when(
+                              data: (orders) => orders.where((o) => o.status == WorkStatus.pending).length,
+                              loading: () => 0,
+                              error: (_, __) => 0,
+                            );
+                            return Badge(
+                              isLabelVisible: pendingCount > 0,
+                              label: Text('$pendingCount', style: const TextStyle(fontSize: 10)),
+                              backgroundColor: AppTheme.errorRed,
+                              child: IconButton(
+                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                                style: IconButton.styleFrom(backgroundColor: Colors.white12),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(width: 8),
                         IconButton(
@@ -417,22 +441,22 @@ class _HomeTab extends ConsumerWidget {
                        ],
                      ),
                    ),
-  
+   
                    const SizedBox(height: 12), // Reduced Status Spacing
-  
+   
                    // 3. Performance
                    Padding(
                      padding: const EdgeInsets.symmetric(horizontal: 24),
                      child: Column(
                        children: [
-                         _buildSectionHeader('PERFORMANCE / الأداء'),
+                         _buildSectionHeader(l10n.performance.toUpperCase()),
                          const SizedBox(height: 8),
                          Row(
                            children: [
                              Expanded(child: _buildStatCard(
                                icon: Icons.check_circle,
-                               value: '${statsAsync.value?['completed'] ?? 0} Tasks',
-                               label: 'Completed Overall',
+                               value: '${statsAsync.value?['completed'] ?? 0} ${l10n.tasks}',
+                               label: l10n.completedOverall,
                                badge: '+${statsAsync.value?['completedThisWeek'] ?? 0}',
                                badgeColor: AppTheme.emeraldLight,
                                badgeTextColor: AppTheme.emeraldGreen,
@@ -441,7 +465,7 @@ class _HomeTab extends ConsumerWidget {
                              Expanded(child: _buildStatCard(
                                icon: Icons.access_time_filled,
                                value: statsAsync.value?['avgResponseTime'] ?? '---',
-                               label: 'Avg. Response Time',
+                               label: l10n.avgResponseTime,
                                badge: '-5%',
                                badgeColor: AppTheme.errorRedLight,
                                badgeTextColor: AppTheme.errorRed,
@@ -452,22 +476,22 @@ class _HomeTab extends ConsumerWidget {
                        ],
                      ),
                    ),
-  
+   
                    const SizedBox(height: 12),
-  
+   
                    // 4. Quick Access
                    Padding(
                      padding: const EdgeInsets.symmetric(horizontal: 24),
                      child: Column(
                         children: [
-                           _buildSectionHeader('QUICK ACCESS / وصول سريع'),
+                           _buildSectionHeader(l10n.quickAccess.toUpperCase()),
                            const SizedBox(height: 8),
                            Row(
                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                              children: [
-                               _buildQuickAccessItem(context, Icons.qr_code_scanner, 'Scan Doc', AppTheme.emeraldGreen),
-                               _buildQuickAccessItem(context, Icons.assignment, 'Daily Report', AppTheme.accentGold),
-                               _buildQuickAccessItem(context, Icons.chat_bubble, 'Support', AppTheme.darkBlue),
+                               _buildQuickAccessItem(context, Icons.qr_code_scanner, l10n.scanDoc, AppTheme.emeraldGreen),
+                               _buildQuickAccessItem(context, Icons.assignment, l10n.dailyReport, AppTheme.accentGold),
+                               _buildQuickAccessItem(context, Icons.chat_bubble, l10n.support, AppTheme.darkBlue),
                              ],
                            ),
                         ],
@@ -481,6 +505,7 @@ class _HomeTab extends ConsumerWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -493,133 +518,123 @@ class _HomeTab extends ConsumerWidget {
   }
 
   Widget _buildWorksSummaryCard(BuildContext context, int pendingCount) {
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.work_outline, color: AppTheme.emeraldGreen),
-                    const SizedBox(width: 8),
-                    Text("MY WORKS / أعمالي", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen, fontSize: 12)),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: AppTheme.emeraldLight, borderRadius: BorderRadius.circular(12)),
-                  child: const Text('Active', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold))
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppTheme.emeraldLight.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(12),
-                border: const Border(left: BorderSide(color: AppTheme.emeraldGreen, width: 4)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final l10n = AppLocalizations.of(context)!;
+    return PremiumCard(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
                 children: [
-                  Row(children: [
-                    Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle)),
-                    const SizedBox(width: 8),
-                    const Text('ASSIGNED TASKS', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
-                  ]),
-                  const SizedBox(height: 8),
-                  Text('$pendingCount Tasks Pending', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-                  const Text('Check your task list for details', style: TextStyle(color: Colors.grey)),
+                  const Icon(Icons.work_outline, color: AppTheme.emeraldGreen),
+                  const SizedBox(width: 8),
+                  Text(l10n.myWorks.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen, fontSize: 12)),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                   if (onSwitchToTasks != null) {
-                     onSwitchToTasks!();
-                   } else {
-                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please switch to Tasks tab')));
-                   }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('View All Works'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(color: AppTheme.emeraldLight, borderRadius: BorderRadius.circular(12)),
+                child: const Text('Active', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold))
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppTheme.emeraldLight.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: const Border(left: BorderSide(color: AppTheme.emeraldGreen, width: 4)),
             ),
-          ],
-        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle)),
+                  const SizedBox(width: 8),
+                  Text(l10n.assignedTasks.toUpperCase(), style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                ]),
+                const SizedBox(height: 8),
+                Text('$pendingCount ${l10n.tasksPending}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                Text(l10n.checkTaskList, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                 if (onSwitchToTasks != null) {
+                   onSwitchToTasks!();
+                 } else {
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error)));
+                 }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.emeraldGreen,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(l10n.viewAllWorks),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildLeavesSummaryCard(BuildContext context, WidgetRef ref) {
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+    final l10n = AppLocalizations.of(context)!;
+    return PremiumCard(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today, color: AppTheme.accentGold),
+                  const SizedBox(width: 8),
+                  Text(l10n.leaves.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentGold, fontSize: 12)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.calendar_today, color: AppTheme.accentGold),
-                    const SizedBox(width: 8),
-                    Text("LEAVES / الإجازات", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentGold, fontSize: 12)),
+                     Text('${ref.watch(leaveBalanceProvider)} ${l10n.days}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                     Text(l10n.annualLeaveBalance, style: const TextStyle(color: Colors.grey, fontSize: 12)),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                       Text('${ref.watch(leaveBalanceProvider)} Days / أيام', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-                       const Text('Annual Leave Balance / رصيد الإجازات', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    ],
-                  ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                   showModalBottomSheet(
+                     context: context,
+                     isScrollControlled: true,
+                     builder: (context) => ApplyLeaveForm(onSuccess: () {
+                       // Refresh data if needed
+                     }),
+                   );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentGold,
+                  foregroundColor: Colors.white, 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                     showModalBottomSheet(
-                       context: context,
-                       isScrollControlled: true,
-                       builder: (context) => ApplyLeaveForm(onSuccess: () {
-                         // Refresh data if needed
-                       }),
-                     );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentGold,
-                    foregroundColor: Colors.white, 
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Apply'),
-                )
-              ],
-            ),
-          ],
-        ),
+                child: Text(l10n.apply),
+              )
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -633,62 +648,56 @@ class _HomeTab extends ConsumerWidget {
     required Color badgeTextColor,
     bool isGold = false,
   }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isGold ? AppTheme.accentGoldLight : AppTheme.emeraldLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: isGold ? AppTheme.accentGold : AppTheme.emeraldGreen, size: 20),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isGold ? AppTheme.accentGoldLight : AppTheme.emeraldLight,
+                  shape: BoxShape.circle,
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(badge, style: TextStyle(color: badgeTextColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                child: Icon(icon, color: isGold ? AppTheme.accentGold : AppTheme.emeraldGreen, size: 20),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-          ],
-        ),
+                child: Text(badge, style: TextStyle(color: badgeTextColor, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        ],
       ),
     );
   }
 
   Widget _buildQuickAccessItem(BuildContext context, IconData icon, String label, Color color) {
+    final l10n = AppLocalizations.of(context)!;
     return Expanded(
       child: InkWell(
         onTap: () {
-          if (label == 'Daily Report') {
+          if (label == l10n.dailyReport) {
             onSwitchToTasks?.call();
-          } else if (label == 'Support') {
+          } else if (label == l10n.support) {
             ContactUtils.openWhatsApp('966500000000', message: 'Assalamu Alaikum, I need operational support.');
-          } else if (label == 'Scan Doc') {
-             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scanner module initializing...')));
+          } else if (label == l10n.scanDoc) {
+             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.scannerInitializing)));
           }
         },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4), // Gap
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.withOpacity(0.1)),
-          ),
+        child: PremiumCard(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
           child: Column(
             children: [
               Container(
@@ -697,14 +706,13 @@ class _HomeTab extends ConsumerWidget {
                    color: color,
                    shape: BoxShape.circle,
                    boxShadow: [
-                     BoxShadow(color: color.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                     BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
                    ],
                  ),
                  child: Icon(icon, color: Colors.white, size: 24),
               ),
               const SizedBox(height: 12),
-              Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-              const Text('مسح مستند', style: TextStyle(fontSize: 10, color: Colors.grey)), // Arabic subtitle mock
+              Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.darkBlue), overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
@@ -763,7 +771,7 @@ class _HomeTab extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.emeraldGreen.withOpacity(0.1) : Colors.white,
+          color: isSelected ? AppTheme.emeraldGreen.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade300,
@@ -816,7 +824,7 @@ class _TasksView extends StatefulWidget {
 
 class _TasksViewState extends State<_TasksView> {
   String _selectedFilter = 'All';
-  final TextEditingController _searchController = new TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   @override
@@ -827,6 +835,7 @@ class _TasksViewState extends State<_TasksView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       body: SafeArea(
@@ -846,29 +855,19 @@ class _TasksViewState extends State<_TasksView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                         const Text(
-                           'My Work Inbox / صندوق المهام',
-                           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                         Text(
+                           l10n.workInbox,
+                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                          ),
                          const SizedBox(height: 20),
                          // Search Bar
-                         Container(
-                           decoration: BoxDecoration(
-                             color: Colors.white,
-                             borderRadius: BorderRadius.circular(16),
-                             boxShadow: [
-                               BoxShadow(
-                                 color: Colors.black.withOpacity(0.05),
-                                 blurRadius: 10,
-                                 offset: const Offset(0, 4),
-                               ),
-                             ],
-                           ),
+                         PremiumCard(
+                           padding: EdgeInsets.zero,
                            child: TextField(
                              controller: _searchController,
                              onChanged: (v) => setState(() => _searchQuery = v),
                              decoration: InputDecoration(
-                               hintText: 'Search Passport, ID, Client...',
+                               hintText: l10n.searchPassport,
                                prefixIcon: const Icon(Icons.search, color: Colors.grey),
                                suffixIcon: _searchQuery.isNotEmpty 
                                  ? IconButton(
@@ -896,10 +895,10 @@ class _TasksViewState extends State<_TasksView> {
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       children: [
-                        _buildFilterChip('All'),
-                        _buildFilterChip('High'),
-                        _buildFilterChip('Pending'),
-                        _buildFilterChip('Completed'),
+                        _buildFilterChip(l10n.all),
+                        _buildFilterChip(l10n.high),
+                        _buildFilterChip(l10n.pending),
+                        _buildFilterChip(l10n.completed),
                       ],
                     ),
                   ),
@@ -913,12 +912,16 @@ class _TasksViewState extends State<_TasksView> {
                         final filteredOrders = orders.where((o) {
                           // Priority/Status Filter
                           bool matchesFilter = true;
-                          if (_selectedFilter == 'High') matchesFilter = o.priority == PriorityLevel.high;
-                          else if (_selectedFilter == 'Pending') matchesFilter = o.status == WorkStatus.pending;
-                          else if (_selectedFilter == 'Completed') matchesFilter = o.status == WorkStatus.completed;
-  
+                          if (_selectedFilter == l10n.high) {
+                            matchesFilter = o.priority == PriorityLevel.high;
+                          } else if (_selectedFilter == l10n.pending) {
+                            matchesFilter = o.status == WorkStatus.pending;
+                          } else if (_selectedFilter == l10n.completed) {
+                            matchesFilter = o.status == WorkStatus.completed;
+                          }
+   
                           if (!matchesFilter) return false;
-  
+   
                           // Search Query Filter
                           if (_searchQuery.isEmpty) return true;
                           final query = _searchQuery.toLowerCase();
@@ -930,33 +933,48 @@ class _TasksViewState extends State<_TasksView> {
                                  phone.contains(query) || 
                                  service.contains(query);
                         }).toList();
-  
+   
                         if (filteredOrders.isEmpty) {
-                          return Center(
+                          return RefreshIndicator(
+                          color: const Color(0xFF0D1B2E),
+                          onRefresh: () async => ref.refresh(myWorkOrdersProvider),
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.height - 200,
+                              child: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.search_off, size: 64, color: Colors.grey.shade300),
                                 const SizedBox(height: 16),
                                 Text(
-                                  _searchQuery.isEmpty ? 'No tasks found' : 'No results for "$_searchQuery"',
+                                  _searchQuery.isEmpty ? l10n.noTasksFound : l10n.noResultsFor(_searchQuery),
                                   style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
                                 ),
                               ],
                             ),
-                          );
+                          ),
+                        ),
+                      ),
+                    );
                         }
-  
-                        return ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+   
+                        return RefreshIndicator(
+                          color: const Color(0xFF0D1B2E),
+                          onRefresh: () async => ref.refresh(myWorkOrdersProvider),
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                           itemCount: filteredOrders.length,
                           itemBuilder: (context, index) {
                             return _buildTaskCard(context, ref, filteredOrders[index]);
                           },
+                          ),
                         );
                       },
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, st) => Center(child: Text('Error: $e')),
+                      error: (e, st) => Center(child: Text('${l10n.error}: $e')),
                     ),
                   ),
                 ],
@@ -977,7 +995,7 @@ class _TasksViewState extends State<_TasksView> {
         selected: isSelected,
         onSelected: (v) => setState(() => _selectedFilter = label),
         backgroundColor: Colors.white,
-        selectedColor: AppTheme.emeraldGreen.withOpacity(0.2),
+        selectedColor: AppTheme.emeraldGreen.withValues(alpha: 0.2),
         checkmarkColor: AppTheme.emeraldGreen,
         labelStyle: TextStyle(
           color: isSelected ? AppTheme.emeraldGreen : Colors.grey,
@@ -992,6 +1010,7 @@ class _TasksViewState extends State<_TasksView> {
   }
 
   Widget _buildTaskCard(BuildContext context, WidgetRef ref, WorkOrder order) {
+    final l10n = AppLocalizations.of(context)!;
     Color statusColor;
     switch (order.priority) {
       case PriorityLevel.high:
@@ -1005,9 +1024,8 @@ class _TasksViewState extends State<_TasksView> {
         break;
     }
 
-    return Card(
+    return PremiumCard(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -1023,103 +1041,100 @@ class _TasksViewState extends State<_TasksView> {
             )
           );
         },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      order.serviceType ?? 'General Task',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: AppTheme.darkBlue),
-                    ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    order.serviceType ?? l10n.generalTask,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppTheme.darkBlue),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      order.priority.name.toUpperCase(),
-                      style: TextStyle(
-                          color: statusColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold),
-                    ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.person, size: 14, color: Colors.grey),
+                  child: Text(
+                    order.priority.name.toUpperCase(),
+                    style: TextStyle(
+                        color: statusColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.person, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(order.clientName ?? "N/A",
+                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                if (order.clientPhoneNumber != null) ...[
+                  const SizedBox(width: 12),
+                  const Icon(Icons.phone, size: 14, color: Colors.grey),
                   const SizedBox(width: 4),
-                  Text(order.clientName ?? "N/A",
-                      style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                  if (order.clientPhoneNumber != null) ...[
-                    const SizedBox(width: 12),
-                    const Icon(Icons.phone, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      order.clientPhoneNumber!,
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.phone_outlined, size: 16, color: AppTheme.emeraldGreen),
-                      onPressed: () => ContactUtils.callNumber(order.clientPhoneNumber),
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.message, size: 16, color: Colors.green),
-                      onPressed: () {
-                        final message = "Assalamu Alaikum, update on your ${order.serviceType}: Status is ${order.status.name.toUpperCase()}.";
-                        ContactUtils.openWhatsApp(order.clientPhoneNumber, message: message);
-                      },
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                    ),
-                    child: Text(order.status.name.toUpperCase(),
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: order.status == WorkStatus.completed
-                                ? AppTheme.emeraldGreen
-                                : AppTheme.accentGold)),
+                  Text(
+                    order.clientPhoneNumber!,
+                    style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
+                  const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.edit, size: 16, color: Colors.grey),
-                    onPressed: () => _showUpdateWorkModal(context, ref, order),
+                    icon: const Icon(Icons.phone_outlined, size: 16, color: AppTheme.emeraldGreen),
+                    onPressed: () => ContactUtils.callNumber(order.clientPhoneNumber),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.message, size: 16, color: Colors.green),
+                    onPressed: () {
+                      final message = "Assalamu Alaikum, update on your ${order.serviceType}: Status is ${order.status.name.toUpperCase()}.";
+                      ContactUtils.openWhatsApp(order.clientPhoneNumber, message: message);
+                    },
                     constraints: const BoxConstraints(),
                     padding: EdgeInsets.zero,
                   ),
                 ],
-              ),
-            ],
-          ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(order.status.name.toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: order.status == WorkStatus.completed
+                              ? AppTheme.emeraldGreen
+                              : AppTheme.accentGold)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 16, color: Colors.grey),
+                  onPressed: () => _showUpdateWorkModal(context, ref, order),
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -1203,28 +1218,28 @@ class _UpdateWorkSheetState extends ConsumerState<_UpdateWorkSheet> {
   }
 
   Future<void> _launchWhatsApp() async {
-    final clientName = widget.order.clientName ?? "Client";
     final message = "Update on your ${widget.order.serviceType}: Status is now $_status.";
     await ContactUtils.openWhatsApp(widget.order.clientPhoneNumber, message: message);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Update: ${widget.order.serviceType}', style: Theme.of(context).textTheme.titleLarge),
+          Text('${l10n.updateStatus}: ${widget.order.serviceType ?? l10n.generalTask}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
           const SizedBox(height: 20),
           DropdownButtonFormField<String>(
             value: _status,
-            decoration: const InputDecoration(labelText: 'Work Status', border: OutlineInputBorder()),
-            items: const [
-              DropdownMenuItem(value: 'Pending', child: Text('Pending')),
-              DropdownMenuItem(value: 'In-Progress', child: Text('In-Progress')),
-              DropdownMenuItem(value: 'Completed', child: Text('Completed')),
+            decoration: InputDecoration(labelText: l10n.workStatus, border: const OutlineInputBorder()),
+            items: [
+              DropdownMenuItem(value: 'Pending', child: Text(l10n.pending)),
+              DropdownMenuItem(value: 'In-Progress', child: Text(l10n.inProgress)),
+              DropdownMenuItem(value: 'Completed', child: Text(l10n.completed)),
             ],
             onChanged: (v) => setState(() => _status = v!),
           ),
@@ -1235,13 +1250,13 @@ class _UpdateWorkSheetState extends ConsumerState<_UpdateWorkSheet> {
                   child: TextField(
                       controller: _totalController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Total Fee (SAR)'))),
+                      decoration: InputDecoration(labelText: l10n.totalFee))),
               const SizedBox(width: 12),
               Expanded(
                   child: TextField(
                       controller: _paidController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Paid Today'))),
+                      decoration: InputDecoration(labelText: l10n.paidToday))),
             ],
           ),
           const SizedBox(height: 16),
@@ -1251,7 +1266,7 @@ class _UpdateWorkSheetState extends ConsumerState<_UpdateWorkSheet> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Remaining Balance:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(l10n.remainingBalance, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('SAR ${balance.toStringAsFixed(2)}',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
               ],
@@ -1263,8 +1278,11 @@ class _UpdateWorkSheetState extends ConsumerState<_UpdateWorkSheet> {
               Expanded(
                   child: ElevatedButton(
                       onPressed: _isLoading ? null : _updateStatus,
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen),
-                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Update Status'))),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.emeraldGreen,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 16)),
+                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(l10n.updateStatus))),
               const SizedBox(width: 12),
               IconButton(
                   onPressed: _launchWhatsApp,
@@ -1283,6 +1301,7 @@ class _LeavesView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
      return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       floatingActionButton: FloatingActionButton.extended(
@@ -1293,12 +1312,18 @@ class _LeavesView extends ConsumerWidget {
             builder: (context) => ApplyLeaveForm(onSuccess: () {}),
           );
         },
-        label: const Text('Apply Leave'),
+        label: Text(l10n.applyLeave),
         icon: const Icon(Icons.add, color: Colors.white),
         backgroundColor: AppTheme.accentGold,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: RefreshIndicator(
+          color: const Color(0xFF0D1B2E),
+          onRefresh: () async {
+            ref.invalidate(leaveProvider);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
           child: ResponsiveLayout(
             maxWidth: 1000,
             padding: EdgeInsets.zero,
@@ -1310,9 +1335,9 @@ class _LeavesView extends ConsumerWidget {
                    child: Column(
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
-                        const Text(
-                          'Leave Management / إدارة الإجازات',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                        Text(
+                          l10n.leaveManagement,
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                         ),
                         const SizedBox(height: 20),
                         
@@ -1328,9 +1353,9 @@ class _LeavesView extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Leave History / أرشيف الإجازات',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                            Text(
+                              l10n.leaveHistory,
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                             ),
                             // Filter button could go here
                           ],
@@ -1347,11 +1372,13 @@ class _LeavesView extends ConsumerWidget {
             ),
           ),
         ),
+        ),
       ),
     );
   }
 
   Widget _buildBalanceCard(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -1362,7 +1389,7 @@ class _LeavesView extends ConsumerWidget {
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-           BoxShadow(color: AppTheme.accentGold.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+           BoxShadow(color: AppTheme.accentGold.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Row(
@@ -1371,16 +1398,16 @@ class _LeavesView extends ConsumerWidget {
            Column(
              crossAxisAlignment: CrossAxisAlignment.start,
              children: [
-               const Text('Annual Bal. / رصيد سنوي', style: TextStyle(color: Colors.white, fontSize: 14)),
+               Text(l10n.annualBal, style: const TextStyle(color: Colors.white, fontSize: 14)),
                const SizedBox(height: 8),
-               Text('${ref.watch(leaveBalanceProvider)} Days', style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+               Text('${ref.watch(leaveBalanceProvider)} ${l10n.days}', style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
                const SizedBox(height: 4),
-               Text('Valid until Dec 31, ${DateTime.now().year}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+               Text(l10n.validUntil('Dec 31, ${DateTime.now().year}'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
              ],
            ),
            Container(
              padding: const EdgeInsets.all(16),
-             decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+             decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
              child: const Icon(Icons.beach_access, color: Colors.white, size: 36),
            ),
         ],

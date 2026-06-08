@@ -88,14 +88,14 @@ class _RevenueDetailScreenState extends ConsumerState<RevenueDetailScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.emeraldGreen, AppTheme.emeraldGreen.withOpacity(0.8)],
+          colors: [AppTheme.emeraldGreen, AppTheme.emeraldGreen.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.emeraldGreen.withOpacity(0.3),
+            color: AppTheme.emeraldGreen.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -116,7 +116,7 @@ class _RevenueDetailScreenState extends ConsumerState<RevenueDetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Row(
@@ -305,7 +305,7 @@ class _RevenueDetailScreenState extends ConsumerState<RevenueDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppTheme.emeraldGreen.withOpacity(0.1),
+                      color: AppTheme.emeraldGreen.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.receipt_long, color: AppTheme.emeraldGreen, size: 20),

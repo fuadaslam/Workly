@@ -6,6 +6,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'core/constants/supabase_env.dart';
 import 'core/providers/locale_provider.dart';
+import 'core/providers/theme_provider.dart';
+import 'core/widgets/offline_banner.dart';
+import 'core/services/notification_service.dart';
 import 'features/onboarding/presentation/pages/splash_screen.dart';
 
 Future<void> main() async {
@@ -22,6 +25,9 @@ Future<void> main() async {
     debugPrint('Supabase init failed: $e');
   }
 
+  await NotificationService.init();
+  await NotificationService.requestPermission();
+
   runApp(const ProviderScope(
     child: MyApp(),
   ));
@@ -33,11 +39,14 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(localeProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Saudi Service Manager',
+      title: 'Worqly',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -46,7 +55,7 @@ class MyApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const SplashScreen(),
+      home: const OfflineBanner(child: SplashScreen()),
     );
   }
 }

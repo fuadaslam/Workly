@@ -40,8 +40,7 @@ class AttendanceRepository {
           .from('attendance')
           .select('id')
           .filter('check_out_time', 'is', null);
-      if (response is List) return response.length;
-      return 0;
+      return response.length;
     } catch (e) {
       return 0;
     }

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/dashboard_provider.dart';
 import '../../domain/models/work_order.dart';
 import 'task_detail_screen.dart';
 import 'client_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../core/widgets/premium_card.dart';
+import '../../../../core/widgets/app_section_header.dart';
 
 class AdminDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> admin;
@@ -44,6 +47,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
   }
 
   Future<void> _saveChanges() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isSaving = true);
     try {
       final repo = ref.read(profileRepositoryProvider);
@@ -59,14 +63,14 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully'), backgroundColor: AppTheme.emeraldGreen),
+          SnackBar(content: Text(l10n.profileUpdated), backgroundColor: AppTheme.emeraldGreen),
         );
         setState(() => _isEditing = false);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('${l10n.errorUpdatingProfile}: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -76,6 +80,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isStaff = _role == 'staff';
     final performanceAsync = ref.watch(staffWorkOrdersProvider(widget.admin['id']));
 
@@ -89,14 +94,14 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          isStaff ? 'Staff Details' : 'Admin Details',
+          isStaff ? l10n.staffDetails : l10n.adminDetails,
           style: const TextStyle(color: AppTheme.darkBlue, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.emeraldGreen),
             onPressed: () {
-              ref.refresh(staffWorkOrdersProvider(widget.admin['id']));
+              ref.invalidate(staffWorkOrdersProvider(widget.admin['id']));
               ref.invalidate(allProfilesProvider);
             },
           ),
@@ -114,27 +119,34 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: ResponsiveLayout(
+      body: RefreshIndicator(
+        color: const Color(0xFF0D1B2E),
+        onRefresh: () async {
+          ref.invalidate(staffWorkOrdersProvider(widget.admin['id']));
+          ref.invalidate(allProfilesProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ResponsiveLayout(
           maxWidth: 1000,
           padding: EdgeInsets.zero,
           child: Column(
             children: [
               _buildHeader(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('PROFESSIONAL PROFILE'),
-                    const SizedBox(height: 12),
+                    AppSectionHeader(title: l10n.professionalProfile),
+                    const SizedBox(height: 8),
                     _buildProfileCard(),
                     const SizedBox(height: 24),
                     
                     if (isStaff) ...[
-                      _buildSectionHeader('PERFORMANCE METRICS'),
-                      const SizedBox(height: 12),
+                      AppSectionHeader(title: l10n.performanceMetrics),
+                      const SizedBox(height: 8),
                       performanceAsync.when(
                         data: (orders) => _buildStatsRow(orders),
                         loading: () => const Center(child: CircularProgressIndicator()),
@@ -142,19 +154,19 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
                       ),
                       const SizedBox(height: 24),
                       
-                      _buildSectionHeader('WORK HISTORY / تاريخ العمل'),
-                      const SizedBox(height: 12),
+                      AppSectionHeader(title: l10n.officeWorkHistory),
+                      const SizedBox(height: 8),
                       _buildWorkHistorySection(ref),
                       const SizedBox(height: 24),
 
-                      _buildSectionHeader('CLIENT LIST / قائمة العملاء'),
-                      const SizedBox(height: 12),
+                      AppSectionHeader(title: l10n.officeClients),
+                      const SizedBox(height: 8),
                       _buildClientListSection(ref),
                       const SizedBox(height: 24),
                     ],
 
-                    _buildSectionHeader('ACCESS & PERMISSIONS'),
-                    const SizedBox(height: 12),
+                    AppSectionHeader(title: l10n.accessPermissions),
+                    const SizedBox(height: 8),
                     _buildPermissionsCard(),
                     const SizedBox(height: 30),
                     
@@ -165,14 +177,16 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: Text(isActive ? 'Deactivate User' : 'Reactivate User'),
-                              content: Text('Are you sure you want to ${isActive ? 'deactivate' : 'reactivate'} ${_nameController.text}?'),
+                              title: Text(isActive ? l10n.deactivateUser : l10n.reactivateUser),
+                              content: Text(isActive 
+                                ? l10n.confirmDeactivate(_nameController.text) 
+                                : l10n.confirmReactivate(_nameController.text)),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
                                 TextButton(
                                   onPressed: () => Navigator.pop(context, true), 
                                   style: TextButton.styleFrom(foregroundColor: isActive ? Colors.red : AppTheme.emeraldGreen), 
-                                  child: Text(isActive ? 'Deactivate' : 'Reactivate')
+                                  child: Text(isActive ? l10n.delete : l10n.success) // Reusing existing strings or should use labels
                                 ),
                               ],
                             ),
@@ -184,11 +198,12 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
                               await ref.read(profileRepositoryProvider).reactivateProfile(widget.admin['id']);
                             }
                             ref.invalidate(allProfilesProvider);
-                            if (mounted) Navigator.pop(context);
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
                           }
                         },
                         icon: Icon((widget.admin['is_active'] ?? true) ? Icons.person_remove_outlined : Icons.person_add_alt_1_outlined),
-                        label: Text((widget.admin['is_active'] ?? true) ? 'Deactivate Account' : 'Reactivate Account'),
+                        label: Text((widget.admin['is_active'] ?? true) ? l10n.deactivateAccount : l10n.reactivateAccount),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: (widget.admin['is_active'] ?? true) ? Colors.red.shade50 : AppTheme.emeraldLight,
                           foregroundColor: (widget.admin['is_active'] ?? true) ? Colors.red : AppTheme.emeraldGreen,
@@ -197,55 +212,53 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         ),
                       ),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ],
           ),
         ),
+        ),
       ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
     );
   }
 
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(30),
+      padding: const EdgeInsets.symmetric(vertical: 30),
       color: Colors.white,
       child: Column(
         children: [
-          Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.emeraldGreen, width: 2),
-                ),
-                child: const CircleAvatar(
-                  radius: 50,
-                  backgroundColor: AppTheme.emeraldLight,
-                  child: Icon(Icons.person, size: 60, color: AppTheme.emeraldGreen),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
+          Hero(
+            tag: 'admin_${widget.admin['id']}',
+            child: Stack(
+              children: [
+                Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle),
-                  child: const Icon(Icons.verified, color: Colors.white, size: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppTheme.emeraldGreen, width: 2),
+                  ),
+                  child: const CircleAvatar(
+                    radius: 50,
+                    backgroundColor: AppTheme.emeraldLight,
+                    child: Icon(Icons.person, size: 60, color: AppTheme.emeraldGreen),
+                  ),
                 ),
-              ),
-            ],
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle),
+                    child: const Icon(Icons.verified, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 15),
           Text(
@@ -262,18 +275,13 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
   }
 
   Widget _buildProfileCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
+    final l10n = AppLocalizations.of(context)!;
+    return PremiumCard(
       child: Column(
         children: [
           _buildDetailRow(
             Icons.person_outline, 
-            'Full Name', 
+            l10n.fullName, 
             _isEditing 
                 ? TextField(controller: _nameController, decoration: const InputDecoration(isDense: true, border: InputBorder.none))
                 : Text(_nameController.text, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -281,7 +289,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
           const Divider(height: 30),
           _buildDetailRow(
             Icons.email_outlined, 
-            'Email Address', 
+            l10n.email, 
             _isEditing 
                 ? TextField(controller: _emailController, decoration: const InputDecoration(isDense: true, border: InputBorder.none))
                 : Text(_emailController.text, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -289,7 +297,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
           const Divider(height: 30),
           _buildDetailRow(
             Icons.phone_outlined, 
-            'Phone Number', 
+            l10n.phoneNumber, 
             _isEditing 
                 ? TextField(controller: _phoneController, decoration: const InputDecoration(isDense: true, border: InputBorder.none))
                 : Text(_phoneController.text.isEmpty ? 'N/A' : _phoneController.text, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -298,7 +306,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
             const Divider(height: 30),
             _buildDetailRow(
               Icons.calendar_today_outlined, 
-              'Joined Date', 
+              l10n.joinedDate, 
               Text(widget.admin['created_at'] != null ? widget.admin['created_at'].substring(0, 10) : 'N/A', style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
@@ -310,27 +318,22 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
   bool _biometricAuth = true;
 
   Widget _buildPermissionsCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
+    final l10n = AppLocalizations.of(context)!;
+    return PremiumCard(
       child: Column(
         children: [
           _buildDetailRow(
             Icons.security_outlined, 
-            'Portal Role', 
+            l10n.portalRole, 
             _isEditing 
                 ? DropdownButton<String>(
                     value: _role,
                     isDense: true,
                     underline: const SizedBox(),
-                    items: const [
-                      DropdownMenuItem(value: 'staff', child: Text('Staff')),
-                      DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                      DropdownMenuItem(value: 'super_admin', child: Text('Super Admin')),
+                    items: [
+                      DropdownMenuItem(value: 'staff', child: Text(l10n.staff)),
+                      const DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                      DropdownMenuItem(value: 'super_admin', child: Text(l10n.superAdmin)),
                     ],
                     onChanged: (v) => setState(() => _role = v!),
                   )
@@ -342,9 +345,9 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Biometric Auth', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text('Enhanced security for login', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                children: [
+                  Text(l10n.biometricAuth, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.enhancedSecurity, style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
               ),
               Switch(
@@ -357,16 +360,16 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
           const Divider(height: 30),
           _buildDetailRow(
             Icons.business_outlined, 
-            'Assigned Office', 
+            l10n.assignedOffice, 
             _isEditing 
                 ? ref.watch(officesProvider).when(
                     data: (offices) => DropdownButton<String?>(
                       value: _officeId,
                       isDense: true,
                       underline: const SizedBox(),
-                      hint: const Text('Select Office'),
+                      hint: Text(l10n.noOffice),
                       items: [
-                        const DropdownMenuItem<String?>(value: null, child: Text('No Office')),
+                        DropdownMenuItem<String?>(value: null, child: Text(l10n.noOffice)),
                         ...offices.map((o) => DropdownMenuItem<String?>(
                           value: o['id'],
                           child: Text(o['name'] ?? 'Unknown'),
@@ -380,11 +383,11 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
                 : Text(
                     ref.watch(officesProvider).maybeWhen(
                       data: (offices) {
-                        if (_officeId == null) return 'Not Assigned';
+                        if (_officeId == null) return l10n.notAssigned;
                         final office = offices.firstWhere((o) => o['id'] == _officeId, orElse: () => {});
-                        return office['name'] ?? 'Not Assigned';
+                        return office['name'] ?? l10n.notAssigned;
                       },
-                      orElse: () => widget.admin['offices']?['name'] ?? 'Not Assigned',
+                      orElse: () => widget.admin['offices']?['name'] ?? l10n.notAssigned,
                     ),
                     style: const TextStyle(fontWeight: FontWeight.bold)
                   ),
@@ -395,27 +398,23 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
   }
 
   Widget _buildStatsRow(List<WorkOrder> orders) {
+    final l10n = AppLocalizations.of(context)!;
     final completedCount = orders.where((o) => o.status == WorkStatus.completed).length;
     final totalCount = orders.length;
-    final efficiency = totalCount == 0 ? 0 : (completedCount / totalCount * 100).toInt();
+    final efficiencyValue = totalCount == 0 ? 0 : (completedCount / totalCount * 100).toInt();
 
     return Row(
       children: [
-        Expanded(child: _buildSmallStat('Tasks Done', completedCount.toString(), Icons.check_circle_outline, Colors.blue)),
+        Expanded(child: _buildSmallStat(l10n.tasksDone, completedCount.toString(), Icons.check_circle_outline, Colors.blue)),
         const SizedBox(width: 15),
-        Expanded(child: _buildSmallStat('Efficiency', '$efficiency%', Icons.speed, Colors.orange)),
+        Expanded(child: _buildSmallStat(l10n.efficiency, '$efficiencyValue%', Icons.speed, Colors.orange)),
       ],
     );
   }
 
   Widget _buildSmallStat(String label, String value, IconData icon, Color color) {
-    return Container(
+    return PremiumCard(
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -452,23 +451,20 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
   }
 
   Widget _buildWorkHistorySection(WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final workOrdersAsync = ref.watch(staffWorkOrdersProvider(widget.admin['id']));
 
     return workOrdersAsync.when(
       data: (orders) {
         if (orders.isEmpty) {
-          return const Center(child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text('No work history found.', style: TextStyle(color: Colors.grey)),
+          return Center(child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text(l10n.noWorkHistory, style: const TextStyle(color: Colors.grey)),
           ));
         }
 
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-          ),
+        return PremiumCard(
+          padding: EdgeInsets.zero,
           child: ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -490,7 +486,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
                     ),
                   );
                 },
-                title: Text(order.serviceType ?? 'General Service', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                title: Text(order.serviceType ?? l10n.generalService, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: Text(order.clientName ?? 'Unknown Client', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 trailing: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -516,11 +512,12 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Text('Error: $e'),
+      error: (e, _) => Text('${l10n.error}: $e'),
     );
   }
 
   Widget _buildClientListSection(WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final workOrdersAsync = ref.watch(staffWorkOrdersProvider(widget.admin['id']));
 
     return workOrdersAsync.when(
@@ -539,18 +536,14 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
             );
 
         if (clients.isEmpty) {
-          return const Center(child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text('No clients found.', style: TextStyle(color: Colors.grey)),
+          return Center(child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text(l10n.noClientsFound, style: const TextStyle(color: Colors.grey)),
           ));
         }
 
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-          ),
+        return PremiumCard(
+          padding: EdgeInsets.zero,
           child: ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -573,14 +566,14 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.emeraldLight.withOpacity(0.2),
+                    color: AppTheme.emeraldLight.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.person_outline, color: AppTheme.emeraldGreen, size: 20),
                 ),
                 title: Text(client['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: Text(
-                  client['phone'] != null && client['phone']!.isNotEmpty ? client['phone']! : 'No phone number',
+                  client['phone'] != null && client['phone']!.isNotEmpty ? client['phone']! : l10n.noPhoneNumber,
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
@@ -590,7 +583,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Text('Error: $e'),
+      error: (e, _) => Text('${l10n.error}: $e'),
     );
   }
 }

@@ -198,8 +198,8 @@ class UpcomingHolidaysList extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             Row(
-               children: const [
+             const Row(
+               children: [
                  Icon(Icons.celebration, color: AppTheme.accentGold),
                  SizedBox(width: 8),
                  Text('Upcoming Holidays / العطلات القادمة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.darkBlue)),
@@ -215,7 +215,7 @@ class UpcomingHolidaysList extends ConsumerWidget {
                    Container(
                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                      decoration: BoxDecoration(
-                       color: AppTheme.accentGold.withOpacity(0.1),
+                       color: AppTheme.accentGold.withValues(alpha: 0.1),
                        borderRadius: BorderRadius.circular(8),
                      ),
                      child: Text(DateFormat('d MMM y').format(h.date), style: const TextStyle(color: AppTheme.accentGold, fontSize: 12, fontWeight: FontWeight.bold)),
@@ -261,7 +261,7 @@ class LeaveHistoryList extends ConsumerWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: _getStatusColor(request.status).withOpacity(0.1),
+              backgroundColor: _getStatusColor(request.status).withValues(alpha: 0.1),
               child: Icon(_getTypeIcon(request.type), color: _getStatusColor(request.status), size: 20),
             ),
             title: Text('${request.type.name.toUpperCase()} LEAVE', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -269,7 +269,7 @@ class LeaveHistoryList extends ConsumerWidget {
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getStatusColor(request.status).withOpacity(0.1),
+                color: _getStatusColor(request.status).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

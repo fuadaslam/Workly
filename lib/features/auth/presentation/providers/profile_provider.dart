@@ -10,7 +10,7 @@ final profileProvider = FutureProvider<model.Profile?>((ref) async {
   try {
     final response = await Supabase.instance.client
         .from('profiles')
-        .select()
+        .select('*, offices(name)')
         .eq('id', user.id)
         .single();
     
