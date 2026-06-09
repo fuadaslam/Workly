@@ -257,7 +257,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Sign in to your Worqly account',
+            'Sign in to your Workly account',
             style: TextStyle(color: subtextColor, fontSize: 14),
             textAlign: TextAlign.center,
           ),
@@ -454,9 +454,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
               Image.asset(
-                'assets/images/Logo Xoviq.png',
+                'assets/images/Xoviq Logo.jpeg',
                 height: 22,
-                color: isDark ? Colors.white.withValues(alpha: 0.7) : null,
               ),
             ],
           ),

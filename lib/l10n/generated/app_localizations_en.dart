@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Worqly';
+  String get appTitle => 'Workly';
 
   @override
   String get login => 'Login';
@@ -257,7 +257,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get executiveOverview => 'Executive Overview';
 
   @override
-  String get vision2030Portal => 'Worqly Platform';
+  String get vision2030Portal => 'Workly Platform';
 
   @override
   String get monthlyRevenue => 'Monthly Revenue';

@@ -1,3 +1,4 @@
+// ignore: constant_identifier_names
 enum AppRole { super_admin, admin, staff, agent }
 
 class Profile {

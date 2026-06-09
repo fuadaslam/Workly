@@ -3,21 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/dashboard_provider.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
+import 'package:service_manager_app/features/enquiries/domain/models/enquiry.dart';
 
-class AssignmentSheet extends StatefulWidget {
+class AssignmentSheet extends ConsumerStatefulWidget {
   const AssignmentSheet({super.key});
 
   @override
-  State<AssignmentSheet> createState() => _AssignmentSheetState();
+  ConsumerState<AssignmentSheet> createState() => _AssignmentSheetState();
 }
 
-class _AssignmentSheetState extends State<AssignmentSheet> {
+class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
   final _formKey = GlobalKey<FormState>();
   final _clientController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _serviceController = TextEditingController();
-  
+
   String? _selectedStaffId;
+  String? _selectedServiceType;
+  String? _selectedNationality;
   String _priority = 'Medium';
   bool _isLoading = false;
 
@@ -25,15 +27,13 @@ class _AssignmentSheetState extends State<AssignmentSheet> {
   void dispose() {
     _clientController.dispose();
     _phoneController.dispose();
-    _serviceController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer(builder: (context, ref, child) {
-      final staffAsync = ref.watch(staffProfilesProvider);
+    final staffAsync = ref.watch(staffProfilesProvider);
 
       return Center(
         child: ConstrainedBox(
@@ -89,14 +89,35 @@ class _AssignmentSheetState extends State<AssignmentSheet> {
                     // Task Info Section
                     _buildSectionTitle(l10n.taskDetails),
                     const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _serviceController,
-                      decoration: InputDecoration(
-                        labelText: l10n.serviceType,
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.work_outline),
+                    DropdownButtonFormField<String>(
+                      value: _selectedServiceType,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Nature of Enquiry',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.work_outline),
                       ),
-                      validator: (v) => v == null || v.isEmpty ? l10n.required : null,
+                      items: kNatureOfEnquiry
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedServiceType = v),
+                      validator: (v) => v == null ? 'Required' : null,
+                      hint: const Text('Select nature of enquiry'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _selectedNationality,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Nationality',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.flag_outlined),
+                      ),
+                      items: kNationalities
+                          .map((n) => DropdownMenuItem(value: n, child: Text(n)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _selectedNationality = v),
+                      hint: const Text('Select nationality'),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -170,7 +191,6 @@ class _AssignmentSheetState extends State<AssignmentSheet> {
           ),
         ),
       );
-    });
   }
 
   Widget _buildSectionTitle(String title) {
@@ -186,19 +206,19 @@ class _AssignmentSheetState extends State<AssignmentSheet> {
     setState(() => _isLoading = true);
     
     try {
-      final repository = ProviderScope.containerOf(context).read(workOrderRepositoryProvider);
+      final repository = ref.read(workOrderRepositoryProvider);
       await repository.createWorkOrder(
         clientName: _clientController.text.trim(),
         clientPhoneNumber: _phoneController.text.trim(),
-        serviceType: _serviceController.text.trim(),
+        serviceType: _selectedServiceType,
+        nationality: _selectedNationality,
         priority: _priority,
         assignedStaffId: _selectedStaffId,
-        assignedOfficeId: null, // No longer assigning to office directly
+        assignedOfficeId: null,
       );
       
         if (mounted) {
           // Invalidate providers to refresh UI
-          final ref = ProviderScope.containerOf(context);
           ref.invalidate(allWorkOrdersProvider);
           
           final l10n = AppLocalizations.of(context)!;

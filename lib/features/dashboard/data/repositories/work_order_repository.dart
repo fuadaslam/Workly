@@ -114,6 +114,7 @@ class WorkOrderRepository {
     required String? clientPhoneNumber,
     required String? serviceType,
     required String priority,
+    String? nationality,
     String? clientId,
     String? serviceId,
     String? assignedStaffId,
@@ -122,6 +123,7 @@ class WorkOrderRepository {
     final response = await _client.from('work_orders').insert({
       'client_name': clientName,
       'client_phone_number': clientPhoneNumber,
+      'nationality': nationality,
       'service_type': serviceType,
       'priority': priority,
       'client_id': clientId,
@@ -142,6 +144,18 @@ class WorkOrderRepository {
   Future<void> updateWorkOrderStatus(String id, String status) async {
     await _client.from('work_orders').update({
       'status': status,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', id);
+  }
+
+  Future<void> updateWorkOrderFinalStatus(
+    String id, {
+    String? finalStatus,
+    String? rejectionReason,
+  }) async {
+    await _client.from('work_orders').update({
+      'final_status': finalStatus,
+      'rejection_reason': rejectionReason,
       'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', id);
   }

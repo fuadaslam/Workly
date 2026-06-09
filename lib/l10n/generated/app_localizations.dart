@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// The title of the application
   ///
   /// In en, this message translates to:
-  /// **'Worqly'**
+  /// **'Workly'**
   String get appTitle;
 
   /// No description provided for @login.
@@ -593,7 +593,7 @@ abstract class AppLocalizations {
   /// No description provided for @vision2030Portal.
   ///
   /// In en, this message translates to:
-  /// **'Worqly Platform'**
+  /// **'Workly Platform'**
   String get vision2030Portal;
 
   /// No description provided for @monthlyRevenue.

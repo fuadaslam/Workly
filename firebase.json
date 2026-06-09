@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "saudi-service-manager",
+    "site": "worqly",
     "public": "build/web",
     "ignore": [
       "firebase.json",

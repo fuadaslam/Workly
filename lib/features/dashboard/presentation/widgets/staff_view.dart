@@ -8,6 +8,7 @@ import '../../../../features/auth/presentation/providers/profile_provider.dart';
 import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import '../../../../features/dashboard/domain/models/work_order.dart';
 import '../pages/task_detail_screen.dart';
+import '../../../../features/enquiries/domain/models/enquiry.dart';
 
 import '../../../../core/theme/pattern_painter.dart';
 import 'profile_view.dart';
@@ -192,14 +193,15 @@ class CreateTaskSheet extends StatefulWidget {
 class _CreateTaskSheetState extends State<CreateTaskSheet> {
   final _clientController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _serviceController = TextEditingController();
+  String? _selectedServiceType;
+  String? _selectedNationality;
   String _priority = 'Medium';
   bool _isLoading = false;
 
   Future<void> _createTask(WidgetRef ref) async {
-    if (_clientController.text.isEmpty || 
+    if (_clientController.text.isEmpty ||
         _phoneController.text.isEmpty ||
-        _serviceController.text.isEmpty) {
+        _selectedServiceType == null) {
       return;
     }
 
@@ -210,7 +212,8 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
       await repo.createWorkOrder(
         clientName: _clientController.text.trim(),
         clientPhoneNumber: _phoneController.text.trim(),
-        serviceType: _serviceController.text.trim(),
+        serviceType: _selectedServiceType,
+        nationality: _selectedNationality,
         priority: _priority,
       );
       
@@ -253,9 +256,32 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
                 decoration: InputDecoration(labelText: l10n.clientPhone, prefixIcon: const Icon(Icons.phone)),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _serviceController,
-                decoration: InputDecoration(labelText: l10n.serviceType, prefixIcon: const Icon(Icons.work)),
+              DropdownButtonFormField<String>(
+                value: _selectedServiceType,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Nature of Enquiry',
+                  prefixIcon: Icon(Icons.work),
+                ),
+                items: kNatureOfEnquiry
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedServiceType = v),
+                hint: const Text('Select nature of enquiry'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedNationality,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Nationality',
+                  prefixIcon: Icon(Icons.flag_outlined),
+                ),
+                items: kNationalities
+                    .map((n) => DropdownMenuItem(value: n, child: Text(n)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedNationality = v),
+                hint: const Text('Select nationality'),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(

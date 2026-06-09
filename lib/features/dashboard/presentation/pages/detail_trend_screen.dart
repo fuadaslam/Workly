@@ -113,7 +113,7 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
     final now = DateTime.now();
     final monthLabels = List.generate(6, (i) {
       final m = DateTime(now.year, now.month - 5 + i, 1);
-      final abbr = const ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const abbr = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
       return abbr[(m.month - 1) % 12];
     });
 

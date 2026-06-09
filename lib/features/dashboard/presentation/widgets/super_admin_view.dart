@@ -12,6 +12,7 @@ import '../../../../core/theme/pattern_painter.dart';
 import '../providers/dashboard_provider.dart';
 import 'profile_view.dart';
 import '../pages/detail_trend_screen.dart';
+import '../pages/active_cases_screen.dart';
 import '../pages/revenue_detail_screen.dart';
 import '../pages/office_detail_screen.dart';
 import '../pages/admin_detail_screen.dart';
@@ -21,7 +22,6 @@ import '../../../auth/domain/models/profile.dart';
 import '../pages/system_detail_screen.dart';
 import '../../../leaves/presentation/widgets/admin_leave_list.dart';
 import '../../../../core/widgets/responsive_layout.dart';
-import '../../../../core/widgets/premium_card.dart';
 import '../../../attendance/presentation/widgets/attendance_monitor.dart';
 
 import 'assignment_sheet.dart';
@@ -470,7 +470,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                       data: (stats) {
                         final total = (stats['totalReceivables'] as num? ?? 0).toDouble();
                         final label = total == 0 ? 'No payment data yet' : '+15.4% vs last month';
-                        final value = total == 0 ? 'SAR 0.0M' : 'SAR ${(total/1000000).toStringAsFixed(1)}M';
+                        final value = _formatSar(total);
                         return _buildRevenueCard(context, l10n.monthlyRevenue, value, label, true);
                       },
                       loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen)),
@@ -486,10 +486,10 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const DetailTrendScreen()),
+                              MaterialPageRoute(builder: (context) => const ActiveCasesScreen()),
                             );
-                          }, 
-                          borderRadius: BorderRadius.circular(16), 
+                          },
+                          borderRadius: BorderRadius.circular(16),
                           child: ref.watch(activeCasesCountProvider).when(
                             data: (count) => _buildSmallStatCard(l10n.activeCases, count.toString(), 'this month', true),
                             loading: () => _buildSmallStatCard(l10n.activeCases, '...', 'loading', true),
@@ -531,10 +531,10 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  _buildRevenueChart(),
-                  
+                  _buildRevenueChart(ref),
+
                   const SizedBox(height: 30),
-                  _buildStaffKPIs(context, l10n),
+                  _buildStaffKPIs(context, l10n, ref),
                 ],
               ),
             ),
@@ -546,6 +546,13 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  static String _formatSar(double amount) {
+    if (amount == 0) return 'SAR 0';
+    if (amount >= 1000000) return 'SAR ${(amount / 1000000).toStringAsFixed(1)}M';
+    if (amount >= 1000) return 'SAR ${(amount / 1000).toStringAsFixed(1)}K';
+    return 'SAR ${amount.toStringAsFixed(0)}';
   }
 
   Widget _buildRevenueCard(BuildContext context, String title, String value, String growth, bool isPositive) {
@@ -696,165 +703,196 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildRevenueChart() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10))],
+  Widget _buildRevenueChart(WidgetRef ref) {
+    final trendAsync = ref.watch(monthlyWorkOrderTrendProvider);
+    final now = DateTime.now();
+    final months = List.generate(6, (i) => DateFormat('MMM').format(DateTime(now.year, now.month - 5 + i)));
+
+    String growthLabel = '— Enquiries / 6 mo';
+    List<FlSpot> spots = List.generate(6, (i) => FlSpot(i.toDouble(), 0));
+
+    return trendAsync.when(
+      loading: () => Container(
+        height: 280,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+        child: const Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Performance Activity', style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  const Text('+24% Growth', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 20, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(20)),
-                child: const Text('This Year', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-              ),
-            ],
+      error: (_, __) => const SizedBox(),
+      data: (counts) {
+        spots = List.generate(6, (i) => FlSpot(i.toDouble(), counts[i]));
+        final prev = counts[4];
+        final curr = counts[5];
+        if (prev > 0) {
+          final pct = ((curr - prev) / prev * 100).round();
+          growthLabel = pct >= 0 ? '+$pct% vs last month' : '$pct% vs last month';
+        } else if (curr > 0) {
+          growthLabel = 'New enquiries this month';
+        }
+
+        final maxY = (counts.reduce((a, b) => a > b ? a : b) + 2).clamp(4.0, double.infinity);
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10))],
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 200,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true, drawVerticalLine: false,
-                  horizontalInterval: 2,
-                  getDrawingHorizontalLine: (value) => FlLine(color: Colors.grey.withValues(alpha: 0.1), strokeWidth: 1, dashArray: [5, 5]),
-                ),
-                titlesData: const FlTitlesData(
-                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      interval: 1,
-                      getTitlesWidget: _bottomTitleWidgets,
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 2), FlSpot(1, 4), FlSpot(2, 3), FlSpot(3, 5), FlSpot(4, 3.5), FlSpot(5, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Enquiry Activity', style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text(growthLabel, style: TextStyle(color: curr >= prev ? AppTheme.emeraldGreen : Colors.red, fontSize: 18, fontWeight: FontWeight.bold)),
                     ],
-                    isCurved: true,
-                    curveSmoothness: 0.35,
-                    color: AppTheme.emeraldGreen,
-                    barWidth: 4,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                        radius: index == 5 ? 6 : 4, color: Colors.white, strokeWidth: 3, strokeColor: AppTheme.emeraldGreen,
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(20)),
+                    child: const Text('6 Months', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 200,
+                child: LineChart(
+                  LineChartData(
+                    minY: 0,
+                    maxY: maxY,
+                    gridData: FlGridData(
+                      show: true, drawVerticalLine: false,
+                      horizontalInterval: (maxY / 4).ceilToDouble().clamp(1, double.infinity),
+                      getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.withValues(alpha: 0.1), strokeWidth: 1, dashArray: [5, 5]),
+                    ),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 30,
+                          interval: 1,
+                          getTitlesWidget: (value, meta) {
+                            final idx = value.toInt();
+                            if (idx < 0 || idx >= months.length) return const SizedBox();
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              child: Text(months[idx], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppTheme.emeraldGreen.withValues(alpha: 0.25),
-                          AppTheme.emeraldGreen.withValues(alpha: 0.0),
-                        ],
-                        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        curveSmoothness: 0.35,
+                        color: AppTheme.emeraldGreen,
+                        barWidth: 4,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                            radius: index == 5 ? 6 : 4, color: Colors.white, strokeWidth: 3, strokeColor: AppTheme.emeraldGreen,
+                          ),
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            colors: [AppTheme.emeraldGreen.withValues(alpha: 0.25), AppTheme.emeraldGreen.withValues(alpha: 0.0)],
+                            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeOutCubic,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStaffKPIs(BuildContext context, AppLocalizations l10n, WidgetRef ref) {
+    final kpiAsync = ref.watch(serviceTypeKpiProvider);
+
+    return kpiAsync.when(
+      loading: () => const SizedBox(height: 80, child: Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen))),
+      error: (_, __) => const SizedBox(),
+      data: (kpis) {
+        if (kpis.isEmpty) return const SizedBox();
+        final avgCompletion = kpis.isEmpty
+            ? 0.0
+            : kpis.fold(0.0, (sum, k) => sum + (k['percent'] as double)) / kpis.length;
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10))],
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Completion by Service Type', style: TextStyle(color: AppTheme.darkBlue, fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text('Top ${kpis.length} service categories', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: AppTheme.emeraldGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                    child: Text(
+                      '${(avgCompletion * 100).toStringAsFixed(0)}% Avg',
+                      style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
               ),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeOutCubic,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Widget _bottomTitleWidgets(double value, TitleMeta meta) {
-    const style = TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey);
-    Widget text;
-    switch (value.toInt()) {
-      case 0: text = const Text('Jan', style: style); break;
-      case 1: text = const Text('Feb', style: style); break;
-      case 2: text = const Text('Mar', style: style); break;
-      case 3: text = const Text('Apr', style: style); break;
-      case 4: text = const Text('May', style: style); break;
-      case 5: text = const Text('Jun', style: style); break;
-      default: text = const Text('', style: style); break;
-    }
-    return SideTitleWidget(axisSide: meta.axisSide, child: text);
-  }
-
-  Widget _buildStaffKPIs(BuildContext context, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10))],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${l10n.staff} KPIs by Department', style: const TextStyle(color: AppTheme.darkBlue, fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Average performance rating', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: AppTheme.emeraldGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                child: const Text('4% Avg', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: kpis.map((k) => _buildKPIBar(k['label'] as String, (k['percent'] as double), k['total'] as int)).toList(),
               ),
             ],
           ),
-          const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildKPIBar('LOGISTICS', 0.8),
-              _buildKPIBar('VISA', 0.6),
-              _buildKPIBar('LEGAL', 0.4),
-              _buildKPIBar('ADMIN', 0.9),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildKPIBar(String label, double percent) {
+  Widget _buildKPIBar(String label, double percent, int total) {
     return Column(
       children: [
+        Text('$total', style: const TextStyle(fontSize: 11, color: AppTheme.darkBlue, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
         Container(
           height: 120, width: 14,
           decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
           child: FractionallySizedBox(
-            heightFactor: percent, alignment: Alignment.bottomCenter,
+            heightFactor: percent.clamp(0.0, 1.0),
+            alignment: Alignment.bottomCenter,
             child: Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -1668,6 +1706,8 @@ class _AdminManagementTab extends ConsumerWidget {
     final name = admin['name'] ?? (isStaff ? 'Unknown Staff' : 'Unknown Admin');
     final role = admin['role'] ?? (isStaff ? 'staff' : 'admin');
     final id = admin['id'];
+    final officeName = (admin['offices'] as Map?)?['name'] as String?;
+    final isActive = admin['is_active'] as bool? ?? true;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
@@ -1689,32 +1729,74 @@ class _AdminManagementTab extends ConsumerWidget {
             children: [
               ListTile(
                 contentPadding: const EdgeInsets.all(15),
-                leading: const CircleAvatar(radius: 30, backgroundColor: AppTheme.emeraldLight, child: Icon(Icons.person, color: AppTheme.emeraldGreen, size: 30)),
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                leading: CircleAvatar(
+                  radius: 30,
+                  backgroundColor: isStaff ? Colors.blue.withValues(alpha: 0.1) : AppTheme.emeraldLight,
+                  child: Icon(
+                    isStaff ? Icons.badge_outlined : Icons.manage_accounts_outlined,
+                    color: isStaff ? Colors.blue : AppTheme.emeraldGreen,
+                    size: 28,
+                  ),
+                ),
+                title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(role.toString().toUpperCase(), style: const TextStyle(fontSize: 12, color: AppTheme.emeraldGreen)),
-                    if (admin['phone_number'] != null)
+                    const SizedBox(height: 2),
+                    Text(role.toString().toUpperCase(), style: TextStyle(fontSize: 11, color: isStaff ? Colors.blue : AppTheme.emeraldGreen, fontWeight: FontWeight.w700)),
+                    if (officeName != null) ...[
+                      const SizedBox(height: 2),
+                      Row(children: [
+                        Icon(Icons.business_outlined, size: 12, color: Colors.grey.shade500),
+                        const SizedBox(width: 4),
+                        Text(officeName, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                      ]),
+                    ],
+                    if (admin['phone_number'] != null) ...[
+                      const SizedBox(height: 2),
                       Text(admin['phone_number'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    ],
                     if ((admin['role'] as String? ?? '').toLowerCase() == 'agent')
                       Text('Work Status: Available', style: TextStyle(fontSize: 11, color: Colors.blue[700], fontWeight: FontWeight.w500)),
                   ],
                 ),
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), 
-                  decoration: BoxDecoration(
-                    color: (admin['is_active'] ?? true) ? AppTheme.emeraldLight : Colors.grey.shade100, 
-                    borderRadius: BorderRadius.circular(8)
-                  ), 
-                  child: Text(
-                    (admin['is_active'] ?? true) ? l10n.active : l10n.inactive, 
-                    style: TextStyle(
-                      color: (admin['is_active'] ?? true) ? AppTheme.emeraldGreen : Colors.grey, 
-                      fontWeight: FontWeight.bold, 
-                      fontSize: 10
-                    )
-                  )
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isActive ? AppTheme.emeraldLight : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isActive ? l10n.active : l10n.inactive,
+                        style: TextStyle(color: isActive ? AppTheme.emeraldGreen : Colors.grey, fontWeight: FontWeight.bold, fontSize: 10),
+                      ),
+                    ),
+                    if (isStaff && id != null) ...[
+                      const SizedBox(height: 6),
+                      ref.watch(staffActiveTaskCountsProvider).when(
+                        data: (counts) {
+                          final count = counts[id] ?? 0;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: count > 0 ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '$count task${count == 1 ? '' : 's'}',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: count > 0 ? Colors.orange.shade700 : Colors.grey),
+                            ),
+                          );
+                        },
+                        loading: () => const SizedBox(width: 50, height: 20),
+                        error: (_, __) => const SizedBox(),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const Divider(height: 1),

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand Colors — Worqly by xoviq Labs
-  static const Color emeraldGreen = Color(0xFF0D1B2E); // Worqly Navy
+  // Brand Colors — Workly by xoviq Labs
+  static const Color emeraldGreen = Color(0xFF0D1B2E); // Workly Navy
   static const Color emeraldLight = Color(0xFFEEF2F7); // Light navy tint
 
   // Navy gradient palette

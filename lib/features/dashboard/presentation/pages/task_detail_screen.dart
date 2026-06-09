@@ -9,6 +9,7 @@ import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/app_section_header.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
+import 'package:service_manager_app/features/enquiries/domain/models/enquiry.dart';
 
 class TaskDetailScreen extends ConsumerStatefulWidget {
   final String taskId;
@@ -32,6 +33,8 @@ class TaskDetailScreen extends ConsumerStatefulWidget {
 
 class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   late String _status;
+  String? _finalStatus;
+  String? _rejectionReason;
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _agentFeeController = TextEditingController();
   String? _selectedAgentId;
@@ -68,7 +71,15 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       if (_status == 'Completed') apiStatus = 'Completed';
       
       await repo.updateWorkOrderStatus(widget.taskId, apiStatus);
-      
+
+      if (_finalStatus != null || _rejectionReason != null) {
+        await repo.updateWorkOrderFinalStatus(
+          widget.taskId,
+          finalStatus: _finalStatus,
+          rejectionReason: _rejectionReason,
+        );
+      }
+
       if (_selectedAgentId != null || _agentFeeController.text.isNotEmpty) {
         final fee = double.tryParse(_agentFeeController.text);
         await repo.updateWorkOrderAgent(widget.taskId, agentId: _selectedAgentId, agentFee: fee);
@@ -129,6 +140,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           if (order.agentFee != null) {
             _agentFeeController.text = order.agentFee!.toString();
           }
+          _finalStatus = order.finalStatus;
+          _rejectionReason = order.rejectionReason;
           _initialized = true;
         });
       }
@@ -270,8 +283,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                     value: _status,
                     items: ['Pending', 'In Progress', 'Completed'].map((e) {
                       return DropdownMenuItem(
-                        value: e, 
-                        child: Text(_getStatusLabel(e, l10n), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))
+                        value: e,
+                        child: Text(_getStatusLabel(e, l10n), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       );
                     }).toList(),
                     onChanged: (v) => setState(() => _status = v!),
@@ -279,6 +292,36 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 ),
               ),
             ],
+          ),
+          const Divider(height: 24),
+          DropdownButtonFormField<String>(
+            value: _finalStatus,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: 'Project Final Status',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            items: kFinalStatusLabels
+                .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13))))
+                .toList(),
+            onChanged: (v) => setState(() => _finalStatus = v),
+            hint: const Text('Select final status', style: TextStyle(fontSize: 13)),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _rejectionReason,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: 'Reason for Skipping / Rejecting',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            items: kRejectionReasons
+                .map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 13))))
+                .toList(),
+            onChanged: (v) => setState(() => _rejectionReason = v),
+            hint: const Text('Select reason', style: TextStyle(fontSize: 13)),
           ),
         ],
       ),

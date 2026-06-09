@@ -72,7 +72,7 @@ class ProfileView extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: WorkqlyAppBar(title: 'My Profile'),
+      appBar: const WorkqlyAppBar(title: 'My Profile'),
       body: profileAsync.when(
         data: (profile) {
           if (profile == null) {
@@ -206,7 +206,7 @@ class ProfileView extends ConsumerWidget {
                     onTap: () {
                       showAboutDialog(
                         context: context,
-                        applicationName: 'Worqly',
+                        applicationName: 'Workly',
                         applicationVersion: '1.0.0',
                         applicationIcon: const Icon(Icons.work_rounded, color: AppTheme.emeraldGreen, size: 40),
                         children: [
@@ -243,7 +243,7 @@ class ProfileView extends ConsumerWidget {
                         style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                       Image.asset(
-                        'assets/images/Logo Xoviq.png',
+                        'assets/images/Xoviq Logo.jpeg',
                         height: 24,
                       ),
                     ],

@@ -54,7 +54,9 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
 
                 Center(
                   child: Column(children: [
-                    const Text('WORQLY BY XOVIQ LABS', style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                    const Text('POWERED BY', style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                    const SizedBox(height: 6),
+                    Image.asset('assets/images/Xoviq Logo.jpeg', height: 28),
                     const SizedBox(height: 4),
                     Text('Platform Console · Build 2024.1', style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
                   ]),
@@ -221,18 +223,18 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
         icon: Icons.public_rounded,
         iconColor: AppTheme.emeraldGreen,
         title: 'Platform Name',
-        subtitle: 'Worqly by xoviq Labs',
+        subtitle: 'Workly by xoviq Labs',
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(color: AppTheme.backgroundLight, borderRadius: BorderRadius.circular(8)),
-          child: const Text('Worqly', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.darkBlue)),
+          child: const Text('Workly', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.darkBlue)),
         ),
       ),
       _settingTile(
         icon: Icons.link_rounded,
         iconColor: Colors.indigo,
         title: 'Platform Domain',
-        subtitle: 'worqly.xoviq.com',
+        subtitle: 'workly.xoviq.com',
         trailing: const Icon(Icons.open_in_new, size: 16, color: Colors.grey),
         onTap: () {},
       ),

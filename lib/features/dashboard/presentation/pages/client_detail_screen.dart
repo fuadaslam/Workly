@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/contact_utils.dart';
 import '../providers/dashboard_provider.dart';
-import '../../domain/models/work_order.dart';
 import 'task_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
@@ -37,7 +36,6 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final workOrdersAsync = ref.watch(allWorkOrdersProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(

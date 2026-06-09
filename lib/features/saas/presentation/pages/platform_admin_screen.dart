@@ -120,7 +120,7 @@ class PlatformAdminScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 16),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Worqly Platform', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 26, letterSpacing: -0.5)),
+                      const Text('Workly Platform', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 26, letterSpacing: -0.5)),
                       Text('GLOBAL SAAS CONSOLE', style: TextStyle(color: AppTheme.emeraldGreen.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
                     ]),
                   ]),

@@ -55,6 +55,7 @@ const List<String> kFinalStatusLabels = [
   'Postponed by client',
   'Rejected by client',
   'Cancelled',
+  'Rejected',
 ];
 
 class Enquiry {

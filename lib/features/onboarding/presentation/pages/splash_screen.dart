@@ -96,7 +96,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
               ),
               const SizedBox(height: 24),
               const Text(
-                'Worqly',
+                'Workly',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,

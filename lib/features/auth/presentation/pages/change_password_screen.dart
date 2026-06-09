@@ -67,7 +67,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: WorkqlyAppBar(title: 'Change Password'),
+      appBar: const WorkqlyAppBar(title: 'Change Password'),
       body: ResponsiveLayout(
         maxWidth: 800,
         padding: EdgeInsets.zero,

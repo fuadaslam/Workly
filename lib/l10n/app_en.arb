@@ -1,5 +1,5 @@
 {
-  "appTitle": "Worqly",
+  "appTitle": "Workly",
   "@appTitle": {
     "description": "The title of the application"
   },
@@ -85,7 +85,7 @@
   "generalService": "General Service",
   "assign": "Assign",
   "executiveOverview": "Executive Overview",
-  "vision2030Portal": "Worqly Platform",
+  "vision2030Portal": "Workly Platform",
   "monthlyRevenue": "Monthly Revenue",
   "vsLastMonth": "vs last month",
   "activeCases": "Active Cases",

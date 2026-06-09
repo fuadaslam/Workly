@@ -62,7 +62,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildRoleView(Profile profile) {
-    // Platform admin (Worqly operator) → SaaS console
+    // Platform admin (Workly operator) → SaaS console
     if (profile.isPlatformAdmin) {
       return const PlatformAdminShell();
     }

@@ -10,7 +10,7 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: WorkqlyAppBar(title: 'Notifications'),
+      appBar: const WorkqlyAppBar(title: 'Notifications'),
       body: ResponsiveLayout(
         maxWidth: 800,
         padding: EdgeInsets.zero,

@@ -310,12 +310,22 @@ final taskHistoryProvider = FutureProvider.family<List<TaskHistory>, String>((re
   return repo.getTaskHistory(taskId);
 });
 
+final activeWorkOrdersProvider = FutureProvider<List<WorkOrder>>((ref) async {
+  final client = Supabase.instance.client;
+  final response = await client
+      .from('work_orders')
+      .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name)')
+      .inFilter('status', ['Pending', 'In-Progress'])
+      .order('created_at', ascending: false);
+  return (response as List).map((json) => WorkOrder.fromJson(json)).toList();
+});
+
 final activeCasesCountProvider = FutureProvider<int>((ref) async {
   final client = Supabase.instance.client;
   final response = await client
       .from('work_orders')
       .select('id')
-      .not('status', 'in', ['Completed', 'Cancelled'])
+      .inFilter('status', ['Pending', 'In-Progress'])
       .count(CountOption.exact);
   return response.count;
 });
@@ -392,6 +402,21 @@ final recentActivityProvider = FutureProvider<List<Map<String, dynamic>>>((ref) 
         : 'updated "$service" → $status';
     return {'name': staffName, 'action': action, 'time': order['updated_at'] as String?};
   }).toList();
+});
+
+/// Active task count per staff member: Map<staffId, count>
+final staffActiveTaskCountsProvider = FutureProvider<Map<String, int>>((ref) async {
+  final client = Supabase.instance.client;
+  final response = await client
+      .from('work_orders')
+      .select('assigned_staff_id')
+      .inFilter('status', ['Pending', 'In-Progress']);
+  final Map<String, int> counts = {};
+  for (final row in response) {
+    final id = row['assigned_staff_id'] as String?;
+    if (id != null) counts[id] = (counts[id] ?? 0) + 1;
+  }
+  return counts;
 });
 
 final workOrderByIdProvider = FutureProvider.family<WorkOrder?, String>((ref, id) async {

@@ -73,7 +73,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: WorkqlyAppBar(title: 'Edit Profile'),
+      appBar: const WorkqlyAppBar(title: 'Edit Profile'),
       body: ResponsiveLayout(
         maxWidth: 800,
         padding: EdgeInsets.zero,
