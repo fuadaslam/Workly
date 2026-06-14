@@ -120,7 +120,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: ResponsiveLayout(
-          maxWidth: 1000,
+          maxWidth: double.infinity,
           padding: EdgeInsets.zero,
           child: Column(
             children: [

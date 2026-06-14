@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../providers/dashboard_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
+import '../../../../core/widgets/animated_hover_card.dart';
 
 class DetailTrendScreen extends ConsumerStatefulWidget {
   const DetailTrendScreen({super.key});
@@ -36,7 +37,7 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
       ),
       body: SingleChildScrollView(
         child: ResponsiveLayout(
-          maxWidth: 1000,
+          maxWidth: double.infinity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -134,14 +135,9 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
           growthLabel = counts.isNotEmpty && counts.last > 0 ? 'New' : '—';
         }
 
-        return Container(
-          height: 320,
+        return AnimatedHoverCard(
+          borderRadius: 24,
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 15, offset: const Offset(0, 5))],
-          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -212,15 +208,28 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
                       LineChartBarData(
                         spots: spots,
                         isCurved: true,
+                        curveSmoothness: 0.35,
                         gradient: const LinearGradient(colors: [AppTheme.emeraldGreen, AppTheme.chartTeal]),
-                        barWidth: 3,
+                        barWidth: 4,
                         isStrokeCapRound: true,
-                        dotData: const FlDotData(show: false),
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                            radius: 5,
+                            color: AppTheme.accentGold,
+                            strokeWidth: 2,
+                            strokeColor: Colors.white,
+                          ),
+                        ),
                         belowBarData: BarAreaData(
                           show: true,
                           gradient: LinearGradient(
-                            colors: [AppTheme.emeraldGreen.withValues(alpha: 0.2), AppTheme.emeraldGreen.withValues(alpha: 0.0)],
-                            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                            colors: [
+                              AppTheme.chartTeal.withValues(alpha: 0.28),
+                              AppTheme.chartTeal.withValues(alpha: 0.0)
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
                           ),
                         ),
                       ),

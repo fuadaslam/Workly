@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -16,17 +17,28 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> with TickerProviderStateMixin {
   final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey            = GlobalKey<FormState>();
   bool _isLoading       = false;
   bool _obscurePassword = true;
+  late AnimationController _blobController;
+
+  @override
+  void initState() {
+    super.initState();
+    _blobController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 15),
+    )..repeat();
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _blobController.dispose();
     super.dispose();
   }
 
@@ -122,45 +134,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // ── Decorative blobs ─────────────────────────────────────────────
   Widget _blobs(bool isDark) {
-    return Stack(
-      children: [
-        Positioned(
-          top: -90, right: -70,
-          child: _blob(
-            300,
-            isDark
-                ? AppTheme.navyDeep.withValues(alpha: 0.6)
-                : AppTheme.emeraldGreen.withValues(alpha: 0.07),
-          ),
-        ),
-        Positioned(
-          bottom: -100, left: -80,
-          child: _blob(
-            320,
-            isDark
-                ? AppTheme.accentGold.withValues(alpha: 0.08)
-                : AppTheme.accentGold.withValues(alpha: 0.06),
-          ),
-        ),
-        Positioned(
-          top: 200, left: -50,
-          child: _blob(
-            180,
-            isDark
-                ? AppTheme.statBlue.withValues(alpha: 0.12)
-                : AppTheme.statBlue.withValues(alpha: 0.05),
-          ),
-        ),
-        Positioned(
-          bottom: 180, right: -30,
-          child: _blob(
-            140,
-            isDark
-                ? AppTheme.statPurple.withValues(alpha: 0.1)
-                : AppTheme.statPurple.withValues(alpha: 0.04),
-          ),
-        ),
-      ],
+    return AnimatedBuilder(
+      animation: _blobController,
+      builder: (context, child) {
+        final val = _blobController.value * 2 * 3.14159;
+        final dx1 = sin(val) * 30;
+        final dy1 = cos(val) * 30;
+        final dx2 = cos(val + 1.0) * 40;
+        final dy2 = sin(val + 1.0) * 40;
+        final dx3 = sin(val + 2.0) * 20;
+        final dy3 = cos(val + 2.0) * 20;
+
+        return Stack(
+          children: [
+            Positioned(
+              top: -90.0 + dy1,
+              right: -70.0 + dx1,
+              child: _blob(
+                300,
+                isDark
+                    ? AppTheme.navyDeep.withValues(alpha: 0.6)
+                    : AppTheme.emeraldGreen.withValues(alpha: 0.07),
+              ),
+            ),
+            Positioned(
+              bottom: -100.0 + dy2,
+              left: -80.0 + dx2,
+              child: _blob(
+                320,
+                isDark
+                    ? AppTheme.accentGold.withValues(alpha: 0.08)
+                    : AppTheme.accentGold.withValues(alpha: 0.06),
+              ),
+            ),
+            Positioned(
+              top: 200.0 + dy3,
+              left: -50.0 + dx3,
+              child: _blob(
+                180,
+                isDark
+                    ? AppTheme.statBlue.withValues(alpha: 0.12)
+                    : AppTheme.statBlue.withValues(alpha: 0.05),
+              ),
+            ),
+            Positioned(
+              bottom: 180.0 - dy1,
+              right: -30.0 - dx1,
+              child: _blob(
+                140,
+                isDark
+                    ? AppTheme.statPurple.withValues(alpha: 0.1)
+                    : AppTheme.statPurple.withValues(alpha: 0.04),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -49,7 +49,7 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: ResponsiveLayout(
-          maxWidth: 1000,
+          maxWidth: double.infinity,
           padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

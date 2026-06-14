@@ -18,6 +18,9 @@ import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
 import '../../../../features/leaves/presentation/widgets/leave_widgets.dart';
 import '../../../../features/leaves/presentation/providers/leave_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/widgets/collapsible_sidebar.dart';
+import '../../../auth/presentation/pages/login_screen.dart';
 
 class StaffView extends StatefulWidget {
   const StaffView({super.key});
@@ -29,118 +32,115 @@ class StaffView extends StatefulWidget {
 class _StaffViewState extends State<StaffView> {
   int _tabIndex = 0;
 
+
+  Future<void> _signOut(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (context.mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= 800) {
-          // Desktop Layout
-          // Map _tabIndex (0, 1, 3, 4) to Rail Index (0, 1, 2, 3)
-          final railIndex = _tabIndex > 2 ? _tabIndex - 1 : _tabIndex;
+    return Consumer(
+      builder: (context, ref, child) {
+        final profileAsync = ref.watch(profileProvider);
+        final profile = profileAsync.value;
+        final userName = profile?.name ?? 'Staff Member';
+        final userRole = profile?.role.name.toUpperCase().replaceAll('_', ' ') ?? 'FIELD OPERATIONS SPECIALIST';
 
-          return Scaffold(
-            backgroundColor: AppTheme.backgroundLight,
-            body: Row(
-              children: [
-                NavigationRail(
-                  selectedIndex: railIndex,
-                  onDestinationSelected: (idx) {
-                    // Map Rail Index (0, 1, 2, 3) back to _tabIndex (0, 1, 3, 4)
-                    final newIndex = idx > 1 ? idx + 1 : idx;
-                    setState(() => _tabIndex = newIndex);
-                  },
-                  labelType: NavigationRailLabelType.all,
-                  leading: Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: FloatingActionButton(
-                       onPressed: () => _showAddTaskModal(context),
-                       backgroundColor: AppTheme.emeraldGreen,
-                       elevation: 4,
-                       shape: const CircleBorder(),
-                       child: const Icon(Icons.add, color: Colors.white),
+        final sidebarItems = [
+          SidebarItem(icon: Icons.home_outlined, label: l10n.home),
+          SidebarItem(icon: Icons.calendar_month_outlined, label: l10n.leaves),
+          SidebarItem(icon: Icons.assignment_outlined, label: l10n.tasks),
+          SidebarItem(icon: Icons.person_outline, label: l10n.profile),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 800) {
+              // Desktop Layout with CollapsibleSidebar
+              // Map _tabIndex (0, 1, 3, 4) to Sidebar Index (0, 1, 2, 3)
+              final sidebarIndex = _tabIndex > 2 ? _tabIndex - 1 : _tabIndex;
+
+              return Scaffold(
+                backgroundColor: AppTheme.backgroundLight,
+                body: Row(
+                  children: [
+                    CollapsibleSidebar(
+                      selectedIndex: sidebarIndex,
+                      items: sidebarItems,
+                      onDestinationSelected: (idx) {
+                        // Map Sidebar Index (0, 1, 2, 3) back to _tabIndex (0, 1, 3, 4)
+                        final newIndex = idx > 1 ? idx + 1 : idx;
+                        setState(() => _tabIndex = newIndex);
+                      },
+                      onSignOut: () => _signOut(context),
+                      userName: userName,
+                      userRole: userRole,
                     ),
-                  ),
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.home_outlined),
-                      selectedIcon: const Icon(Icons.home, color: AppTheme.emeraldGreen),
-                      label: Text(l10n.home),
-                    ),
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.calendar_month_outlined),
-                      selectedIcon: const Icon(Icons.calendar_month, color: AppTheme.emeraldGreen),
-                      label: Text(l10n.leaves),
-                    ),
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.assignment_outlined),
-                      selectedIcon: const Icon(Icons.assignment, color: AppTheme.emeraldGreen),
-                      label: Text(l10n.tasks),
-                    ),
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.person_outline),
-                      selectedIcon: const Icon(Icons.person, color: AppTheme.emeraldGreen),
-                      label: Text(l10n.profile),
+                    Expanded(
+                      child: _buildBody(),
                     ),
                   ],
                 ),
-                Expanded(
-                  child: _buildBody(),
-                ),
-              ],
-            ),
-          );
-        } else {
-          // Mobile Layout
-          return Scaffold(
-            backgroundColor: AppTheme.backgroundLight,
-            body: _buildBody(),
-            floatingActionButton: Container(
-               height: 64,
-               width: 64,
-               margin: const EdgeInsets.only(top: 30),
-               child: FloatingActionButton(
-                onPressed: () {
-                   _showAddTaskModal(context);
-                },
-                backgroundColor: AppTheme.emeraldGreen,
-                elevation: 4,
-                shape: const CircleBorder(),
-                child: const Icon(Icons.add, color: Colors.white, size: 32),
-               ),
-            ),
-            floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-            bottomNavigationBar: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                   BoxShadow(
-                     color: Colors.black.withValues(alpha: 0.05),
-                     blurRadius: 10,
-                     offset: const Offset(0, -5),
+              );
+            } else {
+              // Mobile Layout
+              return Scaffold(
+                backgroundColor: AppTheme.backgroundLight,
+                body: _buildBody(),
+                floatingActionButton: Container(
+                   height: 64,
+                   width: 64,
+                   margin: const EdgeInsets.only(top: 30),
+                   child: FloatingActionButton(
+                    onPressed: () {
+                       _showAddTaskModal(context);
+                    },
+                    backgroundColor: AppTheme.emeraldGreen,
+                    elevation: 4,
+                    shape: const CircleBorder(),
+                    child: const Icon(Icons.add, color: Colors.white, size: 32),
                    ),
-                ],
-              ),
-              child: NavigationBar(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                indicatorColor: Colors.transparent, // Disable pill indicator for custom look
-                selectedIndex: _tabIndex,
-                onDestinationSelected: (idx) {
-                  // If tapping the Spacer (index 2), ignore or handle if possible
-                  if (idx == 2) return; 
-                  setState(() => _tabIndex = idx);
-                },
-                destinations: [
-                  _buildNavItem(Icons.home_outlined, Icons.home, l10n.home, 0),
-                  _buildNavItem(Icons.calendar_month_outlined, Icons.calendar_month, l10n.leaves, 1),
-                  const SizedBox(width: 48), // Spacer for FAB
-                  _buildNavItem(Icons.assignment_outlined, Icons.assignment, l10n.tasks, 3),
-                  _buildNavItem(Icons.person_outline, Icons.person, l10n.profile, 4),
-                ],
-              ),
-            ),
-          );
-        }
+                ),
+                floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+                bottomNavigationBar: Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                       BoxShadow(
+                         color: Colors.black.withValues(alpha: 0.05),
+                         blurRadius: 10,
+                         offset: const Offset(0, -5),
+                       ),
+                    ],
+                  ),
+                  child: NavigationBar(
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                    indicatorColor: Colors.transparent, // Disable pill indicator for custom look
+                    selectedIndex: _tabIndex,
+                    onDestinationSelected: (idx) {
+                      // If tapping the Spacer (index 2), ignore or handle if possible
+                      if (idx == 2) return; 
+                      setState(() => _tabIndex = idx);
+                    },
+                    destinations: [
+                      _buildNavItem(Icons.home_outlined, Icons.home, l10n.home, 0),
+                      _buildNavItem(Icons.calendar_month_outlined, Icons.calendar_month, l10n.leaves, 1),
+                      const SizedBox(width: 48), // Spacer for FAB
+                      _buildNavItem(Icons.assignment_outlined, Icons.assignment, l10n.tasks, 3),
+                      _buildNavItem(Icons.person_outline, Icons.person, l10n.profile, 4),
+                    ],
+                  ),
+                ),
+              );
+            }
+          },
+        );
       },
     );
   }
@@ -442,7 +442,7 @@ class _HomeTab extends ConsumerWidget {
   
              // 2. Overlapping Content (All shifted up together)
              ResponsiveLayout(
-               maxWidth: 1000,
+               maxWidth: double.infinity,
                padding: EdgeInsets.zero,
                child: Transform.translate(
                  offset: const Offset(0, -50),
@@ -860,7 +860,7 @@ class _TasksViewState extends State<_TasksView> {
       backgroundColor: AppTheme.backgroundLight,
       body: SafeArea(
         child: ResponsiveLayout(
-          maxWidth: 1000,
+          maxWidth: double.infinity,
           padding: EdgeInsets.zero,
           child: Consumer(
             builder: (context, ref, child) {
@@ -1345,7 +1345,7 @@ class _LeavesView extends ConsumerWidget {
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
           child: ResponsiveLayout(
-            maxWidth: 1000,
+            maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -175,11 +175,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: ResponsiveLayout(
-          maxWidth: 1000,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
+            maxWidth: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               AppSectionHeader(title: l10n.generalInfo),
               const SizedBox(height: 8),
               _buildInfoCard(l10n),
@@ -241,6 +242,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         ),
       ),
       ),
+      ),
     );
   }
 
@@ -262,68 +264,88 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     return PremiumCard(
       child: Column(
         children: [
-          _buildInfoRow(l10n.caseId, '#${widget.taskId}', false),
-          const Divider(height: 24),
-          _buildInfoRow(l10n.clientName, widget.clientName, false),
-          const Divider(height: 24),
-          _buildInfoRow(l10n.priority, _getPriorityLabel(widget.priority, l10n), true),
-          const Divider(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(l10n.status, style: const TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.w500)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _status,
-                    items: ['Pending', 'In Progress', 'Completed'].map((e) {
-                      return DropdownMenuItem(
-                        value: e,
-                        child: Text(_getStatusLabel(e, l10n), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      );
-                    }).toList(),
-                    onChanged: (v) => setState(() => _status = v!),
-                  ),
-                ),
-              ),
-            ],
+          _buildInfoRow(l10n.caseId, Text('#${widget.taskId}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.darkBlue))),
+          _buildInfoRow(l10n.clientName, Text(widget.clientName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppTheme.darkBlue))),
+          _buildInfoRow(l10n.priority, _buildPriorityBadge(widget.priority, l10n)),
+          _buildInfoRow(l10n.status, _buildStatusDropdown(l10n)),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Divider(color: Colors.grey.shade200, height: 1),
           ),
-          const Divider(height: 24),
-          DropdownButtonFormField<String>(
+          _buildInfoRow('Project Final Status', DropdownButtonFormField<String>(
             value: _finalStatus,
             isExpanded: true,
             decoration: InputDecoration(
-              labelText: 'Project Final Status',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              filled: true,
+              fillColor: Colors.grey.shade50,
             ),
             items: kFinalStatusLabels
-                .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13))))
+                .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 14))))
                 .toList(),
             onChanged: (v) => setState(() => _finalStatus = v),
-            hint: const Text('Select final status', style: TextStyle(fontSize: 13)),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
+            hint: const Text('Select final status', style: TextStyle(fontSize: 14)),
+          )),
+          _buildInfoRow('Reason for Rejecting', DropdownButtonFormField<String>(
             value: _rejectionReason,
             isExpanded: true,
             decoration: InputDecoration(
-              labelText: 'Reason for Skipping / Rejecting',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              filled: true,
+              fillColor: Colors.grey.shade50,
             ),
             items: kRejectionReasons
-                .map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 13))))
+                .map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 14))))
                 .toList(),
             onChanged: (v) => setState(() => _rejectionReason = v),
-            hint: const Text('Select reason', style: TextStyle(fontSize: 13)),
-          ),
+            hint: const Text('Select reason', style: TextStyle(fontSize: 14)),
+          )),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPriorityBadge(String priority, AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.accentGold.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.accentGold.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        _getPriorityLabel(priority, l10n),
+        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 13),
+      ),
+    );
+  }
+
+  Widget _buildStatusDropdown(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _status,
+          isDense: true,
+          items: ['Pending', 'In Progress', 'Completed'].map((e) {
+            return DropdownMenuItem(
+              value: e,
+              child: Text(_getStatusLabel(e, l10n), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            );
+          }).toList(),
+          onChanged: (v) => setState(() => _status = v!),
+        ),
       ),
     );
   }
@@ -344,34 +366,22 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     return status;
   }
 
-  Widget _buildInfoRow(String label, String value, bool isBadge) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.w500)),
-        const SizedBox(width: 16),
-        isBadge 
-        ? Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.accentGold.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              value,
-              style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-          )
-        : Flexible(
-            child: Text(
-              value, 
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-              textAlign: TextAlign.end,
+  Widget _buildInfoRow(String label, Widget valueWidget) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 160, 
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(label.toUpperCase(), style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
             ),
           ),
-      ],
+          Expanded(child: valueWidget),
+        ],
+      ),
     );
   }
 
@@ -382,9 +392,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.1,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.2,
       ),
       itemCount: docs.length,
       itemBuilder: (context, index) {
@@ -398,32 +408,39 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   }
 
   Widget _buildDocItem(String title, IconData icon, bool verified, Color color) {
-    return PremiumCard(
-      padding: EdgeInsets.zero,
-      color: color,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Stack(
         children: [
-          Container(
-            width: double.infinity,
-            height: double.infinity, 
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [color, color.withValues(alpha: 0.6)],
-              ),
-            ),
+          Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: Colors.white, size: 40),
-                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 32),
+                ),
+                const SizedBox(height: 16),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     title, 
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: AppTheme.darkBlue, fontSize: 14, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -434,8 +451,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           ),
           if (verified)
             Positioned(
-              top: 8,
-              right: 8,
+              top: 12,
+              right: 12,
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
@@ -587,7 +604,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               isExpanded: true,
               decoration: InputDecoration(
                 labelText: l10n.agents,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               ),
               items: [
                 const DropdownMenuItem(value: null, child: Text('No Agent')),
@@ -607,8 +628,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
               labelText: l10n.agentFee,
-              prefixIcon: const Icon(Icons.monetization_on_outlined),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(Icons.monetization_on_outlined, color: AppTheme.emeraldGreen),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               hintText: '0.00',
             ),
           ),

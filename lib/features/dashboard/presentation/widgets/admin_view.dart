@@ -120,7 +120,7 @@ class _AdminViewState extends ConsumerState<AdminView> {
         ],
       ),
       body: ResponsiveLayout(
-        maxWidth: 1000,
+        maxWidth: double.infinity,
         padding: EdgeInsets.zero,
         child: Column(
           children: [

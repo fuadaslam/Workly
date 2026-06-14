@@ -167,7 +167,7 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: ResponsiveLayout(
-          maxWidth: 1000,
+          maxWidth: double.infinity,
           padding: EdgeInsets.zero,
           child: Column(
             children: [

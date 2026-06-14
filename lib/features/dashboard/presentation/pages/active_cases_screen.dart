@@ -88,7 +88,7 @@ class _ActiveCasesScreenState extends ConsumerState<ActiveCasesScreen> {
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: ResponsiveLayout(
-        maxWidth: 900,
+        maxWidth: double.infinity,
         child: Column(
           children: [
             TextField(

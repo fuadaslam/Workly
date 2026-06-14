@@ -36,11 +36,13 @@ class _RevenueDetailScreenState extends ConsumerState<RevenueDetailScreen> {
       body: financialStats.when(
         data: (stats) => SingleChildScrollView(
           child: ResponsiveLayout(
-            maxWidth: 1000,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTotalRevenueCard(stats['totalReceivables'] ?? 0),
+            maxWidth: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTotalRevenueCard(stats['totalReceivables'] ?? 0),
                 const SizedBox(height: 24),
                 _buildPeriodSelector(),
                 const SizedBox(height: 24),
@@ -63,6 +65,7 @@ class _RevenueDetailScreenState extends ConsumerState<RevenueDetailScreen> {
                 const SizedBox(height: 24),
                 _buildRecentTransactions(stats['auditLogs'] ?? []),
               ],
+            ),
             ),
           ),
         ),
@@ -216,10 +219,10 @@ class _RevenueDetailScreenState extends ConsumerState<RevenueDetailScreen> {
           gridData: const FlGridData(show: false),
           borderData: FlBorderData(show: false),
           barGroups: [
-            BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: 8, color: AppTheme.emeraldGreen, width: 20, borderRadius: BorderRadius.circular(4))]),
-            BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: 12, color: AppTheme.emeraldGreen, width: 20, borderRadius: BorderRadius.circular(4))]),
-            BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: 15, color: AppTheme.emeraldGreen, width: 20, borderRadius: BorderRadius.circular(4))]),
-            BarChartGroupData(x: 3, barRods: [BarChartRodData(toY: 10, color: AppTheme.emeraldGreen, width: 20, borderRadius: BorderRadius.circular(4))]),
+            BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: 8, color: AppTheme.emeraldGreen, width: 40, borderRadius: BorderRadius.circular(6), backDrawRodData: BackgroundBarChartRodData(show: true, toY: 20, color: Colors.grey.shade100))]),
+            BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: 12, color: AppTheme.emeraldGreen, width: 40, borderRadius: BorderRadius.circular(6), backDrawRodData: BackgroundBarChartRodData(show: true, toY: 20, color: Colors.grey.shade100))]),
+            BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: 15, color: AppTheme.emeraldGreen, width: 40, borderRadius: BorderRadius.circular(6), backDrawRodData: BackgroundBarChartRodData(show: true, toY: 20, color: Colors.grey.shade100))]),
+            BarChartGroupData(x: 3, barRods: [BarChartRodData(toY: 10, color: AppTheme.emeraldGreen, width: 40, borderRadius: BorderRadius.circular(6), backDrawRodData: BackgroundBarChartRodData(show: true, toY: 20, color: Colors.grey.shade100))]),
           ],
         ),
       ),
@@ -252,12 +255,15 @@ class _RevenueDetailScreenState extends ConsumerState<RevenueDetailScreen> {
                     Text(formatter.format(revenue), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen)),
                   ],
                 ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: workload / 100,
-                  backgroundColor: Colors.grey.shade100,
-                  color: AppTheme.emeraldGreen,
-                  borderRadius: BorderRadius.circular(4),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: workload / 100,
+                    minHeight: 10,
+                    backgroundColor: Colors.grey.shade100,
+                    color: AppTheme.emeraldGreen,
+                  ),
                 ),
               ],
             ),

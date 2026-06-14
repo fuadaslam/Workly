@@ -31,10 +31,21 @@ import '../../../search/presentation/global_search_screen.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../auth/presentation/pages/login_screen.dart';
 
+import '../../../../core/widgets/collapsible_sidebar.dart';
+
 final superAdminTabIndexProvider = StateProvider<int>((ref) => 0);
 
 class SuperAdminView extends ConsumerWidget {
   const SuperAdminView({super.key});
+
+  Future<void> _signOut(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (context.mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,6 +65,17 @@ class SuperAdminView extends ConsumerWidget {
        const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
     ];
 
+    final sidebarItems = [
+      SidebarItem(icon: Icons.grid_view_rounded, label: l10n.dashboard),
+      const SidebarItem(icon: Icons.business_outlined, label: 'Offices'),
+      const SidebarItem(icon: Icons.how_to_reg_outlined, label: 'Attendance'),
+      const SidebarItem(icon: Icons.calendar_month_outlined, label: 'Leaves'),
+      SidebarItem(icon: Icons.people_outline, label: l10n.staff),
+      SidebarItem(icon: Icons.support_agent_outlined, label: l10n.agents),
+      const SidebarItem(icon: Icons.track_changes_outlined, label: 'Enquiries'),
+      const SidebarItem(icon: Icons.settings_outlined, label: 'Settings'),
+    ];
+
     // Reset index if out of bounds
     if (currentIndex >= tabs.length) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,27 +89,24 @@ class SuperAdminView extends ConsumerWidget {
     final selectedColor   = isDark ? AppTheme.accentGold   : AppTheme.emeraldGreen;
     final unselectedColor = isDark ? AppTheme.darkSubtext  : Colors.grey;
 
+    final userName = profile?.name ?? 'Super Admin';
+    final userRole = isSuperAdmin ? 'Super Admin' : 'Admin';
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 800) {
-          // Desktop Layout
+          // Desktop Layout with CollapsibleSidebar
           return Scaffold(
             backgroundColor: scaffoldBg,
             body: Row(
               children: [
-                NavigationRail(
-                  selectedIndex: currentIndex < tabs.length ? currentIndex : 0,
+                CollapsibleSidebar(
+                  selectedIndex: currentIndex < sidebarItems.length ? currentIndex : 0,
+                  items: sidebarItems,
                   onDestinationSelected: (idx) => ref.read(superAdminTabIndexProvider.notifier).state = idx,
-                  labelType: NavigationRailLabelType.all,
-                  backgroundColor: navBg,
-                  selectedLabelTextStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: selectedColor),
-                  unselectedLabelTextStyle: TextStyle(fontSize: 11, color: unselectedColor),
-                  selectedIconTheme: IconThemeData(color: selectedColor),
-                  unselectedIconTheme: IconThemeData(color: unselectedColor),
-                  destinations: tabs.map((t) => NavigationRailDestination(
-                    icon: t.icon as Icon, 
-                    label: Text(t.label!),
-                  )).toList(),
+                  onSignOut: () => _signOut(context),
+                  userName: userName,
+                  userRole: userRole,
                 ),
                 Expanded(
                   child: _buildCurrentTab(currentIndex, isSuperAdmin),
@@ -406,7 +425,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: ResponsiveLayout(
-              maxWidth: 1000,
+              maxWidth: double.infinity,
               padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -929,7 +948,7 @@ class _BranchManagementTab extends ConsumerWidget {
         _HeaderSection(title: l10n.regionalOffices, subtitle: l10n.branchManagement.toUpperCase(), showDate: false),
         Expanded(
           child: ResponsiveLayout(
-            maxWidth: 1000,
+            maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: RefreshIndicator(
               color: const Color(0xFF0D1B2E),
@@ -1536,7 +1555,7 @@ class _LeaveManagementTab extends ConsumerWidget {
         ),
         const Expanded(
           child: ResponsiveLayout(
-            maxWidth: 1000,
+            maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: AdminLeaveList(),
           ),
@@ -1565,7 +1584,7 @@ class _AdminManagementTab extends ConsumerWidget {
         ),
         Expanded(
           child: ResponsiveLayout(
-            maxWidth: 1000,
+            maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: RefreshIndicator(
               color: const Color(0xFF0D1B2E),
@@ -2094,7 +2113,7 @@ class _AgentManagementTab extends ConsumerWidget {
         ),
         Expanded(
           child: ResponsiveLayout(
-            maxWidth: 1000,
+            maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: RefreshIndicator(
               color: const Color(0xFF0D1B2E),
@@ -2230,7 +2249,7 @@ class _AccessControlTab extends ConsumerWidget {
         _HeaderSection(title: l10n.accessSecurity, subtitle: l10n.accessPermissions.toUpperCase(), showDate: false),
         Expanded(
           child: ResponsiveLayout(
-            maxWidth: 1000,
+            maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -2515,7 +2534,7 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
         _HeaderSection(title: l10n.systemAuthority, subtitle: l10n.systemLogs.toUpperCase(), showDate: false),
         Expanded(
           child: ResponsiveLayout(
-            maxWidth: 1000,
+            maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),

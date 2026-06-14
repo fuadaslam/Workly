@@ -9,7 +9,7 @@ class ResponsiveLayout extends StatelessWidget {
   const ResponsiveLayout({
     super.key,
     required this.child,
-    this.maxWidth = 1000,
+    this.maxWidth = double.infinity,
     this.padding = EdgeInsets.zero,
     this.center = true,
   });

@@ -16,6 +16,19 @@ class AppTheme {
 
   static const Color darkBlue = Color(0xFF1E293B);
 
+  // Gradient helpers for card and button overlays
+  static const Gradient primaryGradient = LinearGradient(
+    colors: [emeraldGreen, Color(0xFF1E2A3C)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  
+  static const Gradient goldGradient = LinearGradient(
+    colors: [Color(0xFFF59E0B), Color(0xFFD4AF37)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   static const Color surfaceWhite  = Color(0xFFFFFFFF);
   static const Color backgroundLight = Color(0xFFF0F4F8); // Soft blue-grey tint
 
