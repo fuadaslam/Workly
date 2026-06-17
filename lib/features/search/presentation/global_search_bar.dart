@@ -130,7 +130,7 @@ class _GlobalSearchBarState extends ConsumerState<GlobalSearchBar> {
   Widget _buildOverlay(BuildContext context) {
     final isDark = Theme.of(this.context).brightness == Brightness.dark;
     final fieldWidth = widget.width;
-    final fieldHeight = 40.0;
+    const fieldHeight = 40.0;
 
     return Stack(
       children: [
@@ -146,7 +146,7 @@ class _GlobalSearchBarState extends ConsumerState<GlobalSearchBar> {
           showWhenUnlinked: false,
           targetAnchor: Alignment.bottomLeft,
           followerAnchor: Alignment.topLeft,
-          offset: Offset(0, fieldHeight + 6),
+          offset: const Offset(0, fieldHeight + 6),
           child: SizedBox(
             width: fieldWidth,
             child: _dropdownCard(isDark),
