@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -54,8 +55,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
       );
     } else if (session != null) {
       // Check if biometric is enabled — show lock screen before dashboard
-      final biometricEnabled = await BiometricService.isEnabled();
-      final biometricAvailable = await BiometricService.isAvailable();
+      final biometricEnabled = !kIsWeb && await BiometricService.isEnabled();
+      final biometricAvailable = !kIsWeb && await BiometricService.isAvailable();
       if (!mounted) return;
       if (biometricEnabled && biometricAvailable) {
         Navigator.of(context).pushReplacement(

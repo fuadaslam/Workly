@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -85,8 +86,8 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
         'final_status': 'In Progress',
       };
       final created = await ref.read(enquiryRepositoryProvider).createEnquiry(data);
-      // Schedule follow-up notification if date was set
-      if (_followUpDate != null) {
+      // Schedule follow-up notification if date was set (native only)
+      if (!kIsWeb && _followUpDate != null) {
         await NotificationService.scheduleFollowUpReminder(
           id: created.id.hashCode,
           clientName: _clientNameCtrl.text.trim(),

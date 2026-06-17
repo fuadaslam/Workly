@@ -8,6 +8,7 @@ import 'core/constants/supabase_env.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/widgets/offline_banner.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'core/services/notification_service.dart';
 import 'features/onboarding/presentation/pages/splash_screen.dart';
 
@@ -25,8 +26,10 @@ Future<void> main() async {
     debugPrint('Supabase init failed: $e');
   }
 
-  await NotificationService.init();
-  await NotificationService.requestPermission();
+  if (!kIsWeb) {
+    await NotificationService.init();
+    await NotificationService.requestPermission();
+  }
 
   runApp(const ProviderScope(
     child: MyApp(),
