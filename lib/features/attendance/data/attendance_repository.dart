@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/supabase_org_utils.dart';
 
 class AttendanceRepository {
   final SupabaseClient _client;
@@ -21,10 +22,12 @@ class AttendanceRepository {
   }
 
   Future<void> checkIn(String userId, String? gpsLocation) async {
+    final orgId = await fetchCallerOrgId(_client);
     await _client.from('attendance').insert({
       'user_id': userId,
       'check_in_time': DateTime.now().toIso8601String(),
       'location_gps': gpsLocation,
+      'org_id': orgId,
     });
   }
 

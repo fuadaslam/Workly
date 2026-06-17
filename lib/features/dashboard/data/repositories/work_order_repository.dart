@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/work_order.dart';
 import '../../domain/models/task_history.dart';
 import '../../domain/models/task_document.dart';
+import '../../../../core/utils/supabase_org_utils.dart';
 
 class WorkOrderRepository {
   final SupabaseClient _client;
@@ -121,6 +122,7 @@ class WorkOrderRepository {
     String? assignedStaffId,
     String? assignedOfficeId,
   }) async {
+    final orgId = await fetchCallerOrgId(_client);
     final response = await _client.from('work_orders').insert({
       'client_name': clientName,
       'client_phone_number': clientPhoneNumber,
@@ -132,6 +134,7 @@ class WorkOrderRepository {
       'assigned_staff_id': assignedStaffId ?? (assignedOfficeId == null ? _client.auth.currentUser?.id : null),
       'assigned_office_id': assignedOfficeId,
       'status': 'Pending',
+      'org_id': orgId,
     }).select().single();
 
     final orderId = response['id'];
