@@ -144,11 +144,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.photo_camera, color: AppTheme.darkBlue),
-              title: const Text('Take Photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(Icons.photo_camera, color: AppTheme.darkBlue),
+                title: const Text('Take Photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: AppTheme.darkBlue),
               title: const Text('Choose from Gallery'),

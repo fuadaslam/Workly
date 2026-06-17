@@ -152,11 +152,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.photo_camera, color: AppTheme.darkBlue),
-              title: const Text('Take Photo'),
-              onTap: () => Navigator.pop(context, 'camera'),
-            ),
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(Icons.photo_camera, color: AppTheme.darkBlue),
+                title: const Text('Take Photo'),
+                onTap: () => Navigator.pop(context, 'camera'),
+              ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: AppTheme.darkBlue),
               title: const Text('Choose from Gallery'),
