@@ -11,7 +11,16 @@ class OfficeRepository {
   }
 
   Future<void> addOffice(Map<String, dynamic> officeData) async {
-    await _client.from('offices').insert(officeData);
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not authenticated');
+    final profile = await _client
+        .from('profiles')
+        .select('org_id')
+        .eq('id', userId)
+        .single();
+    final orgId = profile['org_id'] as String?;
+    if (orgId == null) throw Exception('Your account is not linked to an organization.');
+    await _client.from('offices').insert({...officeData, 'org_id': orgId});
   }
 
   Future<void> updateOffice(String id, Map<String, dynamic> updates) async {
