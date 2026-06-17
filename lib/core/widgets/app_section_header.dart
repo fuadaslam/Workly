@@ -19,19 +19,40 @@ class AppSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accentColor = isDark ? AppTheme.electricBlue : AppTheme.emeraldGreen;
+    final labelColor = isDark
+        ? AppTheme.darkOnSurface.withValues(alpha: 0.45)
+        : const Color(0xFF94A3B8);
+    final actionColor = accentColor;
+
     return Padding(
       padding: padding ?? const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-              letterSpacing: 1.2,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 3,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: labelColor,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
           ),
           if (action != null)
             action!
@@ -39,14 +60,18 @@ class AppSectionHeader extends StatelessWidget {
             TextButton(
               onPressed: onActionPressed,
               style: TextButton.styleFrom(
-                foregroundColor: AppTheme.emeraldGreen,
-                padding: EdgeInsets.zero,
+                foregroundColor: actionColor,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Text(
                 actionLabel!,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: actionColor,
+                ),
               ),
             ),
         ],

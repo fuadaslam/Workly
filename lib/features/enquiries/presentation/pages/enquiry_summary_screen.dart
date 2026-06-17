@@ -52,7 +52,7 @@ class EnquirySummaryScreen extends ConsumerWidget {
     final byStaff = stats['byStaff'] as Map<String, Map<String, dynamic>>;
 
     return RefreshIndicator(
-      color: const Color(0xFF0D1B2E),
+      color: AppTheme.ink900,
       onRefresh: () async {},
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -66,13 +66,13 @@ class EnquirySummaryScreen extends ConsumerWidget {
             // Status breakdown
             _sectionLabel('Status Breakdown'),
             Row(children: [
-              Expanded(child: _kpiTile('Settled / Executed', '$settled', Colors.green, Icons.check_circle_outline)),
+              Expanded(child: _kpiTile('Settled / Executed', '$settled', AppTheme.statusCompleted, Icons.check_circle_outline)),
               const SizedBox(width: 12),
               Expanded(child: _kpiTile('In Progress', '$inProgress', AppTheme.accentGold, Icons.timelapse_outlined)),
             ]),
             const SizedBox(height: 12),
             Row(children: [
-              Expanded(child: _kpiTile('Avg. Days to Settle', '${avgDays.toStringAsFixed(1)} days', Colors.teal, Icons.schedule_outlined)),
+              Expanded(child: _kpiTile('Avg. Days to Settle', '${avgDays.toStringAsFixed(1)} days', AppTheme.statusCompleted, Icons.schedule_outlined)),
               const SizedBox(width: 12),
               Expanded(child: _kpiTile('Total Revenue', 'SAR ${_fmt(revenue)}', AppTheme.emeraldGreen, Icons.payments_outlined)),
             ]),
@@ -102,7 +102,7 @@ class EnquirySummaryScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppTheme.emeraldGreen, Color(0xFF1E3A5F)],
+          colors: [AppTheme.emeraldGreen, AppTheme.ink800],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -119,7 +119,7 @@ class EnquirySummaryScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _heroStat('Accepted', '$accepted', Colors.greenAccent),
+              _heroStat('Accepted', '$accepted', AppTheme.statusCompleted),
               _heroStat('Rejected', '$rejected', Colors.redAccent),
               _heroStat('Conv. Rate', '${(convRate * 100).toStringAsFixed(1)}%', Colors.amberAccent),
             ],
@@ -202,11 +202,11 @@ class EnquirySummaryScreen extends ConsumerWidget {
               Expanded(child: Text('$count', textAlign: TextAlign.center,
                   style: const TextStyle(fontWeight: FontWeight.bold))),
               Expanded(child: Text('$settled', textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
+                  style: const TextStyle(color: AppTheme.statusCompleted, fontWeight: FontWeight.bold))),
               Expanded(flex: 2, child: Text(
                 settled > 0 ? '${avgDays.toStringAsFixed(1)}d' : '—',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.teal),
+                style: const TextStyle(color: AppTheme.statusCompleted),
               )),
             ]),
           );

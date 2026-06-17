@@ -93,7 +93,7 @@ class _InfiniteScrollListState<T> extends ConsumerState<InfiniteScrollList<T>> {
     }
 
     return RefreshIndicator(
-      color: const Color(0xFF0D1B2E),
+      color: AppTheme.ink900,
       onRefresh: () async {
         await ref.read(widget.provider.notifier).fetchFirstPage();
       },

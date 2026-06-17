@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
@@ -8,11 +9,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../core/utils/contact_utils.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/theme/pattern_painter.dart';
 import '../providers/dashboard_provider.dart';
 import 'profile_view.dart';
 import '../pages/detail_trend_screen.dart';
 import '../pages/active_cases_screen.dart';
+import '../pages/task_detail_screen.dart';
 import '../pages/revenue_detail_screen.dart';
 import '../pages/office_detail_screen.dart';
 import '../pages/admin_detail_screen.dart';
@@ -28,15 +29,28 @@ import 'assignment_sheet.dart';
 import '../../../enquiries/presentation/pages/enquiry_list_screen.dart';
 import '../../../reports/presentation/report_export_screen.dart';
 import '../../../search/presentation/global_search_screen.dart';
+import '../../../search/presentation/global_search_bar.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../auth/presentation/pages/login_screen.dart';
 
 import '../../../../core/widgets/collapsible_sidebar.dart';
+import '../../../../core/widgets/workly_primitives.dart';
+import '../../domain/models/work_order.dart';
 
 final superAdminTabIndexProvider = StateProvider<int>((ref) => 0);
 
-class SuperAdminView extends ConsumerWidget {
+class SuperAdminView extends ConsumerStatefulWidget {
   const SuperAdminView({super.key});
+
+  @override
+  ConsumerState<SuperAdminView> createState() => _SuperAdminViewState();
+}
+
+class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
+  final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
+    8,
+    (_) => GlobalKey<NavigatorState>(),
+  );
 
   Future<void> _signOut(BuildContext context) async {
     await Supabase.instance.client.auth.signOut();
@@ -48,7 +62,7 @@ class SuperAdminView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(superAdminTabIndexProvider);
     final profile = ref.watch(profileProvider).value;
     final isSuperAdmin = profile?.role == AppRole.super_admin;
@@ -98,6 +112,7 @@ class SuperAdminView extends ConsumerWidget {
           // Desktop Layout with CollapsibleSidebar
           return Scaffold(
             backgroundColor: scaffoldBg,
+            endDrawer: const Drawer(width: 400, child: ProfileView()),
             body: Row(
               children: [
                 CollapsibleSidebar(
@@ -109,7 +124,19 @@ class SuperAdminView extends ConsumerWidget {
                   userRole: userRole,
                 ),
                 Expanded(
-                  child: _buildCurrentTab(currentIndex, isSuperAdmin),
+                  child: IndexedStack(
+                    index: currentIndex < sidebarItems.length ? currentIndex : 0,
+                    children: List.generate(8, (index) {
+                      return Navigator(
+                        key: _navKeys[index],
+                        onGenerateRoute: (settings) {
+                          return MaterialPageRoute(
+                            builder: (context) => _buildCurrentTab(index, isSuperAdmin),
+                          );
+                        },
+                      );
+                    }),
+                  ),
                 ),
               ],
             ),
@@ -139,7 +166,20 @@ class SuperAdminView extends ConsumerWidget {
           // Mobile Layout
           return Scaffold(
             backgroundColor: scaffoldBg,
-            body: _buildCurrentTab(currentIndex, isSuperAdmin),
+            endDrawer: const Drawer(width: 350, child: ProfileView()),
+            body: IndexedStack(
+              index: currentIndex < tabs.length ? currentIndex : 0,
+              children: List.generate(8, (index) {
+                return Navigator(
+                  key: _navKeys[index],
+                  onGenerateRoute: (settings) {
+                    return MaterialPageRoute(
+                      builder: (context) => _buildCurrentTab(index, isSuperAdmin),
+                    );
+                  },
+                );
+              }),
+            ),
             floatingActionButton: (currentIndex == 0 || currentIndex == 1)
                 ? FloatingActionButton.extended(
                     onPressed: () {
@@ -195,7 +235,7 @@ class SuperAdminView extends ConsumerWidget {
       case 2: return const _AttendanceTab();
       case 3: return const _LeaveManagementTab();
       case 4: return _AdminManagementTab(isStaffView: !isSuperAdmin);
-      case 5: return const _AgentManagementTab();
+      case 5: return isSuperAdmin ? const _AgentManagementTab() : const SizedBox.shrink();
       case 6: return const EnquiryListScreen();
       case 7: return _SettingsTab(isSuperAdmin: isSuperAdmin);
       default: return const _ExecutiveDashboardTab();
@@ -250,18 +290,18 @@ class _HeaderSection extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.language, color: AppTheme.emeraldGreen),
+                leading: const Icon(Icons.language, color: AppTheme.electricBlue),
                 title: const Text('English'),
-                trailing: ref.watch(localeProvider).languageCode == 'en' ? const Icon(Icons.check, color: AppTheme.emeraldGreen) : null,
+                trailing: ref.watch(localeProvider).languageCode == 'en' ? const Icon(Icons.check, color: AppTheme.electricBlue) : null,
                 onTap: () {
                   ref.read(localeProvider.notifier).state = const Locale('en');
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.language, color: AppTheme.emeraldGreen),
+                leading: const Icon(Icons.language, color: AppTheme.electricBlue),
                 title: const Text('العربية'),
-                trailing: ref.watch(localeProvider).languageCode == 'ar' ? const Icon(Icons.check, color: AppTheme.emeraldGreen) : null,
+                trailing: ref.watch(localeProvider).languageCode == 'ar' ? const Icon(Icons.check, color: AppTheme.electricBlue) : null,
                 onTap: () {
                   ref.read(localeProvider.notifier).state = const Locale('ar');
                   Navigator.pop(context);
@@ -274,13 +314,17 @@ class _HeaderSection extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderIcon({required IconData icon, required VoidCallback onTap}) {
+  Widget _buildHeaderIcon({required IconData icon, required VoidCallback onTap, required bool isDark}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, color: Colors.white, size: 18),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.02),
+          borderRadius: BorderRadius.circular(8),
+          border: isDark ? Border.all(color: Colors.white.withValues(alpha: 0.1)) : null,
+        ),
+        child: Icon(icon, color: isDark ? Colors.white70 : Colors.black87, size: 16),
       ),
     );
   }
@@ -289,115 +333,130 @@ class _HeaderSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentLocale = ref.watch(localeProvider);
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: AppTheme.emeraldGreen,
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        border: Border(bottom: BorderSide(color: isDark ? AppTheme.darkBorder : const Color(0xFFEAEAEA))),
       ),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: CustomPaint(
-              painter: MashrabiyaPatternPainter(color: Colors.white.withValues(alpha: 0.03)),
-            ),
-          ),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       children: [
                         Text(title, 
-                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                            style: TextStyle(color: isDark ? Colors.white : AppTheme.darkBlue, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.5),
                             overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 4),
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(subtitle, 
-                                style: TextStyle(color: AppTheme.accentGold.withValues(alpha: 0.9), fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2),
-                                overflow: TextOverflow.ellipsis),
-                            if (showDate) ...[
-                              Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 8),
-                                width: 4, height: 4,
-                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), shape: BoxShape.circle),
-                              ),
-                              Icon(Icons.security, color: Colors.white.withValues(alpha: 0.5), size: 12),
-                              const SizedBox(width: 4),
-                              Text('${l10n.systemAuthority.toUpperCase()} • ${_currentDateFormatted()}',
-                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5),
-                                  overflow: TextOverflow.ellipsis),
-                            ],
-                          ],
-                        ),
+                        if (showDate) ...[
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppTheme.darkCardAlt : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFEAEAEA)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.circle, color: AppTheme.electricBlue, size: 6),
+                                const SizedBox(width: 6),
+                                Text(l10n.systemAuthority.toUpperCase(), style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                              ]
+                            )
+                          ),
+                        ]
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(subtitle, 
+                            style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis),
+                        if (showDate) ...[
+                          const SizedBox(width: 8),
+                          Text('•', style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFF64748B))),
+                          const SizedBox(width: 8),
+                          Text(_currentDateFormatted(),
+                              style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeaderIcon(
+                    icon: ref.watch(themeModeProvider) == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                    onTap: () => ref.read(themeModeProvider.notifier).toggle(),
+                    isDark: isDark,
                   ),
-                  const SizedBox(width: 12),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Dark mode toggle
-                      _buildHeaderIcon(
-                        icon: ref.watch(themeModeProvider) == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                        onTap: () => ref.read(themeModeProvider.notifier).toggle(),
+                  const SizedBox(width: 8),
+                  if (MediaQuery.of(context).size.width >= 700) ...[
+                    const GlobalSearchBar(width: 300),
+                    const SizedBox(width: 8),
+                  ] else ...[
+                    _buildHeaderIcon(
+                      icon: Icons.search_rounded,
+                      onTap: () => Navigator.push(context, GlobalSearchScreen.route()),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  GestureDetector(
+                    onTap: () => _showLanguagePicker(context, ref),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
                       ),
-                      const SizedBox(width: 8),
-                      // Global search
-                      _buildHeaderIcon(
-                        icon: Icons.search_rounded,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GlobalSearchScreen())),
+                      child: Text(
+                        currentLocale.languageCode == 'en' ? 'عربي' : 'EN',
+                        style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.w600, fontSize: 12),
                       ),
-                      const SizedBox(width: 8),
-                      // Language Toggle
-                      GestureDetector(
-                        onTap: () => _showLanguagePicker(context, ref),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            currentLocale.languageCode == 'en' ? 'عربي' : 'English',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Builder(
+                    builder: (context) => GestureDetector(
+                      onTap: () {
+                        Scaffold.of(context).openEndDrawer();
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0), width: 1),
+                        ),
+                        child: const CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppTheme.electricBlue,
+                          child: Text('SA', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // Profile Avatar
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ProfileView()),
-                          );
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
-                          ),
-                          child: const CircleAvatar(
-                            radius: 18,
-                            backgroundColor: Color(0xFFFFB29D),
-                            child: Icon(Icons.person, color: Colors.white, size: 20),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -410,7 +469,6 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final financialStats = ref.watch(financialStatsProvider);
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
@@ -418,7 +476,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
         _HeaderSection(title: l10n.superAdmin, subtitle: l10n.vision2030Portal.toUpperCase()),
         Expanded(
           child: RefreshIndicator(
-            color: const Color(0xFF0D1B2E),
+            color: AppTheme.ink900,
             onRefresh: () async {
               ref.invalidate(financialStatsProvider);
             },
@@ -438,7 +496,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                   Row(
                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                      children: [
-                       Text(l10n.executiveOverview.toUpperCase(), style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                       Text(l10n.executiveOverview.toUpperCase(), style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
                        Consumer(
                          builder: (ctx, cRef, _) {
                            final dr = cRef.watch(dashboardDateRangeProvider);
@@ -475,65 +533,18 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                      ],
                   ),
                   const SizedBox(height: 15),
-                  
-                  // Revenue Card
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const RevenueDetailScreen()),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: financialStats.when(
-                      data: (stats) {
-                        final total = (stats['totalReceivables'] as num? ?? 0).toDouble();
-                        final label = total == 0 ? 'No payment data yet' : '+15.4% vs last month';
-                        final value = _formatSar(total);
-                        return _buildRevenueCard(context, l10n.monthlyRevenue, value, label, true);
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen)),
-                      error: (e, _) => _buildRevenueCard(context, l10n.monthlyRevenue, 'SAR 0.0M', 'No payment data yet', true),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 15),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const ActiveCasesScreen()),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: ref.watch(activeCasesCountProvider).when(
-                            data: (count) => _buildSmallStatCard(l10n.activeCases, count.toString(), 'this month', true),
-                            loading: () => _buildSmallStatCard(l10n.activeCases, '...', 'loading', true),
-                            error: (_, __) => _buildSmallStatCard(l10n.activeCases, '0', 'no data', true),
-                          )
-                        )
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            ref.read(superAdminTabIndexProvider.notifier).state = 3; // Switch to Access tab
-                          }, 
-                          borderRadius: BorderRadius.circular(16), 
-                          child: ref.watch(pendingApprovalsCountProvider).when(
-                            data: (count) => _buildSmallStatCard(l10n.pendingApprovals, count.toString(), 'awaiting action', false),
-                            loading: () => _buildSmallStatCard(l10n.pendingApprovals, '...', 'loading', false),
-                            error: (_, __) => _buildSmallStatCard(l10n.pendingApprovals, '0', 'no data', false),
-                          )
-                        )
-                      ),
-                    ],
-                  ),
-                  
-                  
+
+                  // KPI StatCard row (Operations Dashboard layout)
+                  _buildKpiGrid(context, ref),
+
+                  const SizedBox(height: 30),
+
+                  // Live operations feed
+                  const Text('LIVE OPERATIONS FEED',
+                      style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+                  const SizedBox(height: 14),
+                  _buildOpsFeed(context, ref),
+
                   const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -550,7 +561,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  _buildRevenueChart(ref),
+                  _buildRevenueChart(context, ref),
 
                   const SizedBox(height: 30),
                   _buildStaffKPIs(context, l10n, ref),
@@ -567,162 +578,164 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
     );
   }
 
-  static String _formatSar(double amount) {
-    if (amount == 0) return 'SAR 0';
-    if (amount >= 1000000) return 'SAR ${(amount / 1000000).toStringAsFixed(1)}M';
-    if (amount >= 1000) return 'SAR ${(amount / 1000).toStringAsFixed(1)}K';
-    return 'SAR ${amount.toStringAsFixed(0)}';
+  /// 4-up KPI grid — Total Orders, Completed (wk), Cash Collected, High Priority.
+  /// Falls to 2 columns under 720px, single column under 460px.
+  Widget _buildKpiGrid(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(dashboardStatsProvider);
+    final financialStats = ref.watch(financialStatsProvider);
+    final ordersAsync = ref.watch(allWorkOrdersProvider);
+
+    String s(AsyncValue v, String Function(dynamic) f) =>
+        v.maybeWhen(data: f, orElse: () => '—');
+
+    final totalOrders = s(statsAsync, (d) => '${d['total'] ?? 0}');
+    final completedWk = s(statsAsync, (d) => '${d['completedThisWeek'] ?? 0}');
+    final highPriority = ordersAsync.maybeWhen(
+      data: (orders) => orders
+          .where((o) => o.priority == PriorityLevel.high && o.status != WorkStatus.completed)
+          .length
+          .toString(),
+      orElse: () => '—',
+    );
+
+    String cashValue = '—';
+    String? cashUnit;
+    financialStats.maybeWhen(
+      data: (d) {
+        final total = (d['totalReceivables'] as num? ?? 0).toDouble();
+        cashUnit = 'SAR';
+        if (total >= 1000000) {
+          cashValue = '${(total / 1000000).toStringAsFixed(1)}M';
+        } else if (total >= 1000) {
+          cashValue = '${(total / 1000).toStringAsFixed(0)}K';
+        } else {
+          cashValue = total.toStringAsFixed(0);
+        }
+      },
+      orElse: () {},
+    );
+
+    final cards = <Widget>[
+      WorqlyStatCard(
+        icon: Icons.receipt_long_rounded,
+        label: 'Total Orders',
+        value: totalOrders,
+        tone: StatTone.ink,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActiveCasesScreen())),
+      ),
+      WorqlyStatCard(
+        icon: Icons.task_alt_rounded,
+        label: 'Completed (wk)',
+        value: completedWk,
+        tone: StatTone.completed,
+      ),
+      WorqlyStatCard(
+        icon: Icons.payments_rounded,
+        label: 'Cash Collected',
+        value: cashValue,
+        unit: cashUnit,
+        tone: StatTone.brand,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RevenueDetailScreen())),
+      ),
+      WorqlyStatCard(
+        icon: Icons.bolt_rounded,
+        label: 'High Priority',
+        value: highPriority,
+        tone: StatTone.danger,
+      ),
+    ];
+
+    return LayoutBuilder(builder: (context, c) {
+      final cols = c.maxWidth >= 720 ? 4 : (c.maxWidth >= 460 ? 2 : 1);
+      const gap = 16.0;
+      final cardWidth = (c.maxWidth - gap * (cols - 1)) / cols;
+      return Wrap(
+        spacing: gap,
+        runSpacing: gap,
+        children: cards.map((w) => SizedBox(width: cardWidth, child: w)).toList(),
+      );
+    });
   }
 
-  Widget _buildRevenueCard(BuildContext context, String title, String value, String growth, bool isPositive) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0B172A), Color(0xFF1E293B)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: const Color(0xFF0B172A).withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 12)),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: CustomPaint(
-                painter: MashrabiyaPatternPainter(color: Colors.white.withValues(alpha: 0.02)),
-              ),
+  /// Live operations feed — recent work orders rendered as WorkOrderCards.
+  Widget _buildOpsFeed(BuildContext context, WidgetRef ref) {
+    final ordersAsync = ref.watch(allWorkOrdersProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.primaryAccent(isDark);
+
+    return ordersAsync.when(
+      loading: () => SizedBox(height: 120, child: Center(child: CircularProgressIndicator(color: accent))),
+      error: (_, __) => const SizedBox(),
+      data: (orders) {
+        if (orders.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+              child: Column(children: [
+                Icon(Icons.inbox_rounded, size: 40, color: isDark ? AppTheme.darkBorder : const Color(0xFFD4D4D8)),
+                const SizedBox(height: 8),
+                Text('No active work orders.',
+                    style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFFA1A1AA), fontSize: 13)),
+              ]),
             ),
-            Positioned(
-              right: -30,
-              bottom: -30,
-              child: Icon(Icons.account_balance_wallet, size: 160, color: Colors.white.withValues(alpha: 0.03)),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(28),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: AppTheme.accentGold.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(12)),
-                              child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.accentGold, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(title, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1.1)),
-                          ],
+          );
+        }
+        final recent = orders.take(9).toList();
+        return LayoutBuilder(builder: (context, c) {
+          final cols = (c.maxWidth / 340).floor().clamp(1, 3);
+          const gap = 16.0;
+          final cardWidth = (c.maxWidth - gap * (cols - 1)) / cols;
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: recent.map((o) {
+              final status = switch (o.status) {
+                WorkStatus.inProgress => WorqlyOrderStatus.progress,
+                WorkStatus.completed => WorqlyOrderStatus.completed,
+                WorkStatus.pending => WorqlyOrderStatus.pending,
+              };
+              return SizedBox(
+                width: cardWidth,
+                child: WorqlyWorkOrderCard(
+                  serviceType: o.serviceType ?? 'General Service',
+                  orderId: o.id.length > 8 ? 'WO-${o.id.substring(0, 6).toUpperCase()}' : o.id,
+                  clientName: o.clientName,
+                  staffName: o.assignedStaffName,
+                  officeName: o.assignedOfficeName,
+                  status: status,
+                  highPriority: o.priority == PriorityLevel.high,
+                  contactable: (o.clientPhoneNumber ?? '').isNotEmpty,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TaskDetailScreen(
+                          taskId: o.id,
+                          clientName: o.clientName ?? 'Unknown',
+                          clientPhone: o.clientPhoneNumber,
+                          priority: o.priority.name,
+                          initialStatus: o.status.name,
                         ),
-                        const SizedBox(height: 24),
-                        Text(value, style: const TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1.0)),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: (isPositive ? AppTheme.emeraldGreen : Colors.red).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: (isPositive ? AppTheme.emeraldGreen : Colors.red).withValues(alpha: 0.3)),
-                              ),
-                              child: Row(children: [
-                                Icon(isPositive ? Icons.trending_up : Icons.trending_down, size: 16, color: isPositive ? AppTheme.emeraldGreen : Colors.red),
-                                const SizedBox(width: 6),
-                                Text(growth, style: TextStyle(color: isPositive ? AppTheme.emeraldGreen : Colors.red, fontWeight: FontWeight.bold, fontSize: 13)),
-                              ]),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(l10n.vsLastMonth, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13, fontWeight: FontWeight.w500)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.05),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                    ),
-                    child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 20),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }).toList(),
+          );
+        });
+      },
     );
   }
 
-  Widget _buildSmallStatCard(String title, String value, String growth, bool isPositive) {
-    final iconData = title.toLowerCase().contains('case') ? Icons.assignment_outlined : Icons.pending_actions_outlined;
-    final color = title.toLowerCase().contains('case') ? Colors.blue : Colors.orange;
-    
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(iconData, size: 22, color: color),
-              ),
-              Icon(Icons.more_horiz, size: 20, color: Colors.grey.shade400),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(value, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppTheme.darkBlue, letterSpacing: -0.5)),
-          const SizedBox(height: 6),
-          Text(title, style: TextStyle(color: Colors.grey.shade600, fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(isPositive ? Icons.arrow_upward : Icons.access_time, size: 12, color: color),
-                    const SizedBox(width: 4),
-                    Text(growth, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildRevenueChart(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFEAEAEA);
+    final metaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
+    final gridColor = isDark ? AppTheme.darkBorder.withValues(alpha: 0.5) : Colors.grey.withValues(alpha: 0.08);
+    final accent = AppTheme.primaryAccent(isDark);
 
-  Widget _buildRevenueChart(WidgetRef ref) {
     final trendAsync = ref.watch(monthlyWorkOrderTrendProvider);
     final now = DateTime.now();
     final months = List.generate(6, (i) => DateFormat('MMM').format(DateTime(now.year, now.month - 5 + i)));
@@ -732,9 +745,9 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
 
     return trendAsync.when(
       loading: () => Container(
-        height: 280,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
-        child: const Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen)),
+        height: 260,
+        decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cardBorder)),
+        child: Center(child: CircularProgressIndicator(color: accent)),
       ),
       error: (_, __) => const SizedBox(),
       data: (counts) {
@@ -751,12 +764,14 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
         final maxY = (counts.reduce((a, b) => a > b ? a : b) + 2).clamp(4.0, double.infinity);
 
         return Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10))],
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cardBorder, width: 1),
+            boxShadow: [
+              if (!isDark) const BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -767,21 +782,29 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Enquiry Activity', style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text('Enquiry Activity', style: TextStyle(color: metaColor, fontSize: 13, fontWeight: FontWeight.w500)),
                       const SizedBox(height: 4),
-                      Text(growthLabel, style: TextStyle(color: curr >= prev ? AppTheme.emeraldGreen : Colors.red, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(growthLabel, style: TextStyle(
+                        color: curr >= prev ? AppTheme.mintGreen : AppTheme.errorRed,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      )),
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(20)),
-                    child: const Text('6 Months', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkCardAlt : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('6 Months', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: metaColor)),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               SizedBox(
-                height: 200,
+                height: 180,
                 child: LineChart(
                   LineChartData(
                     minY: 0,
@@ -789,7 +812,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                     gridData: FlGridData(
                       show: true, drawVerticalLine: false,
                       horizontalInterval: (maxY / 4).ceilToDouble().clamp(1, double.infinity),
-                      getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.withValues(alpha: 0.1), strokeWidth: 1, dashArray: [5, 5]),
+                      getDrawingHorizontalLine: (_) => FlLine(color: gridColor, strokeWidth: 1, dashArray: [4, 4]),
                     ),
                     titlesData: FlTitlesData(
                       leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -798,14 +821,14 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                       bottomTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 30,
+                          reservedSize: 28,
                           interval: 1,
                           getTitlesWidget: (value, meta) {
                             final idx = value.toInt();
                             if (idx < 0 || idx >= months.length) return const SizedBox();
                             return SideTitleWidget(
                               axisSide: meta.axisSide,
-                              child: Text(months[idx], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
+                              child: Text(months[idx], style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: metaColor)),
                             );
                           },
                         ),
@@ -817,26 +840,29 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                         spots: spots,
                         isCurved: true,
                         curveSmoothness: 0.35,
-                        color: AppTheme.emeraldGreen,
-                        barWidth: 4,
+                        color: accent,
+                        barWidth: 2,
                         isStrokeCapRound: true,
                         dotData: FlDotData(
                           show: true,
                           getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                            radius: index == 5 ? 6 : 4, color: Colors.white, strokeWidth: 3, strokeColor: AppTheme.emeraldGreen,
+                            radius: index == 5 ? 4 : 3,
+                            color: cardBg,
+                            strokeWidth: 2,
+                            strokeColor: accent,
                           ),
                         ),
                         belowBarData: BarAreaData(
                           show: true,
                           gradient: LinearGradient(
-                            colors: [AppTheme.emeraldGreen.withValues(alpha: 0.25), AppTheme.emeraldGreen.withValues(alpha: 0.0)],
+                            colors: [accent.withValues(alpha: 0.18), accent.withValues(alpha: 0.0)],
                             begin: Alignment.topCenter, end: Alignment.bottomCenter,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  duration: const Duration(milliseconds: 800),
+                  duration: const Duration(milliseconds: 600),
                   curve: Curves.easeOutCubic,
                 ),
               ),
@@ -848,23 +874,29 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
   }
 
   Widget _buildStaffKPIs(BuildContext context, AppLocalizations l10n, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final kpiAsync = ref.watch(serviceTypeKpiProvider);
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE9EEF5);
+    final titleColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final metaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
+    final accent = AppTheme.primaryAccent(isDark);
 
     return kpiAsync.when(
-      loading: () => const SizedBox(height: 80, child: Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen))),
+      loading: () => SizedBox(height: 80, child: Center(child: CircularProgressIndicator(color: accent))),
       error: (_, __) => const SizedBox(),
       data: (kpis) {
         if (kpis.isEmpty) return const SizedBox();
-        final avgCompletion = kpis.isEmpty
-            ? 0.0
-            : kpis.fold(0.0, (sum, k) => sum + (k['percent'] as double)) / kpis.length;
+        final avgCompletion = kpis.fold(0.0, (sum, k) => sum + (k['percent'] as double)) / kpis.length;
         return Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10))],
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cardBorder, width: 1),
+            boxShadow: [
+              if (!isDark) const BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+            ],
           ),
           child: Column(
             children: [
@@ -874,25 +906,31 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Completion by Service Type', style: TextStyle(color: AppTheme.darkBlue, fontSize: 16, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text('Top ${kpis.length} service categories', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                      Text('Completion by Service Type', style: TextStyle(color: titleColor, fontSize: 15, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 3),
+                      Text('Top ${kpis.length} service categories', style: TextStyle(color: metaColor, fontSize: 12)),
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: AppTheme.emeraldGreen.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     child: Text(
                       '${(avgCompletion * 100).toStringAsFixed(0)}% Avg',
-                      style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: kpis.map((k) => _buildKPIBar(k['label'] as String, (k['percent'] as double), k['total'] as int)).toList(),
+                children: kpis.map((k) => _buildKPIBar(
+                  context, k['label'] as String, (k['percent'] as double), k['total'] as int,
+                  isDark, titleColor, metaColor, accent,
+                )).toList(),
               ),
             ],
           ),
@@ -901,35 +939,31 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildKPIBar(String label, double percent, int total) {
-    return Column(
-      children: [
-        Text('$total', style: const TextStyle(fontSize: 11, color: AppTheme.darkBlue, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        Container(
-          height: 120, width: 14,
-          decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-          child: FractionallySizedBox(
-            heightFactor: percent.clamp(0.0, 1.0),
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.emeraldGreen, Color(0xFF0A8A61)],
-                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [BoxShadow(color: AppTheme.emeraldGreen.withValues(alpha: 0.4), blurRadius: 6, offset: const Offset(0, 2))],
-              ),
+  Widget _buildKPIBar(BuildContext context, String label, double percent, int total,
+      bool isDark, Color titleColor, Color metaColor, Color accent) {
+    final trackColor = isDark ? AppTheme.darkCardAlt : const Color(0xFFF1F5F9);
+    return Column(children: [
+      Text('$total', style: TextStyle(fontSize: 11, color: titleColor, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 6),
+      Container(
+        height: 110, width: 8,
+        decoration: BoxDecoration(color: trackColor, borderRadius: BorderRadius.circular(12)),
+        child: FractionallySizedBox(
+          heightFactor: percent.clamp(0.0, 1.0),
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
-        const SizedBox(height: 4),
-        Text('${(percent * 100).toInt()}%', style: const TextStyle(fontSize: 12, color: AppTheme.darkBlue, fontWeight: FontWeight.bold)),
-      ],
-    );
+      ),
+      const SizedBox(height: 10),
+      Text(label, style: TextStyle(fontSize: 9, color: metaColor, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+      const SizedBox(height: 3),
+      Text('${(percent * 100).toInt()}%', style: TextStyle(fontSize: 11, color: titleColor, fontWeight: FontWeight.w600)),
+    ]);
   }
 }
 
@@ -951,7 +985,7 @@ class _BranchManagementTab extends ConsumerWidget {
             maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: RefreshIndicator(
-              color: const Color(0xFF0D1B2E),
+              color: AppTheme.ink900,
               onRefresh: () async {
                 ref.invalidate(officesProvider);
               },
@@ -1012,9 +1046,9 @@ class _BranchManagementTab extends ConsumerWidget {
                           children: [
                             _buildFilterChip(context, ref, 'Default', Icons.sort),
                             const SizedBox(width: 10),
-                            _buildFilterChip(context, ref, l10n.revenue, Icons.monetization_on_outlined),
+                            _buildFilterChip(context, ref, 'Revenue', Icons.monetization_on_outlined, displayLabel: l10n.revenue),
                             const SizedBox(width: 10),
-                            _buildFilterChip(context, ref, l10n.workloadCapacity, Icons.bar_chart),
+                            _buildFilterChip(context, ref, 'Workload', Icons.bar_chart, displayLabel: l10n.workloadCapacity),
                           ],
                         ),
                       ),
@@ -1078,15 +1112,17 @@ class _BranchManagementTab extends ConsumerWidget {
     }
     
     final avgWorkload = offices.isEmpty ? 0 : totalWorkload / offices.length;
-    final displayRevenue = totalRevenueValue >= 1000000 
-        ? '${(totalRevenueValue / 1000000).toStringAsFixed(1)}M' 
-        : '${(totalRevenueValue / 1000).toStringAsFixed(0)}K';
+    final displayRevenue = totalRevenueValue >= 1000000
+        ? '${(totalRevenueValue / 1000000).toStringAsFixed(1)}M'
+        : totalRevenueValue >= 1000
+            ? '${(totalRevenueValue / 1000).toStringAsFixed(0)}K'
+            : totalRevenueValue.toStringAsFixed(0);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppTheme.emeraldGreen, Color(0xFF34D399)],
+          colors: [AppTheme.ink900, AppTheme.ink800],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1144,7 +1180,7 @@ class _BranchManagementTab extends ConsumerWidget {
                ClipRRect(
                  borderRadius: BorderRadius.circular(4),
                  child: LinearProgressIndicator(
-                   value: avgWorkload / 100,
+                   value: (avgWorkload / 100).clamp(0.0, 1.0),
                    backgroundColor: Colors.black12,
                    color: Colors.white,
                    minHeight: 6,
@@ -1157,34 +1193,40 @@ class _BranchManagementTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterChip(BuildContext context, WidgetRef ref, String label, IconData icon) {
+  Widget _buildFilterChip(BuildContext context, WidgetRef ref, String sortKey, IconData icon, {String? displayLabel}) {
+    final label = displayLabel ?? sortKey;
     final currentSort = ref.watch(officeSortProvider);
-    final isSelected = currentSort == label;
+    final isSelected = currentSort == sortKey;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = AppTheme.primaryAccent(isDark);
+    final inactiveBg = isDark ? AppTheme.darkCard : Colors.white;
+    final inactiveBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0);
+    final inactiveText = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
 
-    return InkWell(
-      onTap: () => ref.read(officeSortProvider.notifier).state = label,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return GestureDetector(
+      onTap: () => ref.read(officeSortProvider.notifier).state = sortKey,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.emeraldGreen : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected ? null : Border.all(color: Colors.grey.shade300),
+          color: isSelected ? activeColor.withValues(alpha: isDark ? 0.18 : 0.08) : inactiveBg,
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: isSelected ? activeColor.withValues(alpha: 0.45) : inactiveBorder,
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey),
-            const SizedBox(width: 8),
-            Text(
-              label, 
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey, 
-                fontWeight: FontWeight.bold, 
-                fontSize: 12
-              )
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: isSelected ? activeColor : inactiveText),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? activeColor : inactiveText,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              fontSize: 12,
             ),
-          ],
-        ),
+          ),
+        ]),
       ),
     );
   }
@@ -1383,12 +1425,16 @@ class _BranchManagementTab extends ConsumerWidget {
   }
 
   Color _getColorFromHex(String? hexColor) {
-    if (hexColor == null) return AppTheme.emeraldGreen;
+    if (hexColor == null || hexColor.trim().isEmpty) return AppTheme.emeraldGreen;
     hexColor = hexColor.replaceAll('#', '');
     if (hexColor.length == 6) {
       hexColor = 'FF$hexColor';
     }
-    return Color(int.parse(hexColor, radix: 16));
+    try {
+      return Color(int.parse(hexColor, radix: 16));
+    } catch (e) {
+      return AppTheme.emeraldGreen;
+    }
   }
 
   Widget _buildOfficeCard(BuildContext context, Map<String, dynamic> office) {
@@ -1404,6 +1450,16 @@ class _BranchManagementTab extends ConsumerWidget {
     // Check revenue format if needed (e.g. millions)
     // For simplicity just showing raw or formatted if string
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE9EEF5);
+    final titleColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final metaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
+    final iconBg = isDark ? AppTheme.darkCardAlt : const Color(0xFFF1F5F9);
+    final iconColor = isDark ? AppTheme.darkSubtext : const Color(0xFF94A3B8);
+    final dividerColor = isDark ? AppTheme.darkBorder : const Color(0xFFF1F5F9);
+    final accent = AppTheme.primaryAccent(isDark);
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -1411,12 +1467,12 @@ class _BranchManagementTab extends ConsumerWidget {
           MaterialPageRoute(builder: (context) => OfficeDetailScreen(office: office)),
         );
       },
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)],
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cardBorder, width: 1),
         ),
         child: Column(
           children: [
@@ -1425,23 +1481,23 @@ class _BranchManagementTab extends ConsumerWidget {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
-                    child: Icon(Icons.business, color: Colors.grey.shade600),
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+                    child: Icon(Icons.business_outlined, color: iconColor, size: 20),
                   ),
-                  const SizedBox(width: 15),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text(loc, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text(name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: titleColor)),
+                        Text(loc, style: TextStyle(color: metaColor, fontSize: 12)),
                         if (office['phone_numbers'] != null && (office['phone_numbers'] as List).isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
-                              (office['phone_numbers'] as List)[0]['number'],
-                              style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                              ((office['phone_numbers'] as List)[0]['number']?.toString() ?? ''),
+                              style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ),
                       ],
@@ -1451,7 +1507,7 @@ class _BranchManagementTab extends ConsumerWidget {
                     children: [
                       if (office['phone_numbers'] != null && (office['phone_numbers'] as List).isNotEmpty)
                         IconButton(
-                          onPressed: () => ContactUtils.openWhatsApp((office['phone_numbers'] as List)[0]['number']),
+                          onPressed: () => ContactUtils.openWhatsApp(((office['phone_numbers'] as List)[0]['number']?.toString() ?? '')),
                           icon: const Icon(Icons.message, size: 20, color: Colors.green),
                         ),
                       IconButton(
@@ -1474,21 +1530,21 @@ class _BranchManagementTab extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: _buildMiniStat(l10n.workload, workload, workloadColor, true)),
+                  Expanded(child: _buildMiniStat(context, l10n.workload, workload, workloadColor, true, isDark)),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildMiniStat(l10n.staffCount.toUpperCase(), staff, Colors.blueGrey, false)),
+                  Expanded(child: _buildMiniStat(context, l10n.staffCount.toUpperCase(), staff, AppTheme.electricBlue, false, isDark)),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildMiniStat(l10n.revenue, revenue, Colors.amber.shade700, false)),
+                  Expanded(child: _buildMiniStat(context, l10n.revenue, revenue, AppTheme.mutedAmber, false, isDark)),
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: dividerColor),
             Padding(
                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                child: Row(
                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
-                   Text(l10n.regionalHub, style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold)),
+                   Text(l10n.regionalHub, style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                    InkWell(
                      onTap: () {
                         Navigator.push(
@@ -1497,12 +1553,10 @@ class _BranchManagementTab extends ConsumerWidget {
                         );
                      },
                      borderRadius: BorderRadius.circular(4),
-                     child: Row(
-                       children: [
-                         Text(l10n.branchSettings, style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 12, fontWeight: FontWeight.bold)),
-                         const Icon(Icons.chevron_right, size: 16, color: AppTheme.emeraldGreen),
-                       ],
-                     ),
+                     child: Row(children: [
+                       Text(l10n.branchSettings, style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600)),
+                       Icon(Icons.chevron_right, size: 14, color: accent),
+                     ]),
                    ),
                  ],
                ),
@@ -1514,25 +1568,27 @@ class _BranchManagementTab extends ConsumerWidget {
   }
 
 
-  Widget _buildMiniStat(String label, String val, Color color, bool showProgress) {
+  Widget _buildMiniStat(BuildContext context, String label, String val, Color color, bool showProgress, bool isDark) {
+    final bg = isDark ? AppTheme.darkCardAlt : const Color(0xFFF8FAFC);
+    final textColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final metaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF94A3B8);
+    final trackColor = isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0);
+
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(fontSize: 8, color: metaColor, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
           const SizedBox(height: 4),
-          Row(
-           children: [
-              // Use Flexible to avoid overflow
-              Flexible(child: Text(val, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
-              if (label == 'STAFF') const Icon(Icons.people, size: 10, color: Colors.grey),
-            ],
-          ),
+          Text(val, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor), overflow: TextOverflow.ellipsis),
           if (showProgress) ...[
-            const SizedBox(height: 4),
-            LinearProgressIndicator(value: 0.8, backgroundColor: Colors.grey.shade200, color: color, minHeight: 4),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(value: 0.8, backgroundColor: trackColor, color: color, minHeight: 3),
+            ),
           ],
         ],
       ),
@@ -1587,7 +1643,7 @@ class _AdminManagementTab extends ConsumerWidget {
             maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: RefreshIndicator(
-              color: const Color(0xFF0D1B2E),
+              color: AppTheme.ink900,
               onRefresh: () async {
                  ref.invalidate(isStaffView ? allProfilesProvider : allProfilesProvider); // simple invalidation of profiles
               },
@@ -1704,18 +1760,37 @@ class _AdminManagementTab extends ConsumerWidget {
   Widget _buildFilterChip(WidgetRef ref, String label) {
     final currentFilter = ref.watch(adminRoleFilterProvider);
     final isSelected = currentFilter == label;
-    return InkWell(
-      onTap: () => ref.read(adminRoleFilterProvider.notifier).state = label,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.emeraldGreen : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade300),
+    // Note: using Builder pattern since context is not a param here.
+    return Builder(builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final activeColor = AppTheme.primaryAccent(isDark);
+      final inactiveBg = isDark ? AppTheme.darkCard : Colors.white;
+      final inactiveBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0);
+      final inactiveText = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
+
+      return GestureDetector(
+        onTap: () => ref.read(adminRoleFilterProvider.notifier).state = label,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: isSelected ? activeColor.withValues(alpha: isDark ? 0.18 : 0.08) : inactiveBg,
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(
+              color: isSelected ? activeColor.withValues(alpha: 0.45) : inactiveBorder,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? activeColor : inactiveText,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
         ),
-        child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-      ),
-    );
+      );
+    });
   }
 
 
@@ -1727,9 +1802,19 @@ class _AdminManagementTab extends ConsumerWidget {
     final id = admin['id'];
     final officeName = (admin['offices'] as Map?)?['name'] as String?;
     final isActive = admin['is_active'] as bool? ?? true;
+    final isAgent = role.toString().toLowerCase() == 'agent';
+    final roleColor = isAgent ? Colors.purple : (isStaff ? AppTheme.statBlue : AppTheme.emeraldGreen);
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE9EEF5);
+    final titleTextColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final cardMetaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF94A3B8);
+    final cardDivColor = isDark ? AppTheme.darkBorder : const Color(0xFFF1F5F9);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -1737,101 +1822,132 @@ class _AdminManagementTab extends ConsumerWidget {
             MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: admin)),
           );
         },
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
+            color: cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cardBorder, width: 1),
           ),
           child: Column(
             children: [
-              ListTile(
-                contentPadding: const EdgeInsets.all(15),
-                leading: CircleAvatar(
-                  radius: 30,
-                  backgroundColor: isStaff ? Colors.blue.withValues(alpha: 0.1) : AppTheme.emeraldLight,
-                  child: Icon(
-                    isStaff ? Icons.badge_outlined : Icons.manage_accounts_outlined,
-                    color: isStaff ? Colors.blue : AppTheme.emeraldGreen,
-                    size: 28,
-                  ),
-                ),
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
                   children: [
-                    const SizedBox(height: 2),
-                    Text(role.toString().toUpperCase(), style: TextStyle(fontSize: 11, color: isStaff ? Colors.blue : AppTheme.emeraldGreen, fontWeight: FontWeight.w700)),
-                    if (officeName != null) ...[
-                      const SizedBox(height: 2),
-                      Row(children: [
-                        Icon(Icons.business_outlined, size: 12, color: Colors.grey.shade500),
-                        const SizedBox(width: 4),
-                        Text(officeName, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                      ]),
-                    ],
-                    if (admin['phone_number'] != null) ...[
-                      const SizedBox(height: 2),
-                      Text(admin['phone_number'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                    ],
-                    if ((admin['role'] as String? ?? '').toLowerCase() == 'agent')
-                      Text('Work Status: Available', style: TextStyle(fontSize: 11, color: Colors.blue[700], fontWeight: FontWeight.w500)),
-                  ],
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isActive ? AppTheme.emeraldLight : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        isActive ? l10n.active : l10n.inactive,
-                        style: TextStyle(color: isActive ? AppTheme.emeraldGreen : Colors.grey, fontWeight: FontWeight.bold, fontSize: 10),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: roleColor.withValues(alpha: 0.12),
+                          child: Text(initial, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: roleColor)),
+                        ),
+                        Positioned(
+                          bottom: -2, right: -2,
+                          child: Container(
+                            width: 13, height: 13,
+                            decoration: BoxDecoration(
+                              color: isActive ? AppTheme.mintGreen : cardMetaColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: cardBg, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: titleTextColor)),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: roleColor.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(role.toString().toUpperCase(),
+                                    style: TextStyle(fontSize: 10, color: roleColor, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+                              ),
+                              if (officeName != null) ...[
+                                const SizedBox(width: 6),
+                                Icon(Icons.business_outlined, size: 11, color: cardMetaColor),
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(officeName,
+                                      style: TextStyle(fontSize: 11, color: cardMetaColor),
+                                      overflow: TextOverflow.ellipsis),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (admin['phone_number'] != null && admin['phone_number'].toString().isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(admin['phone_number'], style: TextStyle(fontSize: 11, color: cardMetaColor)),
+                          ],
+                        ],
                       ),
                     ),
-                    if (isStaff && id != null) ...[
-                      const SizedBox(height: 6),
-                      ref.watch(staffActiveTaskCountsProvider).when(
-                        data: (counts) {
-                          final count = counts[id] ?? 0;
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: count > 0 ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '$count task${count == 1 ? '' : 's'}',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: count > 0 ? Colors.orange.shade700 : Colors.grey),
-                            ),
-                          );
-                        },
-                        loading: () => const SizedBox(width: 50, height: 20),
-                        error: (_, __) => const SizedBox(),
-                      ),
-                    ],
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isActive ? AppTheme.mintGreen.withValues(alpha: 0.10) : cardMetaColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isActive ? l10n.active : l10n.inactive,
+                            style: TextStyle(color: isActive ? AppTheme.mintGreen : cardMetaColor, fontWeight: FontWeight.w600, fontSize: 10),
+                          ),
+                        ),
+                        if (isStaff && id != null) ...[
+                          const SizedBox(height: 6),
+                          ref.watch(staffActiveTaskCountsProvider).when(
+                            data: (counts) {
+                              final count = counts[id] ?? 0;
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: count > 0 ? AppTheme.mutedAmber.withValues(alpha: 0.10) : cardMetaColor.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '$count task${count == 1 ? '' : 's'}',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
+                                      color: count > 0 ? AppTheme.mutedAmber : cardMetaColor),
+                                ),
+                              );
+                            },
+                            loading: () => const SizedBox(width: 50, height: 20),
+                            error: (_, __) => const SizedBox(),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
-              const Divider(height: 1),
+              Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 16), color: cardDivColor),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(
                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                    children: [
-                     _buildActionButton(context, Icons.edit, l10n.edit, Colors.green, () {
+                     _buildActionButton(context, Icons.edit_outlined, l10n.edit, AppTheme.emeraldGreen, () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: admin)),
                         );
                      }),
                      if (admin['is_active'] ?? true)
-                       _buildActionButton(context, Icons.block, l10n.delete, Colors.red, () async {
+                       _buildActionButton(context, Icons.delete_outline, l10n.delete, AppTheme.errorRed, () async {
                           if (id == null) return;
                           final confirm = await showDialog<bool>(
                             context: context,
@@ -1876,12 +1992,17 @@ class _AdminManagementTab extends ConsumerWidget {
   Widget _buildActionButton(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 5),
-          Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
-        ],
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 5),
+            Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
@@ -2045,9 +2166,10 @@ class _AdminManagementTab extends ConsumerWidget {
                           try {
                             setModalState(() => isLoading = true);
                             final client = ref.read(supabaseClientProvider);
+                            final agentPassword = isAgent ? _generateSecurePassword() : null;
                             await client.rpc('create_user_admin', params: {
                               'new_email': emailController.text.trim(),
-                              'new_password': isAgent ? _generateSecurePassword() : passwordController.text.trim(),
+                              'new_password': agentPassword ?? passwordController.text.trim(),
                               'full_name': nameController.text.trim(),
                               'user_role': role,
                               'phone': phoneController.text.trim(),
@@ -2056,7 +2178,56 @@ class _AdminManagementTab extends ConsumerWidget {
 
                             ref.invalidate(allProfilesProvider);
                             if (context.mounted) Navigator.pop(context);
-                             if (context.mounted) {
+                            if (context.mounted && isAgent && agentPassword != null) {
+                              await showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Agent Created', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Share this temporary password with the agent:'),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.ink900,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: SelectableText(
+                                          agentPassword,
+                                          style: const TextStyle(
+                                            fontFamily: 'monospace',
+                                            color: AppTheme.electricBlue,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text('The agent should change it after first login.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text('Close'),
+                                    ),
+                                    ElevatedButton.icon(
+                                      icon: const Icon(Icons.copy, size: 16),
+                                      label: const Text('Copy & Close'),
+                                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, foregroundColor: Colors.white),
+                                      onPressed: () {
+                                        Clipboard.setData(ClipboardData(text: agentPassword));
+                                        Navigator.pop(ctx);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else if (context.mounted) {
                                ScaffoldMessenger.of(context).showSnackBar(
                                  SnackBar(
                                    content: Text(l10n.registeredSuccessfully(role.toUpperCase())),
@@ -2116,7 +2287,7 @@ class _AgentManagementTab extends ConsumerWidget {
             maxWidth: double.infinity,
             padding: EdgeInsets.zero,
             child: RefreshIndicator(
-              color: const Color(0xFF0D1B2E),
+              color: AppTheme.ink900,
               onRefresh: () async {
                  ref.invalidate(allProfilesProvider);
               },

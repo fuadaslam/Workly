@@ -42,7 +42,7 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
       backgroundColor: AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(title: l10n.clientDetails),
       body: RefreshIndicator(
-        color: const Color(0xFF0D1B2E),
+        color: AppTheme.ink900,
         onRefresh: () async {
           ref.invalidate(allWorkOrdersProvider);
         },

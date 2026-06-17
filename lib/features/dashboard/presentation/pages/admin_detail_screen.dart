@@ -112,7 +112,7 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
         ],
       ),
       body: RefreshIndicator(
-        color: const Color(0xFF0D1B2E),
+        color: AppTheme.ink900,
         onRefresh: () async {
           ref.invalidate(staffWorkOrdersProvider(widget.admin['id']));
           ref.invalidate(allProfilesProvider);
@@ -219,47 +219,75 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 30),
-      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppTheme.ink900, AppTheme.ink900],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Column(
         children: [
           Hero(
             tag: 'admin_${widget.admin['id']}',
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.emeraldGreen, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.accentGold.withValues(alpha: 0.3),
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
-                  child: const CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppTheme.emeraldLight,
-                    child: Icon(Icons.person, size: 60, color: AppTheme.emeraldGreen),
+                  child: CircleAvatar(
+                    radius: 52,
+                    backgroundColor: Colors.white.withValues(alpha: 0.12),
+                    child: Icon(
+                      _role == 'staff' ? Icons.badge_outlined : Icons.manage_accounts_outlined,
+                      size: 56,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 Positioned(
                   bottom: 0,
                   right: 0,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle),
-                    child: const Icon(Icons.verified, color: Colors.white, size: 20),
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentGold,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.ink900, width: 2),
+                    ),
+                    child: const Icon(Icons.verified, color: Colors.white, size: 16),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 18),
           Text(
             _nameController.text,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.3),
           ),
-          Text(
-            _role.toUpperCase().replaceAll('_', ' '),
-            style: const TextStyle(fontSize: 14, color: AppTheme.emeraldGreen, fontWeight: FontWeight.w600),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+            ),
+            child: Text(
+              _role.toUpperCase().replaceAll('_', ' '),
+              style: const TextStyle(fontSize: 11, color: AppTheme.accentGold, fontWeight: FontWeight.w800, letterSpacing: 1.2),
+            ),
           ),
         ],
       ),
@@ -405,15 +433,30 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
   }
 
   Widget _buildSmallStat(String label, String value, IconData icon, Color color) {
-    return PremiumCard(
-      padding: const EdgeInsets.all(15),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: AppTheme.shadowMd,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 10),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 16),
+          Text(value,
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.5)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -421,19 +464,24 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
 
   Widget _buildDetailRow(IconData icon, String label, Widget valueWidget) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.grey.shade50, shape: BoxShape.circle),
-          child: Icon(icon, size: 18, color: Colors.grey),
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: AppTheme.emeraldGreen.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 17, color: AppTheme.emeraldGreen.withValues(alpha: 0.75)),
         ),
-        const SizedBox(width: 15),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
+              Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 0.3)),
+              const SizedBox(height: 4),
               valueWidget,
             ],
           ),
@@ -455,51 +503,94 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
           ));
         }
 
-        return PremiumCard(
-          padding: EdgeInsets.zero,
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: orders.length > 5 ? 5 : orders.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final order = orders[index];
-              return ListTile(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TaskDetailScreen(
-                        taskId: order.id,
-                        clientName: order.clientName ?? 'Unknown',
-                        priority: order.priority.name,
-                        initialStatus: order.status.name,
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: AppTheme.shadowMd,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: orders.length > 5 ? 5 : orders.length,
+              separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade100),
+              itemBuilder: (context, index) {
+                final order = orders[index];
+                final isCompleted = order.status == WorkStatus.completed;
+                final statusColor = isCompleted ? AppTheme.emeraldGreen : AppTheme.accentGold;
+                return InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TaskDetailScreen(
+                          taskId: order.id,
+                          clientName: order.clientName ?? 'Unknown',
+                          priority: order.priority.name,
+                          initialStatus: order.status.name,
+                        ),
                       ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            isCompleted ? Icons.check_circle_outline : Icons.pending_outlined,
+                            size: 17,
+                            color: statusColor,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(order.serviceType ?? l10n.generalService,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.darkBlue)),
+                              const SizedBox(height: 3),
+                              Text(order.clientName ?? 'Unknown Client',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                order.status.name.toUpperCase(),
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              order.createdAt?.toString().substring(0, 10) ?? '',
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  );
-                },
-                title: Text(order.serviceType ?? l10n.generalService, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text(order.clientName ?? 'Unknown Client', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      order.status.name.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: order.status == WorkStatus.completed ? AppTheme.emeraldGreen : AppTheme.accentGold,
-                      ),
-                    ),
-                    Text(
-                      order.createdAt?.toString().substring(0, 10) ?? '',
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              );
-            },
+                  ),
+                );
+              },
+            ),
           ),
         );
       },

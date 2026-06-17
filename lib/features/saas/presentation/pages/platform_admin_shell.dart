@@ -53,7 +53,7 @@ class PlatformAdminShell extends ConsumerWidget {
 
     final isDesktop = MediaQuery.of(context).size.width >= 800;
     final userName = profileAsync.value?.name ?? 'Platform Admin';
-    final userRole = 'Workly Operator';
+    const userRole = 'Workly Operator';
 
     // Theme toggle widget for sidebar
     final themeToggle = IconButton(

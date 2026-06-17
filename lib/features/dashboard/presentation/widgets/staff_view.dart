@@ -16,6 +16,7 @@ import '../pages/notifications_screen.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
+import '../../../../core/widgets/workly_primitives.dart';
 import '../../../../features/leaves/presentation/widgets/leave_widgets.dart';
 import '../../../../features/leaves/presentation/providers/leave_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,6 +32,10 @@ class StaffView extends StatefulWidget {
 
 class _StaffViewState extends State<StaffView> {
   int _tabIndex = 0;
+  final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
+    5,
+    (_) => GlobalKey<NavigatorState>(),
+  );
 
 
   Future<void> _signOut(BuildContext context) async {
@@ -86,6 +91,17 @@ class _StaffViewState extends State<StaffView> {
                       child: _buildBody(),
                     ),
                   ],
+                ),
+                floatingActionButton: FloatingActionButton.extended(
+                  onPressed: () => _showAddTaskModal(context),
+                  backgroundColor: AppTheme.emeraldGreen,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  icon: const Icon(Icons.add, color: Colors.white, size: 24),
+                  label: Text(
+                    l10n.createNewTask,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  ),
                 ),
               );
             } else {
@@ -154,7 +170,23 @@ class _StaffViewState extends State<StaffView> {
   }
 
   Widget _buildBody() {
-    switch (_tabIndex) {
+    return IndexedStack(
+      index: _tabIndex,
+      children: List.generate(5, (index) {
+        return Navigator(
+          key: _navKeys[index],
+          onGenerateRoute: (settings) {
+            return MaterialPageRoute(
+              builder: (_) => _buildTab(index),
+            );
+          },
+        );
+      }),
+    );
+  }
+
+  Widget _buildTab(int index) {
+    switch (index) {
       case 0:
         return _HomeTab(
           onProfileTap: () => setState(() => _tabIndex = 4),
@@ -331,7 +363,7 @@ class _HomeTab extends ConsumerWidget {
     final statsAsync = ref.watch(dashboardStatsProvider);
 
     return RefreshIndicator(
-      color: const Color(0xFF0D1B2E),
+      color: AppTheme.ink900,
       onRefresh: () async {
         ref.invalidate(dashboardStatsProvider);
         ref.invalidate(leaveProvider);
@@ -419,7 +451,7 @@ class _HomeTab extends ConsumerWidget {
                               label: Text('$pendingCount', style: const TextStyle(fontSize: 10)),
                               backgroundColor: AppTheme.errorRed,
                               child: IconButton(
-                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                                onPressed: () => NotificationsScreen.showAsDrawer(context),
                                 icon: const Icon(Icons.notifications_outlined, color: Colors.white),
                                 style: IconButton.styleFrom(backgroundColor: Colors.white12),
                               ),
@@ -956,7 +988,7 @@ class _TasksViewState extends State<_TasksView> {
    
                         if (filteredOrders.isEmpty) {
                           return RefreshIndicator(
-                          color: const Color(0xFF0D1B2E),
+                          color: AppTheme.ink900,
                           onRefresh: () async => ref.refresh(myWorkOrdersProvider),
                           child: SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -981,7 +1013,7 @@ class _TasksViewState extends State<_TasksView> {
                         }
    
                         return RefreshIndicator(
-                          color: const Color(0xFF0D1B2E),
+                          color: AppTheme.ink900,
                           onRefresh: () async => ref.refresh(myWorkOrdersProvider),
                           child: ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -1030,23 +1062,29 @@ class _TasksViewState extends State<_TasksView> {
   }
 
   Widget _buildTaskCard(BuildContext context, WidgetRef ref, WorkOrder order) {
-    final l10n = AppLocalizations.of(context)!;
-    Color statusColor;
-    switch (order.priority) {
-      case PriorityLevel.high:
-        statusColor = AppTheme.errorRed;
-        break;
-      case PriorityLevel.medium:
-        statusColor = AppTheme.accentGold;
-        break;
-      case PriorityLevel.low:
-        statusColor = AppTheme.emeraldGreen;
-        break;
-    }
+    final status = switch (order.status) {
+      WorkStatus.inProgress => WorqlyOrderStatus.progress,
+      WorkStatus.completed => WorqlyOrderStatus.completed,
+      WorkStatus.pending => WorqlyOrderStatus.pending,
+    };
 
-    return PremiumCard(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: WorqlyWorkOrderCard(
+        serviceType: order.serviceType ?? 'General Task',
+        orderId: order.id.length > 8 ? 'WO-${order.id.substring(0, 6).toUpperCase()}' : order.id,
+        clientName: order.clientName,
+        staffName: order.assignedStaffName,
+        officeName: order.assignedOfficeName,
+        status: status,
+        highPriority: order.priority == PriorityLevel.high,
+        contactable: (order.clientPhoneNumber ?? '').isNotEmpty,
+        actionButton: IconButton(
+          icon: const Icon(Icons.edit, size: 16, color: Colors.grey),
+          onPressed: () => _showUpdateWorkModal(context, ref, order),
+          constraints: const BoxConstraints(),
+          padding: EdgeInsets.zero,
+        ),
         onTap: () {
           Navigator.push(
             context,
@@ -1061,101 +1099,6 @@ class _TasksViewState extends State<_TasksView> {
             )
           );
         },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    order.serviceType ?? l10n.generalTask,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: AppTheme.darkBlue),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    order.priority.name.toUpperCase(),
-                    style: TextStyle(
-                        color: statusColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.person, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(order.clientName ?? "N/A",
-                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                if (order.clientPhoneNumber != null) ...[
-                  const SizedBox(width: 12),
-                  const Icon(Icons.phone, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    order.clientPhoneNumber!,
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.phone_outlined, size: 16, color: AppTheme.emeraldGreen),
-                    onPressed: () => ContactUtils.callNumber(order.clientPhoneNumber),
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.message, size: 16, color: Colors.green),
-                    onPressed: () {
-                      final message = "Assalamu Alaikum, update on your ${order.serviceType}: Status is ${order.status.name.toUpperCase()}.";
-                      ContactUtils.openWhatsApp(order.clientPhoneNumber, message: message);
-                    },
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                  ),
-                  child: Text(order.status.name.toUpperCase(),
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: order.status == WorkStatus.completed
-                              ? AppTheme.emeraldGreen
-                              : AppTheme.accentGold)),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 16, color: Colors.grey),
-                  onPressed: () => _showUpdateWorkModal(context, ref, order),
-                  constraints: const BoxConstraints(),
-                  padding: EdgeInsets.zero,
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1338,7 +1281,7 @@ class _LeavesView extends ConsumerWidget {
       ),
       body: SafeArea(
         child: RefreshIndicator(
-          color: const Color(0xFF0D1B2E),
+          color: AppTheme.ink900,
           onRefresh: () async {
             ref.invalidate(leaveProvider);
           },

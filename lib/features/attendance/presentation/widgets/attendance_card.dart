@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/premium_card.dart';
 import '../providers/attendance_provider.dart';
 
 class AttendanceCard extends ConsumerWidget {
@@ -12,16 +13,14 @@ class AttendanceCard extends ConsumerWidget {
     final attendanceAsync = ref.watch(currentAttendanceProvider);
     final controllerState = ref.watch(attendanceControllerProvider);
 
-    return Card(
-      elevation: 8,
-      shadowColor: AppTheme.emeraldGreen.withValues(alpha: 0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      clipBehavior: Clip.antiAlias,
+    return PremiumCard(
+      padding: EdgeInsets.zero,
+      borderRadius: 24,
       child: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.1), width: 1),
         ),
+        clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
             // Decorative Corner

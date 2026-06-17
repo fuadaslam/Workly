@@ -34,9 +34,9 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
 
   Color _statusColor(String? s) {
     switch (s) {
-      case 'active': return Colors.green;
-      case 'trialing': return Colors.blue;
-      case 'past_due': return Colors.orange;
+      case 'active': return AppTheme.statusCompleted;
+      case 'trialing': return AppTheme.statusProgress;
+      case 'past_due': return AppTheme.statusPending;
       case 'paused': case 'cancelled': return AppTheme.errorRed;
       default: return Colors.grey;
     }
@@ -57,7 +57,7 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF0D1B2E), Color(0xFF1E3A5F)]),
+                  gradient: LinearGradient(colors: [AppTheme.ink900, AppTheme.ink800]),
                 ),
                 child: SafeArea(
                   child: Padding(
@@ -222,7 +222,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
           if (widget.org.periodEnd != null)
             _detailRow('Renews', Text(df.format(widget.org.periodEnd!))),
           if (widget.org.trialEndsAt != null)
-            _detailRow('Trial ends', Text(df.format(widget.org.trialEndsAt!), style: const TextStyle(color: Colors.blue))),
+            _detailRow('Trial ends', Text(df.format(widget.org.trialEndsAt!), style: const TextStyle(color: AppTheme.statusProgress))),
           _detailRow('Monthly fee', Text(widget.org.priceMonthly != null ? 'SAR ${widget.org.priceMonthly!.toStringAsFixed(0)}' : '—')),
         ], action: plansAsync.when(
           loading: () => const SizedBox(),
@@ -240,12 +240,12 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
         _card('Danger Zone', Icons.warning_amber_outlined, [
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.pause_circle_outline, color: Colors.orange, size: 20)),
+            leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppTheme.statusPending.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.pause_circle_outline, color: AppTheme.statusPending, size: 20)),
             title: const Text('Suspend Organization', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             subtitle: const Text('Blocks user access, preserves all data', style: TextStyle(fontSize: 12)),
             trailing: OutlinedButton(
               onPressed: () => _confirmSuspend(context),
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.orange, side: const BorderSide(color: Colors.orange)),
+              style: OutlinedButton.styleFrom(foregroundColor: AppTheme.statusPending, side: const BorderSide(color: AppTheme.statusPending)),
               child: const Text('Suspend'),
             ),
           ),
@@ -300,7 +300,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.statusPending),
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(saasRepositoryProvider).suspendOrganization(widget.org.id);
@@ -408,10 +408,10 @@ class _MemberTile extends StatelessWidget {
 
   Color _roleColor(String role) {
     switch (role) {
-      case 'super_admin': return const Color(0xFFD4AF37);
+      case 'super_admin': return AppTheme.brand500;
       case 'admin': return AppTheme.emeraldGreen;
-      case 'agent': return Colors.purple;
-      default: return Colors.teal;
+      case 'agent': return AppTheme.brand600;
+      default: return AppTheme.statusCompleted;
     }
   }
 
@@ -452,7 +452,7 @@ class _MemberTile extends StatelessWidget {
             width: 8, height: 8,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: member.isActive ? Colors.green : Colors.grey,
+              color: member.isActive ? AppTheme.statusCompleted : Colors.grey,
             ),
           ),
         ]),
@@ -491,7 +491,7 @@ class _InvitationsTabState extends ConsumerState<_InvitationsTab> {
       ref.invalidate(orgInvitationsProvider(widget.org.id));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invitation sent!'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('Invitation sent!'), backgroundColor: AppTheme.statusCompleted),
       );
       }
     } catch (e) {
@@ -610,7 +610,7 @@ class _InviteTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final df = DateFormat('dd MMM yyyy');
-    Color statusColor = invite.isAccepted ? Colors.green : invite.isExpired ? Colors.orange : Colors.blue;
+    Color statusColor = invite.isAccepted ? AppTheme.statusCompleted : invite.isExpired ? AppTheme.statusPending : AppTheme.statusProgress;
     String statusLabel = invite.isAccepted ? 'Accepted' : invite.isExpired ? 'Expired' : 'Pending';
 
     return Container(
@@ -662,9 +662,9 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color c = switch (status) {
-      'active' => Colors.green,
-      'trialing' => Colors.blue,
-      'past_due' => Colors.orange,
+      'active' => AppTheme.statusCompleted,
+      'trialing' => AppTheme.statusProgress,
+      'past_due' => AppTheme.statusPending,
       _ => Colors.grey,
     };
     return Container(

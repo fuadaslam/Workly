@@ -13,6 +13,7 @@ class Profile {
   final String? orgId;
   final bool isPlatformAdmin;
   final DateTime? createdAt;
+  final String? avatarUrl;
 
   Profile({
     required this.id,
@@ -26,6 +27,7 @@ class Profile {
     this.orgId,
     this.isPlatformAdmin = false,
     this.createdAt,
+    this.avatarUrl,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class Profile {
       orgId: json['org_id'],
       isPlatformAdmin: json['is_platform_admin'] == true,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      avatarUrl: json['avatar_url'],
     );
   }
 

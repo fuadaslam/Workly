@@ -2,82 +2,107 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand Colors — Workly by xoviq Labs
-  static const Color emeraldGreen = Color(0xFF0D1B2E); // Workly Navy
-  static const Color emeraldLight = Color(0xFFEEF2F7); // Light navy tint
+  // ── Brand identity (Worqly — ink-black + signal-yellow) ───────────
+  // Ink scale — near-black brand ground (logo, sidebar, primary surfaces).
+  static const Color ink900 = Color(0xFF0A0A0B); // logo ground / primary
+  static const Color ink800 = Color(0xFF161618);
+  static const Color ink700 = Color(0xFF232327);
+  static const Color ink600 = Color(0xFF34343A);
 
-  // Navy gradient palette
-  static const Color navyDark = Color(0xFF0B172A);
-  static const Color navyDeep = Color(0xFF1A2E4A);
-  static const Color navyMid  = Color(0xFF0F2038);
+  // Signal Yellow — the brand accent (the logo dot).
+  static const Color brand700 = Color(0xFFA16207); // accent text on light
+  static const Color brand600 = Color(0xFFCA8A04);
+  static const Color brand500 = Color(0xFFEAB308); // core brand yellow
+  static const Color brand400 = Color(0xFFFACC15);
+  static const Color brand50  = Color(0xFFFEFCE8);
 
-  static const Color accentGold      = Color(0xFFD4AF37);
-  static const Color accentGoldLight = Color(0xFFFEF9C3);
+  // Legacy aliases kept for compatibility; now point at the ink+yellow brand.
+  static const Color emeraldGreen = ink900;          // primary brand ground
+  static const Color emeraldLight = Color(0xFFF4F4F5); // neutral zinc-100 tint
 
-  static const Color darkBlue = Color(0xFF1E293B);
+  static const Color navyDark = ink900;
+  static const Color navyDeep = ink800;
+  static const Color navyMid  = ink800;
 
-  // Gradient helpers for card and button overlays
+  // Gold — secondary / brand accent (sidebar logo highlight, FAB)
+  static const Color accentGold      = brand500;
+  static const Color accentGoldLight = brand50;
+
+  static const Color darkBlue = Color(0xFF18181B); // zinc-900 (headings)
+
   static const Gradient primaryGradient = LinearGradient(
-    colors: [emeraldGreen, Color(0xFF1E2A3C)],
+    colors: [ink900, ink800],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-  
+
   static const Gradient goldGradient = LinearGradient(
-    colors: [Color(0xFFF59E0B), Color(0xFFD4AF37)],
+    colors: [brand400, brand600],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const Color surfaceWhite  = Color(0xFFFFFFFF);
-  static const Color backgroundLight = Color(0xFFF0F4F8); // Soft blue-grey tint
+  static const Color surfaceWhite    = Color(0xFFFFFFFF);
+  static const Color backgroundLight = Color(0xFFFAFAFA); // Sharper SaaS background
 
-  // Status colors
-  static const Color successGreen      = Color(0xFF22C55E);
-  static const Color successGreenLight = Color(0xFF4ADE80);
+  // ── Semantic accent tokens ────────────────────────────────────────
+  /// Signal Yellow — primary active / interactive accent (was Electric Blue).
+  static const Color electricBlue  = brand500;
+  /// Green — success / completed / on-duty / paid.
+  static const Color mintGreen     = Color(0xFF16A34A);
+  /// Amber — pending / warning states.
+  static const Color mutedAmber    = Color(0xFFF59E0B);
+
+  // ── Status hues (work-order domain) ───────────────────────────────
+  static const Color statusCompleted = Color(0xFF16A34A); // green-500
+  static const Color statusProgress  = Color(0xFF3B82F6); // blue-500
+  static const Color statusPending   = Color(0xFFF59E0B); // amber-500
+  static const Color statusDanger    = Color(0xFFEF4444); // red-500
+
+  // Kept for backwards-compatibility — point at the new semantic names.
+  static const Color successGreen      = mintGreen;
+  static const Color successGreenLight = Color(0xFF6EE7B7);
   static const Color chartTeal         = Color(0xFF34D399);
 
-  // Semantic stat colors
-  static const Color statBlue   = Color(0xFF3B82F6);
-  static const Color statAmber  = Color(0xFFF59E0B);
+  static const Color statBlue   = electricBlue;
+  static const Color statAmber  = mutedAmber;
   static const Color statPurple = Color(0xFFA855F7);
 
   static const Color errorRed      = Color(0xFFEF4444);
   static const Color errorRedLight = Color(0xFFFEE2E2);
 
-  // ── Dark theme surfaces ───────────────────────────────────────────
-  static const Color darkBackground = Color(0xFF0F1520);
-  static const Color darkSurface    = Color(0xFF1A2332);
-  static const Color darkCard       = Color(0xFF1E2A3C);
-  static const Color darkCardAlt    = Color(0xFF243044);
-  static const Color darkBorder     = Color(0xFF2A3A52);
-  static const Color darkOnSurface  = Color(0xFFE2E8F0);
-  static const Color darkSubtext    = Color(0xFF64748B);
+  // ── Dark-mode surfaces (Linear / Vercel aesthetic) ────────────────
+  /// Root scaffold background — deepest layer (ink-900).
+  static const Color darkBackground = ink900;
+  /// Sidebar, top-level panels (ink-800).
+  static const Color darkSurface    = ink800;
+  /// Card / list-item background (ink-800).
+  static const Color darkCard       = ink800;
+  /// Hover / alternate card shade (ink-700).
+  static const Color darkCardAlt    = ink700;
+  /// Thin separator / card border (ink-700).
+  static const Color darkBorder     = ink700;
+  /// Primary body text on dark.
+  static const Color darkOnSurface  = Color(0xFFFAFAFA);
+  /// Dimmed / meta text on dark.
+  static const Color darkSubtext    = Color(0xFFA1A1AA);
 
   // ── Glassmorphism tokens ──────────────────────────────────────────
-  // Light glass: near-opaque frosted white
-  static const Color glassLight       = Color(0xBFFFFFFF); // 75% white
-  static const Color glassBorderLight = Color(0x99FFFFFF); // 60% white border
-  // Dark glass: very subtle overlay on deep background
-  static const Color glassDark       = Color(0x0DFFFFFF); //  5% white on dark
-  static const Color glassBorderDark = Color(0x14FFFFFF); //  8% white border
+  static const Color glassLight       = Color(0xBFFFFFFF);
+  static const Color glassBorderLight = Color(0x99FFFFFF);
+  static const Color glassDark        = Color(0x0DFFFFFF);
+  static const Color glassBorderDark  = Color(0x14FFFFFF);
 
-  // ── Multi-layer shadows for subtle depth ─────────────────────────
-  // Light mode
+  // ── Multi-layer shadows (Flatter SaaS aesthetic) ──────────────────
   static const List<BoxShadow> shadowSm = [
-    BoxShadow(color: Color(0x08000000), blurRadius: 8,  offset: Offset(0, 2)),
-    BoxShadow(color: Color(0x04000000), blurRadius: 2,  offset: Offset(0, 0)),
+    BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
   ];
   static const List<BoxShadow> shadowMd = [
-    BoxShadow(color: Color(0x0F000000), blurRadius: 20, offset: Offset(0, 6)),
-    BoxShadow(color: Color(0x06000000), blurRadius: 6,  offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4)),
   ];
   static const List<BoxShadow> shadowLg = [
-    BoxShadow(color: Color(0x14000000), blurRadius: 32, offset: Offset(0, 12)),
-    BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0,  3)),
-    BoxShadow(color: Color(0x03000000), blurRadius: 2,  offset: Offset(0,  0)),
+    BoxShadow(color: Color(0x0D000000), blurRadius: 24, offset: Offset(0, 8)),
   ];
-  // Dark mode (more pronounced)
   static const List<BoxShadow> shadowDarkMd = [
     BoxShadow(color: Color(0x40000000), blurRadius: 20, offset: Offset(0, 8)),
     BoxShadow(color: Color(0x1A000000), blurRadius: 6,  offset: Offset(0, 2)),
@@ -87,11 +112,9 @@ class AppTheme {
     BoxShadow(color: Color(0x28000000), blurRadius: 10, offset: Offset(0,  3)),
   ];
 
-  // Convenience: pick shadow set by brightness
   static List<BoxShadow> cardShadow(bool isDark) =>
       isDark ? shadowDarkMd : shadowMd;
 
-  // ── Glass BoxDecoration helper ────────────────────────────────────
   static BoxDecoration glassDecoration({
     required bool isDark,
     double borderRadius = 20,
@@ -111,9 +134,16 @@ class AppTheme {
     );
   }
 
+  // ── Convenience: resolve accent from brightness ───────────────────
+  /// Returns the signal-yellow accent, tuned for contrast per mode:
+  /// bright yellow on dark, deeper gold on light.
+  static Color primaryAccent(bool isDark) =>
+      isDark ? brand400 : brand700;
+
   // ─────────────────────────────────────────────────────────────────
 
   static ThemeData get lightTheme {
+    final base = GoogleFonts.interTextTheme();
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -126,37 +156,48 @@ class AppTheme {
         error: errorRed,
       ),
       scaffoldBackgroundColor: backgroundLight,
-      textTheme: GoogleFonts.outfitTextTheme().apply(
+      textTheme: base.apply(
         bodyColor: darkBlue,
         displayColor: emeraldGreen,
       ).copyWith(
-        headlineMedium: GoogleFonts.outfit(color: darkBlue, fontWeight: FontWeight.bold),
-        headlineSmall:  GoogleFonts.outfit(color: darkBlue, fontWeight: FontWeight.bold),
-        titleLarge:     GoogleFonts.outfit(color: darkBlue, fontWeight: FontWeight.w600),
+        headlineMedium: GoogleFonts.inter(color: darkBlue, fontWeight: FontWeight.w700, letterSpacing: -0.4),
+        headlineSmall:  GoogleFonts.inter(color: darkBlue, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+        titleLarge:     GoogleFonts.inter(color: darkBlue, fontWeight: FontWeight.w600, letterSpacing: -0.2),
+        titleMedium:    GoogleFonts.inter(color: darkBlue, fontWeight: FontWeight.w600),
+        bodyLarge:      GoogleFonts.inter(color: darkBlue),
+        bodyMedium:     GoogleFonts.inter(color: darkBlue),
+        bodySmall:      GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 12),
+        labelSmall:     GoogleFonts.inter(letterSpacing: 0.8, fontWeight: FontWeight.w600),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: surfaceWhite,
         foregroundColor: emeraldGreen,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        iconTheme: IconThemeData(color: emeraldGreen),
+        iconTheme: const IconThemeData(color: emeraldGreen),
+        titleTextStyle: GoogleFonts.inter(
+          color: darkBlue,
+          fontWeight: FontWeight.w700,
+          fontSize: 17,
+          letterSpacing: -0.3,
+        ),
       ),
       cardTheme: CardThemeData(
         color: surfaceWhite,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0x0D000000), width: 1),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFFEAEAEA), width: 1), // Crisp borders
         ),
       ),
       chipTheme: const ChipThemeData(
         backgroundColor: emeraldLight,
-        labelStyle: TextStyle(color: emeraldGreen, fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(color: emeraldGreen, fontWeight: FontWeight.w600, fontSize: 12),
         shape: StadiumBorder(),
         side: BorderSide.none,
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: emeraldGreen,
@@ -167,94 +208,99 @@ class AppTheme {
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.9),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0x14000000)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0x14000000)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: emeraldGreen, width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: emeraldGreen, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        hintStyle: TextStyle(color: Colors.grey.shade400),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: emeraldGreen,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: emeraldGreen,
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
       ),
-      iconTheme: const IconThemeData(color: emeraldGreen, size: 24),
-      dividerTheme: DividerThemeData(color: Colors.grey.shade200, thickness: 1),
+      iconTheme: const IconThemeData(color: emeraldGreen, size: 22),
+      dividerTheme: const DividerThemeData(color: Color(0xFFE2E8F0), thickness: 1),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white.withValues(alpha: 0.92),
-        indicatorColor: emeraldGreen.withValues(alpha: 0.12),
-        height: 68,
+        indicatorColor: emeraldGreen.withValues(alpha: 0.10),
+        height: 64,
         elevation: 0,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: emeraldGreen, size: 22);
           }
-          return const IconThemeData(color: Colors.grey, size: 22);
+          return const IconThemeData(color: Color(0xFF94A3B8), size: 22);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: emeraldGreen);
+            return GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 11, color: emeraldGreen);
           }
-          return const TextStyle(fontSize: 11, color: Colors.grey);
+          return GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8));
         }),
       ),
     );
   }
 
   static ThemeData get darkTheme {
+    final base = GoogleFonts.interTextTheme(ThemeData.dark().textTheme);
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: const ColorScheme.dark(
-        primary: accentGold,
+        // Signal-yellow as primary interactive color in dark mode.
+        primary: electricBlue,
         secondary: accentGold,
         surface: darkCard,
         surfaceContainerHighest: darkCardAlt,
-        onPrimary: Colors.black,
+        onPrimary: ink900, // ink text on yellow
         onSurface: darkOnSurface,
         error: errorRed,
       ),
       scaffoldBackgroundColor: darkBackground,
-      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme).apply(
+      textTheme: base.apply(
         bodyColor: darkOnSurface,
-        displayColor: accentGold,
+        displayColor: darkOnSurface,
       ).copyWith(
-        headlineMedium: GoogleFonts.outfit(color: darkOnSurface, fontWeight: FontWeight.bold),
-        headlineSmall:  GoogleFonts.outfit(color: darkOnSurface, fontWeight: FontWeight.bold),
-        titleLarge:     GoogleFonts.outfit(color: darkOnSurface, fontWeight: FontWeight.w600),
-        bodyMedium:     GoogleFonts.outfit(color: darkOnSurface),
-        bodySmall:      GoogleFonts.outfit(color: darkSubtext),
+        headlineMedium: GoogleFonts.inter(color: darkOnSurface, fontWeight: FontWeight.w700, letterSpacing: -0.4),
+        headlineSmall:  GoogleFonts.inter(color: darkOnSurface, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+        titleLarge:     GoogleFonts.inter(color: darkOnSurface, fontWeight: FontWeight.w600, letterSpacing: -0.2),
+        titleMedium:    GoogleFonts.inter(color: darkOnSurface, fontWeight: FontWeight.w600),
+        bodyLarge:      GoogleFonts.inter(color: darkOnSurface),
+        bodyMedium:     GoogleFonts.inter(color: darkOnSurface),
+        bodySmall:      GoogleFonts.inter(color: darkSubtext, fontSize: 12),
+        labelSmall:     GoogleFonts.inter(color: darkSubtext, letterSpacing: 0.8, fontWeight: FontWeight.w600),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: darkSurface,
         foregroundColor: darkOnSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        iconTheme: IconThemeData(color: accentGold),
-        titleTextStyle: TextStyle(
+        iconTheme: const IconThemeData(color: darkOnSurface),
+        titleTextStyle: GoogleFonts.inter(
           color: darkOnSurface,
           fontWeight: FontWeight.w700,
-          fontSize: 18,
+          fontSize: 17,
           letterSpacing: -0.3,
         ),
       ),
@@ -263,86 +309,87 @@ class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(20)),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
           side: BorderSide(color: darkBorder, width: 1),
         ),
       ),
-      chipTheme: const ChipThemeData(
-        backgroundColor: darkBorder,
-        labelStyle: TextStyle(color: accentGold, fontWeight: FontWeight.w600),
-        shape: StadiumBorder(),
+      chipTheme: ChipThemeData(
+        backgroundColor: electricBlue.withValues(alpha: 0.1),
+        labelStyle: const TextStyle(color: electricBlue, fontWeight: FontWeight.w600, fontSize: 12),
+        shape: const StadiumBorder(),
         side: BorderSide.none,
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: accentGold,
-        foregroundColor: Colors.black,
+        backgroundColor: electricBlue,
+        foregroundColor: ink900,
         elevation: 4,
       ),
       inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: darkCard,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide(color: darkBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
           borderSide: BorderSide(color: darkBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-          borderSide: BorderSide(color: accentGold, width: 2),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderSide: BorderSide(color: electricBlue, width: 1.5),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        hintStyle: TextStyle(color: darkSubtext),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        hintStyle: TextStyle(color: darkSubtext, fontSize: 14),
         labelStyle: TextStyle(color: Color(0xFF94A3B8)),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: accentGold,
-          foregroundColor: Colors.black,
+          backgroundColor: electricBlue,
+          foregroundColor: ink900,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: accentGold,
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+          foregroundColor: brand400,
+          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
       ),
-      iconTheme: const IconThemeData(color: accentGold, size: 24),
+      iconTheme: const IconThemeData(color: darkOnSurface, size: 22),
       dividerTheme: const DividerThemeData(color: darkBorder, thickness: 1),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: darkSurface,
-        selectedItemColor: accentGold,
+        selectedItemColor: electricBlue,
         unselectedItemColor: darkSubtext,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: darkSurface,
-        indicatorColor: accentGold.withValues(alpha: 0.15),
-        height: 68,
+        indicatorColor: electricBlue.withValues(alpha: 0.12),
+        height: 64,
         elevation: 0,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: accentGold, size: 22);
+            return const IconThemeData(color: electricBlue, size: 22);
           }
           return const IconThemeData(color: darkSubtext, size: 22);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: accentGold);
+            return GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 11, color: electricBlue);
           }
-          return const TextStyle(fontSize: 11, color: darkSubtext);
+          return GoogleFonts.inter(fontSize: 11, color: darkSubtext);
         }),
       ),
       tabBarTheme: const TabBarThemeData(
-        labelColor: accentGold,
+        labelColor: electricBlue,
         unselectedLabelColor: darkSubtext,
-        indicatorColor: accentGold,
+        indicatorColor: electricBlue,
+        dividerColor: darkBorder,
       ),
     );
   }

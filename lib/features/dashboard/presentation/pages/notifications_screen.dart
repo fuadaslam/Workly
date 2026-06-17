@@ -4,13 +4,55 @@ import '../../../../core/widgets/responsive_layout.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class NotificationsScreen extends StatelessWidget {
-  const NotificationsScreen({super.key});
+  final bool isDrawer;
+
+  const NotificationsScreen({super.key, this.isDrawer = false});
+
+  static void showAsDrawer(BuildContext context) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Material(
+            elevation: 16,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width > 400 ? 400 : MediaQuery.of(context).size.width * 0.85,
+              height: double.infinity,
+              child: const NotificationsScreen(isDrawer: true),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1.0, 0.0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeInOut)),
+          child: child,
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
-      appBar: const WorkqlyAppBar(title: 'Notifications'),
+      appBar: WorkqlyAppBar(
+        title: 'Notifications',
+        leading: isDrawer
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+      ),
       body: ResponsiveLayout(
         maxWidth: 800,
         padding: EdgeInsets.zero,

@@ -1,6 +1,12 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/profile.dart' as model;
 import '../providers/profile_provider.dart';
@@ -20,6 +26,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _whatsappController;
   late TextEditingController _phoneController;
   bool _isLoading = false;
+  bool _isUploadingAvatar = false;
+  String? _localAvatarPath;
 
   @override
   void initState() {
@@ -37,6 +45,122 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final source = await _showImageSourceDialog();
+    if (source == null) return;
+
+    final picked = await picker.pickImage(source: source, imageQuality: 100);
+    if (picked == null) return;
+
+    setState(() => _isUploadingAvatar = true);
+
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      late Uint8List bytes;
+      String? localPath;
+
+      if (kIsWeb) {
+        // Web: dart:io and FlutterImageCompress are unavailable.
+        bytes = await picked.readAsBytes();
+      } else {
+        // Native: compress to JPEG ≤ 200 KB.
+        final tmpDir = await getTemporaryDirectory();
+        final outPath = '${tmpDir.path}/${user.id}_avatar.jpg';
+        final compressed = await FlutterImageCompress.compressAndGetFile(
+          picked.path,
+          outPath,
+          format: CompressFormat.jpeg,
+          quality: 65,
+          minWidth: 300,
+          minHeight: 300,
+        );
+        if (compressed == null) return;
+        localPath = compressed.path;
+        bytes = await File(compressed.path).readAsBytes();
+      }
+
+      // Upload to Supabase Storage (upsert)
+      await Supabase.instance.client.storage
+          .from('avatars')
+          .uploadBinary(
+            '${user.id}.jpg',
+            bytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+
+      // Get public URL and update profile row
+      final publicUrl = Supabase.instance.client.storage
+          .from('avatars')
+          .getPublicUrl('${user.id}.jpg');
+
+      await Supabase.instance.client
+          .from('profiles')
+          .update({'avatar_url': publicUrl})
+          .eq('id', user.id);
+
+      setState(() => _localAvatarPath = localPath);
+
+      ref.invalidate(profileProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo updated!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.photo_camera, color: AppTheme.darkBlue),
+              title: const Text('Take Photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppTheme.darkBlue),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _updateProfile() async {
     setState(() => _isLoading = true);
     try {
@@ -49,12 +173,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         'phone_number': _phoneController.text.trim(),
       }).eq('id', user.id);
 
-      // Refresh profile data
       ref.invalidate(profileProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully! / تم تحديث الملف الشخصي بنجاح!')),
+          const SnackBar(content: Text('Profile updated successfully!')),
         );
         Navigator.of(context).pop();
       }
@@ -67,6 +190,61 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Widget _buildAvatar() {
+    final remoteUrl = widget.profile.avatarUrl;
+    final hasLocal = _localAvatarPath != null;
+    final hasRemote = remoteUrl != null && remoteUrl.isNotEmpty;
+
+    ImageProvider? imageProvider;
+    if (hasLocal) {
+      imageProvider = FileImage(File(_localAvatarPath!));
+    } else if (hasRemote) {
+      imageProvider = NetworkImage(remoteUrl);
+    }
+
+    return GestureDetector(
+      onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.emeraldGreen, width: 2),
+            ),
+            child: _isUploadingAvatar
+                ? const SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emeraldGreen),
+                  )
+                : CircleAvatar(
+                    radius: 50,
+                    backgroundColor: AppTheme.emeraldLight,
+                    backgroundImage: imageProvider,
+                    child: imageProvider == null
+                        ? const Icon(Icons.person, size: 50, color: AppTheme.emeraldGreen)
+                        : null,
+                  ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: AppTheme.emeraldGreen,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -82,35 +260,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Stack(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppTheme.emeraldGreen, width: 2),
-                      ),
-                      child: const CircleAvatar(
-                        radius: 50,
-                        backgroundColor: AppTheme.emeraldLight,
-                        child: Icon(Icons.person, size: 50, color: AppTheme.emeraldGreen),
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppTheme.emeraldGreen,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                      ),
-                    ),
-                  ],
+              Center(child: _buildAvatar()),
+              const SizedBox(height: 8),
+              const Center(
+                child: Text(
+                  'Tap to change photo',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ),
               const SizedBox(height: 32),

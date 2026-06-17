@@ -32,7 +32,7 @@ class PremiumCard extends StatelessWidget {
 
     final defaultBorder = isDark
         ? Border.all(color: AppTheme.darkBorder, width: 1)
-        : Border.all(color: const Color(0x0D000000), width: 1);
+        : Border.all(color: const Color(0xFFE4E4E7), width: 1);
 
     final defaultShadow = AppTheme.cardShadow(isDark);
 

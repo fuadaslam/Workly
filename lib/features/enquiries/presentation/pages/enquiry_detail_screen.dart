@@ -149,9 +149,9 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   Color _statusColor(EnquiryFinalStatus s) {
     switch (s) {
       case EnquiryFinalStatus.executed:
-      case EnquiryFinalStatus.settled: return Colors.green;
+      case EnquiryFinalStatus.settled: return AppTheme.statusCompleted;
       case EnquiryFinalStatus.inProgress: return AppTheme.accentGold;
-      case EnquiryFinalStatus.postponedByClient: return Colors.orange;
+      case EnquiryFinalStatus.postponedByClient: return AppTheme.statusPending;
       case EnquiryFinalStatus.rejectedByClient:
       case EnquiryFinalStatus.cancelled: return AppTheme.errorRed;
     }
@@ -159,9 +159,9 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
 
   Color _perfColor(PerformanceRating r) {
     switch (r) {
-      case PerformanceRating.excellent: return Colors.green;
-      case PerformanceRating.good: return Colors.teal;
-      case PerformanceRating.average: return Colors.orange;
+      case PerformanceRating.excellent: return AppTheme.statusCompleted;
+      case PerformanceRating.good: return AppTheme.statusCompleted;
+      case PerformanceRating.average: return AppTheme.statusPending;
       case PerformanceRating.needsReview: return AppTheme.errorRed;
     }
   }
@@ -283,7 +283,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
                     : Text(_enquiry.finalAgreedServiceCharge != null
                         ? 'SAR ${_enquiry.finalAgreedServiceCharge!.toStringAsFixed(0)}'
                         : '—',
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.teal, fontSize: 16))),
+                        style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.statusCompleted, fontSize: 16))),
                 _detailRow('Final Notes', _editing
                     ? _editField(_finalNotesCtrl, maxLines: 3)
                     : Text(_enquiry.finalNotes ?? '—', style: const TextStyle(fontSize: 15))),
@@ -340,7 +340,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B), // Slate 800
+        color: AppTheme.ink800, // Slate 800
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -538,7 +538,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
 
   Widget _clientStatusWidget() {
     return Row(children: [
-      _statusBtn('Accepted', _enquiry.clientStatus == ClientStatus.accepted, Colors.green,
+      _statusBtn('Accepted', _enquiry.clientStatus == ClientStatus.accepted, AppTheme.statusCompleted,
           () => _updateClientStatus(ClientStatus.accepted)),
       const SizedBox(width: 8),
       _statusBtn('Rejected', _enquiry.clientStatus == ClientStatus.rejected, AppTheme.errorRed,

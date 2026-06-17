@@ -96,7 +96,7 @@ class PlatformAdminScreen extends ConsumerWidget {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0B172A), Color(0xFF162236)],
+          colors: [AppTheme.ink900, AppTheme.ink800],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -117,10 +117,10 @@ class PlatformAdminScreen extends ConsumerWidget {
               width: 280, height: 280,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+                color: AppTheme.brand600.withValues(alpha: 0.08),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                    color: AppTheme.brand600.withValues(alpha: 0.12),
                     blurRadius: 100,
                   ),
                 ],
@@ -158,14 +158,14 @@ class PlatformAdminScreen extends ConsumerWidget {
                         padding: const EdgeInsets.all(11),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF1D4ED8), Color(0xFF3B82F6)],
+                            colors: [Color(0xFF1D4ED8), AppTheme.brand600],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF3B82F6).withValues(alpha: 0.35),
+                              color: AppTheme.brand600.withValues(alpha: 0.35),
                               blurRadius: 14,
                               offset: const Offset(0, 6),
                             ),
@@ -217,7 +217,7 @@ class PlatformAdminScreen extends ConsumerWidget {
                             label: 'Organizations',
                             value: '${s['totalOrgs']}',
                             icon: Icons.business_outlined,
-                            accentColor: const Color(0xFF3B82F6),
+                            accentColor: AppTheme.brand600,
                           ),
                           const SizedBox(width: 12),
                           _KpiCard(
@@ -231,7 +231,7 @@ class PlatformAdminScreen extends ConsumerWidget {
                             label: 'Active Subs',
                             value: '${s['activeSubscriptions']}',
                             icon: Icons.check_circle_outline_rounded,
-                            accentColor: const Color(0xFF10B981),
+                            accentColor: AppTheme.mintGreen,
                           ),
                           const SizedBox(width: 12),
                           _KpiCard(
@@ -384,9 +384,9 @@ class _OrgCard extends ConsumerWidget {
   Color _statusColor(String? s) {
     switch (s) {
       case 'active':
-        return const Color(0xFF10B981);
+        return AppTheme.mintGreen;
       case 'trialing':
-        return const Color(0xFF3B82F6);
+        return AppTheme.brand600;
       case 'past_due':
         return const Color(0xFFF59E0B);
       case 'paused':
@@ -400,9 +400,9 @@ class _OrgCard extends ConsumerWidget {
   Color _planColor(String? plan) {
     switch (plan) {
       case 'enterprise':
-        return const Color(0xFFD4AF37);
+        return AppTheme.brand500;
       case 'pro':
-        return const Color(0xFF3B82F6);
+        return AppTheme.brand600;
       default:
         return Colors.grey;
     }
@@ -539,7 +539,7 @@ class _OrgCard extends ConsumerWidget {
                       icon: Icons.assignment_outlined,
                       value: '${org.workOrderCount}',
                       label: 'Work Orders',
-                      color: const Color(0xFF0EA5E9),
+                      color: AppTheme.brand600,
                     ),
                     const Spacer(),
                     // Status pill
@@ -646,19 +646,19 @@ class _OrgCard extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                            color: AppTheme.brand600.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.hourglass_top_rounded, size: 12, color: Color(0xFF3B82F6)),
+                              const Icon(Icons.hourglass_top_rounded, size: 12, color: AppTheme.brand600),
                               const SizedBox(width: 4),
                               Text(
                                 'Trial ends ${df.format(org.trialEndsAt!)}',
                                 style: const TextStyle(
                                   fontSize: 11,
-                                  color: Color(0xFF3B82F6),
+                                  color: AppTheme.brand600,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),

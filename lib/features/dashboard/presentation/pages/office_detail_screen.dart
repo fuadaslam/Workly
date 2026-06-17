@@ -158,7 +158,7 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
         ],
       ),
       body: RefreshIndicator(
-        color: const Color(0xFF0D1B2E),
+        color: AppTheme.ink900,
         onRefresh: () async {
           ref.invalidate(officesProvider);
           ref.invalidate(staffProfilesProvider);
@@ -221,29 +221,46 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
   Widget _buildHeader(Color color, AppLocalizations l10n) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(30),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(30, 36, 30, 30),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppTheme.ink900, color.withValues(alpha: 0.75)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Column(
         children: [
-           Container(
-             padding: const EdgeInsets.all(20),
-             decoration: BoxDecoration(
-               color: color.withValues(alpha: 0.1),
-               shape: BoxShape.circle,
-             ),
-             child: Icon(Icons.business, size: 40, color: color),
-           ),
-           const SizedBox(height: 15),
-           Text(
-             _isEditing ? _nameController.text : widget.office['name'],
-             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-           ),
-           Text(
-             widget.office['location'],
-             style: const TextStyle(fontSize: 14, color: Colors.grey),
-           ),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+              boxShadow: [
+                BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2),
+              ],
+            ),
+            child: const Icon(Icons.business, size: 40, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _isEditing ? _nameController.text : widget.office['name'],
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.3),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.location_on, size: 14, color: Colors.white.withValues(alpha: 0.6)),
+              const SizedBox(width: 4),
+              Text(
+                widget.office['location'] ?? '',
+                style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -390,25 +407,47 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
           ],
         ),
         const SizedBox(height: 15),
-        PremiumCard(
-          color: AppTheme.emeraldGreen,
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppTheme.ink900, AppTheme.ink900],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: AppTheme.shadowMd,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(l10n.workloadCapacity.toUpperCase(), style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('${widget.office['workload_percentage'] ?? 0}%', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.speed_outlined, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(l10n.workloadCapacity.toUpperCase(),
+                      style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                 ],
               ),
+              const SizedBox(height: 14),
+              Text('${widget.office['workload_percentage'] ?? 0}%',
+                  style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1)),
               const SizedBox(height: 10),
-              LinearProgressIndicator(
-                value: (widget.office['workload_percentage'] ?? 0) / 100,
-                backgroundColor: Colors.black12,
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(5),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: (widget.office['workload_percentage'] ?? 0) / 100,
+                  backgroundColor: Colors.white.withValues(alpha: 0.15),
+                  color: AppTheme.accentGold,
+                  minHeight: 6,
+                ),
               ),
             ],
           ),
@@ -418,20 +457,31 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
   }
 
   Widget _buildBigStatCard(String label, String value, Color color) {
-    return PremiumCard(
-      border: Border(top: BorderSide(color: color, width: 3)),
+    final isRevenue = label.contains('Revenue') || label.contains('الإيرادات');
+    final icon = isRevenue ? Icons.monetization_on_outlined : Icons.people_outline;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: AppTheme.shadowMd,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-              Icon(label.contains('Revenue') || label.contains('الإيرادات') ? Icons.monetization_on_outlined : Icons.people_outline, color: color, size: 18),
-            ],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 10),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 14),
+          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.5)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
         ],
       ),
     );

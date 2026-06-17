@@ -32,6 +32,18 @@ class EnquiryFilter {
       searchQuery: searchQuery ?? this.searchQuery,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EnquiryFilter &&
+          status == other.status &&
+          staffId == other.staffId &&
+          service == other.service &&
+          searchQuery == other.searchQuery;
+
+  @override
+  int get hashCode => Object.hash(status, staffId, service, searchQuery);
 }
 
 final enquiryFilterProvider = StateProvider<EnquiryFilter>((ref) => const EnquiryFilter());

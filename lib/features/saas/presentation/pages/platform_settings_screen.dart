@@ -74,7 +74,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0B172A), Color(0xFF1E293B)],
+          colors: [AppTheme.ink900, AppTheme.ink800],
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
       ),
@@ -89,8 +89,8 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
               width: 240, height: 240,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.blueAccent.withValues(alpha: 0.1),
-                boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha: 0.15), blurRadius: 100)],
+                color: AppTheme.brand500.withValues(alpha: 0.12),
+                boxShadow: [BoxShadow(color: AppTheme.brand500.withValues(alpha: 0.18), blurRadius: 100)],
               ),
             ),
           ),
@@ -106,18 +106,18 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Colors.blueAccent, Color(0xFF1565C0)],
+                          colors: [AppTheme.brand400, AppTheme.brand600],
                           begin: Alignment.topLeft, end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(16),
-                        boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 6))],
+                        boxShadow: [BoxShadow(color: AppTheme.brand500.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 6))],
                       ),
-                      child: const Icon(Icons.manage_accounts_rounded, color: Colors.white, size: 28),
+                      child: const Icon(Icons.manage_accounts_rounded, color: AppTheme.ink900, size: 28),
                     ),
                     const SizedBox(width: 16),
                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       const Text('Console Settings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 26, letterSpacing: -0.5)),
-                      Text('PLATFORM CONFIGURATION', style: TextStyle(color: Colors.blueAccent.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
+                      Text('PLATFORM CONFIGURATION', style: TextStyle(color: AppTheme.brand400.withValues(alpha: 0.95), fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
                     ]),
                   ]),
                   const SizedBox(height: 32),
@@ -170,7 +170,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
   Widget _sectionLabel(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, top: 4, left: 4),
-      child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.blueGrey, letterSpacing: 1.2)),
+      child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF71717A), letterSpacing: 1.2)),
     );
   }
 
@@ -232,7 +232,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
       ),
       _settingTile(
         icon: Icons.link_rounded,
-        iconColor: Colors.indigo,
+        iconColor: AppTheme.brand600,
         title: 'Platform Domain',
         subtitle: 'workly.xoviq.com',
         trailing: const Icon(Icons.open_in_new, size: 16, color: Colors.grey),
@@ -240,14 +240,14 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
       ),
       _settingTile(
         icon: Icons.tag_rounded,
-        iconColor: Colors.teal,
+        iconColor: AppTheme.statusCompleted,
         title: 'Platform Version',
         subtitle: 'Build 2024.1.42 — Latest',
         showDivider: false,
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: const Text('Up to date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.green)),
+          decoration: BoxDecoration(color: AppTheme.statusCompleted.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+          child: const Text('Up to date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.statusCompleted)),
         ),
       ),
     ]);
@@ -257,7 +257,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
     return _card(children: [
       _settingTile(
         icon: Icons.science_outlined,
-        iconColor: Colors.blue,
+        iconColor: AppTheme.statusProgress,
         title: 'Trial Period',
         subtitle: 'New organizations get a free trial',
         trailing: Switch(
@@ -269,7 +269,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
       if (_trialEnabled)
         _settingTile(
           icon: Icons.timer_outlined,
-          iconColor: Colors.blue,
+          iconColor: AppTheme.statusProgress,
           title: 'Trial Duration',
           subtitle: 'Days before trial expires',
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -292,8 +292,8 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
         showDivider: false,
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: const Text('Active', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.green)),
+          decoration: BoxDecoration(color: AppTheme.statusCompleted.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+          child: const Text('Active', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.statusCompleted)),
         ),
       ),
     ]);
@@ -314,14 +314,14 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
       ),
       _settingTile(
         icon: Icons.sms_outlined,
-        iconColor: Colors.green,
+        iconColor: AppTheme.statusCompleted,
         title: 'SMS Gateway',
         subtitle: 'Twilio — not configured',
         showDivider: false,
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: const Text('Setup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.orange)),
+          decoration: BoxDecoration(color: AppTheme.statusPending.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+          child: const Text('Setup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.statusPending)),
         ),
         onTap: () => _showComingSoon(context, 'SMS Gateway configuration'),
       ),
@@ -332,25 +332,25 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
     return _card(children: [
       _settingTile(
         icon: Icons.storage_rounded,
-        iconColor: Colors.teal,
+        iconColor: AppTheme.statusCompleted,
         title: 'Database',
         subtitle: 'Supabase PostgreSQL — healthy',
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.green.withValues(alpha: 0.5), blurRadius: 6)])),
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: AppTheme.statusCompleted, shape: BoxShape.circle, boxShadow: [BoxShadow(color: AppTheme.statusCompleted.withValues(alpha: 0.5), blurRadius: 6)])),
           const SizedBox(width: 8),
-          const Text('Online', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.green)),
+          const Text('Online', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.statusCompleted)),
         ]),
       ),
       _settingTile(
         icon: Icons.api_rounded,
-        iconColor: Colors.purple,
+        iconColor: AppTheme.brand600,
         title: 'API & Webhooks',
         subtitle: 'Manage API keys and webhook endpoints',
         onTap: () => _showComingSoon(context, 'API key management'),
       ),
       _settingTile(
         icon: Icons.build_circle_outlined,
-        iconColor: Colors.orange,
+        iconColor: AppTheme.statusPending,
         title: 'Maintenance Mode',
         subtitle: _maintenanceMode ? 'Platform is in maintenance mode' : 'Platform is fully operational',
         showDivider: false,
@@ -365,7 +365,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
                   content: const Text('This will block access for all tenant users. Only platform admins can log in.'),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: Colors.orange), child: const Text('Enable')),
+                    TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: AppTheme.statusPending), child: const Text('Enable')),
                   ],
                 ),
               );
@@ -374,7 +374,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
               setState(() => _maintenanceMode = v);
             }
           },
-          activeColor: Colors.orange,
+          activeColor: AppTheme.statusPending,
         ),
       ),
     ]);

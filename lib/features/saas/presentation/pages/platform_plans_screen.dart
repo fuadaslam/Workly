@@ -53,7 +53,7 @@ class PlatformPlansScreen extends ConsumerWidget {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0B172A), Color(0xFF1E293B)],
+          colors: [AppTheme.ink900, AppTheme.ink800],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -149,9 +149,9 @@ class _PlanCard extends StatelessWidget {
 
   Color get _accentColor {
     switch (plan.name) {
-      case 'enterprise': return const Color(0xFFD4AF37);
+      case 'enterprise': return AppTheme.brand500;
       case 'pro': return AppTheme.emeraldGreen;
-      default: return Colors.blueGrey;
+      default: return const Color(0xFF71717A);
     }
   }
 
@@ -223,9 +223,9 @@ class _PlanCard extends StatelessWidget {
             child: Column(
               children: [
                 Row(children: [
-                  Expanded(child: _limitTile(Icons.people_outline, plan.limitLabel(plan.maxUsers), 'Max Users', Colors.teal)),
+                  Expanded(child: _limitTile(Icons.people_outline, plan.limitLabel(plan.maxUsers), 'Max Users', AppTheme.statusCompleted)),
                   Container(width: 1, height: 40, color: Colors.grey.withValues(alpha: 0.15)),
-                  Expanded(child: _limitTile(Icons.business_outlined, plan.limitLabel(plan.maxOffices), 'Max Offices', Colors.indigo)),
+                  Expanded(child: _limitTile(Icons.business_outlined, plan.limitLabel(plan.maxOffices), 'Max Offices', AppTheme.brand600)),
                   Container(width: 1, height: 40, color: Colors.grey.withValues(alpha: 0.15)),
                   Expanded(child: _limitTile(Icons.assignment_outlined, plan.limitLabel(plan.maxWorkOrdersPerMonth), 'Orders/mo', Colors.deepOrange)),
                 ]),

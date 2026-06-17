@@ -279,7 +279,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppTheme.emeraldGreen, Color(0xFF1E3A5F)],
+          colors: [AppTheme.emeraldGreen, AppTheme.ink800],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -437,9 +437,9 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
         ));
       }
     }
-    addChips(_filters.woStatuses, Colors.blue);
-    addChips(_filters.woPriorities, Colors.orange);
-    addChips(_filters.woServiceTypes, Colors.purple);
+    addChips(_filters.woStatuses, AppTheme.statusProgress);
+    addChips(_filters.woPriorities, AppTheme.statusPending);
+    addChips(_filters.woServiceTypes, AppTheme.brand600);
     // Show staff names for staff IDs
     final staffOpts = _options['staff'] ?? [];
     final selectedStaffNames = _filters.woStaffIds.map((id) =>
@@ -447,9 +447,9 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
     final eqStaffNames = _filters.eqStaffIds.map((id) =>
         staffOpts.firstWhere((s) => s['value'] == id, orElse: () => {'label': id})['label']!).toList();
     addChips(selectedStaffNames, AppTheme.emeraldGreen);
-    addChips(_filters.eqFinalStatuses, Colors.teal);
-    addChips(_filters.eqClientStatuses, Colors.indigo);
-    addChips(_filters.eqServiceTypes, Colors.deepPurple);
+    addChips(_filters.eqFinalStatuses, AppTheme.statusCompleted);
+    addChips(_filters.eqClientStatuses, AppTheme.brand600);
+    addChips(_filters.eqServiceTypes, AppTheme.brand600);
     addChips(_filters.eqNationalities, Colors.brown);
     addChips(eqStaffNames, AppTheme.emeraldGreen);
 
@@ -568,7 +568,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
 
           // ── Work Orders ──
           if (_includeWorkOrders) ...[
-            _filterGroupHeader('Work Orders', Icons.assignment_outlined, Colors.blue),
+            _filterGroupHeader('Work Orders', Icons.assignment_outlined, AppTheme.statusProgress),
             _filterGroup(
               label: 'Status',
               icon: Icons.circle_outlined,
@@ -577,7 +577,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
               onToggle: (v) => _toggleFilter<String>(
                   _filters.woStatuses, v,
                   (l) => _filters = _filters.copyWith(woStatuses: l)),
-              chipColor: Colors.blue,
+              chipColor: AppTheme.statusProgress,
             ),
             _filterGroup(
               label: 'Priority',
@@ -587,7 +587,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
               onToggle: (v) => _toggleFilter<String>(
                   _filters.woPriorities, v,
                   (l) => _filters = _filters.copyWith(woPriorities: l)),
-              chipColor: Colors.orange,
+              chipColor: AppTheme.statusPending,
             ),
             _filterGroup(
               label: 'Service Type',
@@ -597,7 +597,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
               onToggle: (v) => _toggleFilter<String>(
                   _filters.woServiceTypes, v,
                   (l) => _filters = _filters.copyWith(woServiceTypes: l)),
-              chipColor: Colors.purple,
+              chipColor: AppTheme.brand600,
             ),
             _filterGroup(
               label: 'Staff Member',
@@ -614,7 +614,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
 
           // ── Enquiries ──
           if (_includeEnquiries) ...[
-            _filterGroupHeader('Enquiries', Icons.track_changes_outlined, Colors.teal),
+            _filterGroupHeader('Enquiries', Icons.track_changes_outlined, AppTheme.statusCompleted),
             _filterGroup(
               label: 'Final Status',
               icon: Icons.check_circle_outline,
@@ -623,7 +623,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
               onToggle: (v) => _toggleFilter<String>(
                   _filters.eqFinalStatuses, v,
                   (l) => _filters = _filters.copyWith(eqFinalStatuses: l)),
-              chipColor: Colors.teal,
+              chipColor: AppTheme.statusCompleted,
             ),
             _filterGroup(
               label: 'Client Decision',
@@ -637,7 +637,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
               onToggle: (v) => _toggleFilter<String>(
                   _filters.eqClientStatuses, v,
                   (l) => _filters = _filters.copyWith(eqClientStatuses: l)),
-              chipColor: Colors.indigo,
+              chipColor: AppTheme.brand600,
             ),
             _filterGroup(
               label: 'Service Type',
@@ -647,7 +647,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
               onToggle: (v) => _toggleFilter<String>(
                   _filters.eqServiceTypes, v,
                   (l) => _filters = _filters.copyWith(eqServiceTypes: l)),
-              chipColor: Colors.deepPurple,
+              chipColor: AppTheme.brand600,
             ),
             _filterGroup(
               label: 'Nationality',

@@ -41,237 +41,343 @@ class CollapsibleSidebar extends StatefulWidget {
 
 class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
   bool _isExpanded = true;
+  int? _hoveredIndex;
+
+  // Dynamic colors — updated every build() based on brightness
+  late Color _bg;
+  late Color _border;
+  late Color _divider;
+  late Color _footerBg;
+  late Color _activeText;
+  late Color _mutedIcon;
+  late Color _mutedText;
+  late Color _hoverBg;
+  late Color _activeBg;
+  late Color _logoText;
+  late Color _chevronBg;
+  late Color _chevronBorder;
+
+  static const Color _activeBlue = AppTheme.brand500;
+
+  void _updatePalette(bool isDark) {
+    if (isDark) {
+      _bg           = AppTheme.ink900;
+      _border       = const Color(0xFF1F1F23);
+      _divider      = const Color(0xFF1F1F23);
+      _footerBg     = const Color(0xFF060607);
+      _activeText   = const Color(0xFFFAFAFA);
+      _mutedIcon    = const Color(0xFF6B7280);
+      _mutedText    = const Color(0xFF8A8A93);
+      _hoverBg      = const Color(0x0AFFFFFF);
+      _activeBg     = const Color(0x14FFFFFF);
+      _logoText     = Colors.white;
+      _chevronBg    = const Color(0x0AFFFFFF);
+      _chevronBorder= const Color(0xFF1F1F23);
+    } else {
+      _bg           = Colors.white;
+      _border       = const Color(0xFFE5E7EB);
+      _divider      = const Color(0xFFE5E7EB);
+      _footerBg     = const Color(0xFFF9FAFB);
+      _activeText   = const Color(0xFF111827);
+      _mutedIcon    = const Color(0xFF9CA3AF);
+      _mutedText    = const Color(0xFF6B7280);
+      _hoverBg      = const Color(0x08000000);
+      _activeBg     = const Color(0x0D000000);
+      _logoText     = const Color(0xFF111827);
+      _chevronBg    = const Color(0xFFF3F4F6);
+      _chevronBorder= const Color(0xFFE5E7EB);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sidebarBgColor = isDark ? AppTheme.darkSurface : AppTheme.emeraldGreen;
-    final activeColor = isDark ? AppTheme.accentGold : AppTheme.accentGold;
-    final inactiveColor = Colors.white.withValues(alpha: 0.6);
+    _updatePalette(isDark);
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOutCubic,
-      width: _isExpanded ? 240 : 80,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeInOutQuart,
+      width: _isExpanded ? 220 : 64,
       height: double.infinity,
       decoration: BoxDecoration(
-        color: sidebarBgColor,
-        border: Border(
-          right: BorderSide(
-            color: isDark ? AppTheme.darkBorder : Colors.transparent,
-            width: 1,
-          ),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 15,
-            offset: Offset(4, 0),
-          )
-        ],
+        color: _bg,
+        border: Border(right: BorderSide(color: _border, width: 1)),
       ),
       child: Column(
         children: [
-          // 1. Header (Logo & Collapse toggle)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Row(
-              mainAxisAlignment:
-                  _isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
-              children: [
-                if (_isExpanded)
-                  const Row(
-                    children: [
-                      Icon(Icons.auto_graph_rounded, color: AppTheme.accentGold, size: 24),
-                      SizedBox(width: 10),
-                      Text(
-                        'Workly',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+          _buildHeader(),
+          const SizedBox(height: 8),
+          Expanded(child: _buildNavItems()),
+          const SizedBox(height: 8),
+          if (widget.themeToggle != null) _buildThemeRow(),
+          _buildFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      height: 56,
+      padding: EdgeInsets.symmetric(horizontal: _isExpanded ? 16 : 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: _divider, width: 1)),
+      ),
+      child: Row(
+        mainAxisAlignment:
+            _isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+        children: [
+          if (_isExpanded)
+            Row(children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: AppTheme.brand500,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(Icons.bolt_rounded, color: AppTheme.ink900, size: 16),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Worqly',
+                style: TextStyle(
+                  color: _logoText,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ]),
+          GestureDetector(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: _chevronBg,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: _chevronBorder),
+              ),
+              child: Icon(
+                _isExpanded ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                color: _mutedText,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItems() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      itemCount: widget.items.length,
+      itemBuilder: (context, index) {
+        final item = widget.items[index];
+        final isSelected = widget.selectedIndex == index;
+        final isHovered = _hoveredIndex == index;
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _hoveredIndex = index),
+            onExit:  (_) => setState(() => _hoveredIndex = null),
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => widget.onDestinationSelected(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? _activeBg
+                      : isHovered
+                          ? _hoverBg
+                          : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    // Left indicator bar
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 3,
+                      height: isSelected ? 20 : 0,
+                      margin: const EdgeInsets.only(right: 9),
+                      decoration: BoxDecoration(
+                        color: _activeBlue,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    // Icon with optional badge
+                    SizedBox(
+                      width: 20,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(
+                            item.icon,
+                            size: 18,
+                            color: isSelected
+                                ? _activeBlue
+                                : isHovered
+                                    ? const Color(0xFF9CA3AF)
+                                    : _mutedIcon,
+                          ),
+                          if (item.badgeCount != null && item.badgeCount! > 0)
+                            Positioned(
+                              right: -6,
+                              top: -5,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.errorRed,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                                child: Text(
+                                  '${item.badgeCount}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (_isExpanded) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          item.label,
+                          style: TextStyle(
+                            color: isSelected
+                                ? _activeText
+                                : isHovered
+                                    ? _mutedIcon
+                                    : _mutedText,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            fontSize: 13,
+                            letterSpacing: -0.1,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
-                  ),
-                IconButton(
-                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                  icon: Icon(
-                    _isExpanded ? Icons.menu_open_rounded : Icons.menu_rounded,
-                    color: Colors.white,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.08),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-          const Divider(color: Colors.white12, height: 1),
-          const SizedBox(height: 16),
+        );
+      },
+    );
+  }
 
-          // 2. Navigation Items
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              itemCount: widget.items.length,
-              itemBuilder: (context, index) {
-                final item = widget.items[index];
-                final isSelected = widget.selectedIndex == index;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => widget.onDestinationSelected(index),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.white.withValues(alpha: 0.1)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: _isExpanded
-                              ? MainAxisAlignment.start
-                              : MainAxisAlignment.center,
-                          children: [
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Icon(
-                                  item.icon,
-                                  color: isSelected ? activeColor : inactiveColor,
-                                  size: 22,
-                                ),
-                                if (item.badgeCount != null && item.badgeCount! > 0)
-                                  Positioned(
-                                    right: -6,
-                                    top: -6,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: AppTheme.errorRed,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 14,
-                                        minHeight: 14,
-                                      ),
-                                      child: Text(
-                                        '${item.badgeCount}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            if (_isExpanded) ...[
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Text(
-                                  item.label,
-                                  style: TextStyle(
-                                    color: isSelected ? Colors.white : inactiveColor,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    fontSize: 13,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+  Widget _buildThemeRow() {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: _isExpanded ? 16 : 12,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: _divider, width: 1)),
+      ),
+      child: Row(
+        mainAxisAlignment:
+            _isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+        children: [
+          if (_isExpanded)
+            Text(
+              'APPEARANCE',
+              style: TextStyle(
+                color: _mutedText,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8,
+              ),
             ),
-          ),
+          widget.themeToggle!,
+        ],
+      ),
+    );
+  }
 
-          // 3. Footer (Theme Toggle & Profile)
-          const Divider(color: Colors.white12, height: 1),
-          const SizedBox(height: 12),
-          if (widget.themeToggle != null) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                mainAxisAlignment:
-                    _isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+  Widget _buildFooter() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _footerBg,
+        border: Border(top: BorderSide(color: _divider, width: 1)),
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: _isExpanded ? 12 : 8,
+        vertical: 12,
+      ),
+      child: Row(
+        mainAxisAlignment:
+            _isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: AppTheme.electricBlue.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.person, color: AppTheme.electricBlue, size: 16),
+          ),
+          if (_isExpanded) ...[
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_isExpanded)
-                    Text(
-                      isDark ? 'Dark Mode' : 'Light Mode',
-                      style: TextStyle(color: inactiveColor, fontSize: 12),
+                  Text(
+                    widget.userName,
+                    style: TextStyle(
+                      color: _activeText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.1,
                     ),
-                  widget.themeToggle!,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    widget.userRole,
+                    style: TextStyle(
+                      color: _mutedText,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-          ],
-
-          // User Profile view
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            color: Colors.black.withValues(alpha: 0.12),
-            child: Row(
-              mainAxisAlignment:
-                  _isExpanded ? MainAxisAlignment.start : MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: AppTheme.accentGold.withValues(alpha: 0.25),
-                  child: const Icon(Icons.person, color: AppTheme.accentGold, size: 20),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: widget.onSignOut,
+                child: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(Icons.logout_rounded, color: _mutedText, size: 16),
                 ),
-                if (_isExpanded) ...[
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.userName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          widget.userRole,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: 10,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  InkWell(
-                    onTap: widget.onSignOut,
-                    borderRadius: BorderRadius.circular(8),
-                    child: const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Icon(Icons.logout_rounded, color: Colors.white70, size: 18),
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

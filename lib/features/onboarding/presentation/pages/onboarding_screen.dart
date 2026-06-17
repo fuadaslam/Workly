@@ -28,13 +28,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Real-time Tracking',
       description: 'Monitor task progress, location, and status updates in real-time. Never lose sight of what matters.',
       icon: Icons.map_rounded,
-      color: const Color(0xFF3B82F6), // Vibrant Blue
+      color: AppTheme.brand600, // Vibrant Blue
     ),
     OnboardingContent(
       title: 'Seamless Communication',
       description: 'Update your clients instantly via WhatsApp and keep everyone synchronized effortlessly.',
       icon: Icons.message_rounded,
-      color: const Color(0xFF10B981), // Fresh Emerald
+      color: AppTheme.mintGreen, // Fresh Emerald
     ),
     OnboardingContent(
       title: 'Ready to Lead',

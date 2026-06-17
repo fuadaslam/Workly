@@ -5,12 +5,13 @@ import '../../../../core/utils/contact_utils.dart';
 import '../providers/dashboard_provider.dart';
 import '../../domain/models/work_order.dart';
 import 'profile_view.dart';
+import '../pages/task_detail_screen.dart';
 import '../../../../core/providers/locale_provider.dart';
 import 'assignment_sheet.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../attendance/presentation/widgets/attendance_monitor.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
-
+import '../../../../core/widgets/workly_primitives.dart';
 class AdminView extends ConsumerStatefulWidget {
   const AdminView({super.key});
 
@@ -21,6 +22,8 @@ class AdminView extends ConsumerStatefulWidget {
 class _AdminViewState extends ConsumerState<AdminView> {
   String _statusFilter = 'All';
   String? _staffFilter;
+  final GlobalKey<NavigatorState> _adminNavKey = GlobalKey<NavigatorState>();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void _showLanguagePicker(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
@@ -70,7 +73,22 @@ class _AdminViewState extends ConsumerState<AdminView> {
     final staffAsync = ref.watch(staffProfilesProvider);
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppTheme.backgroundLight,
+      endDrawer: const Drawer(width: 400, child: ProfileView()),
+      body: Navigator(
+        key: _adminNavKey,
+        onGenerateRoute: (settings) {
+          return MaterialPageRoute(
+            builder: (innerContext) => _buildMainBody(innerContext, workOrdersAsync, staffAsync),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMainBody(BuildContext context, AsyncValue<List<WorkOrder>> workOrdersAsync, AsyncValue<List<dynamic>> staffAsync) {
+    return Scaffold(
       appBar: WorkqlyAppBar(
         title: 'Operations Tracking',
         automaticallyImplyLeading: false,
@@ -101,16 +119,16 @@ class _AdminViewState extends ConsumerState<AdminView> {
             },
             icon: const Icon(Icons.how_to_reg_outlined),
           ),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ProfileView()),
-              );
-            },
-            icon: const CircleAvatar(
-              radius: 14,
-              backgroundColor: AppTheme.emeraldLight,
-              child: Icon(Icons.person, size: 18, color: AppTheme.emeraldGreen),
+          Builder(
+            builder: (innerCtx) => IconButton(
+              onPressed: () {
+                _scaffoldKey.currentState?.openEndDrawer();
+              },
+              icon: const CircleAvatar(
+                radius: 14,
+                backgroundColor: AppTheme.emeraldLight,
+                child: Icon(Icons.person, size: 18, color: AppTheme.emeraldGreen),
+              ),
             ),
           ),
           IconButton(
@@ -142,7 +160,7 @@ class _AdminViewState extends ConsumerState<AdminView> {
                        underline: const SizedBox(),
                        items: [
                          const DropdownMenuItem(value: null, child: Text('Show All Staff')),
-                         ...staff.map((s) => DropdownMenuItem(value: s['id'], child: Text(s['name'] ?? 'Unknown'))),
+                         ...staff.map((s) => DropdownMenuItem(value: s['id'] as String, child: Text((s['name'] as String?) ?? 'Unknown'))),
                        ],
                        onChanged: (v) => setState(() => _staffFilter = v),
                      ),
@@ -215,8 +233,8 @@ class _AdminViewState extends ConsumerState<AdminView> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         icon: const Icon(Icons.assignment_add, color: Colors.white, size: 24),
         label: const Text(
-          'Assign Work', 
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+          'Assign Work',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
       ),
     );
@@ -254,75 +272,37 @@ class _AdminViewState extends ConsumerState<AdminView> {
   }
 
   Widget _buildWorkOrderCard(WorkOrder order) {
-    Color statusColor;
-    switch (order.status) {
-      case WorkStatus.completed: statusColor = AppTheme.emeraldGreen; break;
-      case WorkStatus.inProgress: statusColor = Colors.blue; break;
-      default: statusColor = order.priority == PriorityLevel.high ? AppTheme.errorRed : AppTheme.accentGold;
-    }
+    final status = switch (order.status) {
+      WorkStatus.inProgress => WorqlyOrderStatus.progress,
+      WorkStatus.completed => WorqlyOrderStatus.completed,
+      WorkStatus.pending => WorqlyOrderStatus.pending,
+    };
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(child: Text(order.serviceType ?? 'General Service', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Text(order.status.name.toUpperCase(), style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
-              ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: WorqlyWorkOrderCard(
+        serviceType: order.serviceType ?? 'General Service',
+        orderId: order.id.length > 8 ? 'WO-${order.id.substring(0, 6).toUpperCase()}' : order.id,
+        clientName: order.clientName,
+        staffName: order.assignedStaffName,
+        officeName: order.assignedOfficeName,
+        status: status,
+        highPriority: order.priority == PriorityLevel.high,
+        contactable: (order.clientPhoneNumber ?? '').isNotEmpty,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TaskDetailScreen(
+                taskId: order.id,
+                clientName: order.clientName ?? 'Unknown',
+                clientPhone: order.clientPhoneNumber,
+                priority: order.priority.name,
+                initialStatus: order.status.name,
+              ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.person_outline, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(order.clientName ?? "N/A", style: const TextStyle(fontSize: 13)),
-                if (order.clientPhoneNumber != null) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.phone_outlined, size: 16, color: AppTheme.emeraldGreen),
-                    onPressed: () => ContactUtils.callNumber(order.clientPhoneNumber),
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    icon: const Icon(Icons.message, size: 16, color: Colors.green),
-                    onPressed: () => ContactUtils.openWhatsApp(order.clientPhoneNumber),
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
-                const Spacer(),
-                if (order.priority == PriorityLevel.high)
-                  const Icon(Icons.flash_on, size: 14, color: AppTheme.errorRed),
-              ],
-            ),
-            const Divider(height: 20),
-            Row(
-              children: [
-                const Icon(Icons.assignment_ind_outlined, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  order.assignedStaffName != null 
-                    ? 'Staff: ${order.assignedStaffName}${order.assignedOfficeName != null ? ' (${order.assignedOfficeName})' : ''}' 
-                    : (order.assignedOfficeName != null ? 'Office: ${order.assignedOfficeName}' : 'Unassigned'),
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

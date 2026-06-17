@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/work_order.dart';
 import '../../domain/models/task_history.dart';
+import '../../domain/models/task_document.dart';
 
 class WorkOrderRepository {
   final SupabaseClient _client;
@@ -66,7 +67,7 @@ class WorkOrderRepository {
         query = query.eq('status', status);
       }
       
-      final response = await query.limit(1).count(CountOption.exact);
+      final response = await query.count(CountOption.exact);
       return response.count;
     }
 
@@ -90,7 +91,7 @@ class WorkOrderRepository {
     // Scalability Fix: Limit to last 50
     final response = await _client
         .from('work_orders')
-        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name))')
+        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name)')
         .eq('assigned_staff_id', staffId)
         .order('created_at', ascending: false)
         .limit(50);
@@ -234,5 +235,41 @@ class WorkOrderRepository {
       'description': description,
       'status_at_time': status,
     });
+  }
+
+  Future<List<TaskDocument>> getTaskDocuments(String workOrderId) async {
+    final response = await _client
+        .from('task_documents')
+        .select()
+        .eq('work_order_id', workOrderId)
+        .order('created_at', ascending: true);
+    return (response as List).map((json) => TaskDocument.fromJson(json)).toList();
+  }
+
+  Future<TaskDocument> addTaskDocument({
+    required String workOrderId,
+    required String title,
+    required String fileUrl,
+    required String iconName,
+  }) async {
+    final response = await _client.from('task_documents').insert({
+      'work_order_id': workOrderId,
+      'title': title,
+      'file_url': fileUrl,
+      'icon_name': iconName,
+      'is_verified': false,
+    }).select().single();
+    return TaskDocument.fromJson(response);
+  }
+
+  Future<void> deleteTaskDocument(String docId, {String? storagePath}) async {
+    await _client.from('task_documents').delete().eq('id', docId);
+    if (storagePath != null && storagePath.isNotEmpty) {
+      await _client.storage.from('task-files').remove([storagePath]);
+    }
+  }
+
+  Future<void> toggleDocumentVerified(String docId, {required bool verified}) async {
+    await _client.from('task_documents').update({'is_verified': verified}).eq('id', docId);
   }
 }

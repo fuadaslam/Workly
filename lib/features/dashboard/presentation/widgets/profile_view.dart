@@ -107,10 +107,15 @@ class ProfileView extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          child: const CircleAvatar(
+                          child: CircleAvatar(
                             radius: 50,
                             backgroundColor: AppTheme.emeraldLight,
-                            child: Icon(Icons.person, size: 50, color: AppTheme.emeraldGreen),
+                            backgroundImage: (profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
+                                ? NetworkImage(profile.avatarUrl!)
+                                : null,
+                            child: (profile.avatarUrl == null || profile.avatarUrl!.isEmpty)
+                                ? const Icon(Icons.person, size: 50, color: AppTheme.emeraldGreen)
+                                : null,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -163,9 +168,7 @@ class ProfileView extends ConsumerWidget {
                     icon: Icons.notifications_outlined,
                     title: 'Notifications / الإشعارات',
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                      );
+                      NotificationsScreen.showAsDrawer(context);
                     },
                     trailing: Switch(value: true, onChanged: (v) {}, activeColor: AppTheme.emeraldGreen),
                   ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/premium_card.dart';
 import '../../data/models/leave_request.dart';
 import '../providers/leave_provider.dart';
 
@@ -190,12 +191,9 @@ class UpcomingHolidaysList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final holidays = ref.watch(upcomingHolidaysProvider);
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+    return PremiumCard(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
              const Row(
@@ -225,7 +223,6 @@ class UpcomingHolidaysList extends ConsumerWidget {
              )),
           ],
         ),
-      ),
     );
   }
 }
@@ -256,9 +253,9 @@ class LeaveHistoryList extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: state.requests.map((request) {
-        return Card(
+        return PremiumCard(
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: EdgeInsets.zero,
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: _getStatusColor(request.status).withValues(alpha: 0.1),

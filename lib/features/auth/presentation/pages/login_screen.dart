@@ -118,7 +118,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with TickerProviderSt
   LinearGradient _bgGradient(bool isDark) {
     if (isDark) {
       return const LinearGradient(
-        colors: [Color(0xFF0B172A), Color(0xFF0F2038), Color(0xFF0F1520)],
+        colors: [AppTheme.ink900, AppTheme.ink900, AppTheme.ink800],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         stops: [0.0, 0.55, 1.0],
@@ -249,7 +249,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with TickerProviderSt
 
   Widget _formContent(BuildContext context, bool isDark) {
     final l10n = AppLocalizations.of(context)!;
-    final inputFill = isDark ? const Color(0xFF1E2A3C) : Colors.white;
+    final inputFill = isDark ? AppTheme.ink900 : Colors.white;
     final inputBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0);
     final inputFocusBorder = isDark ? AppTheme.accentGold : AppTheme.emeraldGreen;
     final labelColor = isDark ? AppTheme.accentGold : AppTheme.emeraldGreen;

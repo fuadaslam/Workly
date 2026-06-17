@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../theme/app_theme.dart';
 
 class OfflineBanner extends StatefulWidget {
   final Widget child;
@@ -96,7 +97,7 @@ class _OfflineBannerState extends State<OfflineBanner> with SingleTickerProvider
   Widget _onlineBanner() {
     return Container(
       width: double.infinity,
-      color: const Color(0xFF059669),
+      color: AppTheme.mintGreen,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: const SafeArea(
         bottom: false,

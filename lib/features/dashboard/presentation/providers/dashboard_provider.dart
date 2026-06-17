@@ -5,6 +5,7 @@ import '../../data/repositories/work_order_repository.dart';
 import '../../data/repositories/office_repository.dart';
 import '../../domain/models/work_order.dart';
 import '../../domain/models/task_history.dart';
+import '../../domain/models/task_document.dart';
 import '../../../attendance/data/attendance_repository.dart';
 
 import '../../data/repositories/profile_repository.dart';
@@ -74,7 +75,7 @@ final financialStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
   if (dateRange != null) {
     query = query
         .gte('created_at', dateRange.start.toIso8601String())
-        .lte('created_at', dateRange.end.toIso8601String());
+        .lt('created_at', dateRange.end.add(const Duration(days: 1)).toIso8601String());
   }
   final response = await query;
   
@@ -228,9 +229,9 @@ final filteredOfficesProvider = Provider<AsyncValue<List<Map<String, dynamic>>>>
     }).toList();
 
     if (sort == 'Revenue') {
-      filtered.sort((a, b) => (b['revenue'] as num).compareTo(a['revenue'] as num));
+      filtered.sort((a, b) => ((b['revenue'] as num?) ?? 0).compareTo((a['revenue'] as num?) ?? 0));
     } else if (sort == 'Workload') {
-      filtered.sort((a, b) => (b['workload_percentage'] as num).compareTo(a['workload_percentage'] as num));
+      filtered.sort((a, b) => ((b['workload_percentage'] as num?) ?? 0).compareTo((a['workload_percentage'] as num?) ?? 0));
     }
 
     return filtered;
@@ -308,6 +309,11 @@ final filteredAgentsProvider = Provider<AsyncValue<List<Map<String, dynamic>>>>(
 final taskHistoryProvider = FutureProvider.family<List<TaskHistory>, String>((ref, taskId) async {
   final repo = ref.watch(workOrderRepositoryProvider);
   return repo.getTaskHistory(taskId);
+});
+
+final taskDocumentsProvider = FutureProvider.family<List<TaskDocument>, String>((ref, taskId) async {
+  final repo = ref.watch(workOrderRepositoryProvider);
+  return repo.getTaskDocuments(taskId);
 });
 
 final activeWorkOrdersProvider = FutureProvider<List<WorkOrder>>((ref) async {

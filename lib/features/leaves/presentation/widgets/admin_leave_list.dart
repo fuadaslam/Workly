@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/workly_primitives.dart';
 import '../../data/models/leave_request.dart';
 import '../providers/leave_provider.dart';
 
@@ -55,7 +56,7 @@ class _AdminLeaveListState extends ConsumerState<AdminLeaveList> {
                   ),
                 )
               : RefreshIndicator(
-                  color: const Color(0xFF0D1B2E),
+                  color: AppTheme.ink900,
                   onRefresh: () => ref.read(adminLeaveProvider.notifier).loadAllLeaves(),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
@@ -72,21 +73,10 @@ class _AdminLeaveListState extends ConsumerState<AdminLeaveList> {
   }
 
   Widget _buildFilterChip(String label, bool isSelected) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black87)),
-        selected: isSelected,
-        onSelected: (selected) {
-          setState(() {
-            _statusFilter = label;
-          });
-        },
-        selectedColor: AppTheme.emeraldGreen,
-        backgroundColor: Colors.white,
-        checkmarkColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.grey.shade300)),
-      ),
+    return WorklyFilterChip(
+      label: label,
+      selected: isSelected,
+      onTap: () => setState(() => _statusFilter = label),
     );
   }
 }
@@ -96,108 +86,168 @@ class _LeaveRequestCard extends ConsumerWidget {
 
   const _LeaveRequestCard({required this.request});
 
+  Color _accentColor() {
+    switch (request.status) {
+      case LeaveStatus.approved: return AppTheme.mintGreen;
+      case LeaveStatus.rejected: return AppTheme.errorRed;
+      case LeaveStatus.pending: return AppTheme.mutedAmber;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = _accentColor();
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE9EEF5);
+    final titleColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final metaColor = isDark ? AppTheme.darkSubtext : Colors.grey.shade600;
+    final dateBg = isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight;
+    final reasonBg = isDark ? AppTheme.darkCardAlt : Colors.grey.shade50;
+    final reasonBorder = isDark ? AppTheme.darkBorder : Colors.grey.shade200;
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardBorder, width: 1),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: AppTheme.emeraldLight,
-                  child: Icon(Icons.person, color: AppTheme.emeraldGreen),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // Colored top accent strip
+            Container(height: 3, color: accent),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Text(request.userName ?? 'Unknown Staff / موظف غير معروف', 
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('${request.type.name.toUpperCase()} LEAVE / إجازة ${request.type.name}', 
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.w500)),
+                      Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.10),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.person_outline, color: accent, size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              request.userName ?? 'Unknown Staff / موظف غير معروف',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: titleColor),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${request.type.name.toUpperCase()} LEAVE',
+                              style: TextStyle(color: metaColor, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.4),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _StatusBadge(status: request.status),
                     ],
                   ),
-                ),
-                _StatusBadge(status: request.status),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Text(
-                  '${DateFormat('dd MMM yyyy').format(request.startDate)} - ${DateFormat('dd MMM yyyy').format(request.endDate)}',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const Spacer(),
-                const Icon(Icons.timer_outlined, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text('${request.durationDays} days / أيام', style: const TextStyle(fontWeight: FontWeight.w600)),
-              ],
-            ),
-            if (request.reason.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Reason / السبب:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                    const SizedBox(height: 4),
-                    Text(
-                      request.reason,
-                      style: TextStyle(color: Colors.grey[800], fontSize: 13, fontStyle: FontStyle.italic),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: dateBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined, size: 14, color: metaColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${DateFormat('dd MMM yyyy').format(request.startDate)} – ${DateFormat('dd MMM yyyy').format(request.endDate)}',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: titleColor),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.timelapse_outlined, size: 12, color: accent),
+                            const SizedBox(width: 4),
+                            Text('${request.durationDays} days / أيام',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: accent)),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (request.reason.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: reasonBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: reasonBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('REASON',
+                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: metaColor, letterSpacing: 0.8)),
+                          const SizedBox(height: 4),
+                          Text(
+                            request.reason,
+                            style: TextStyle(color: titleColor, fontSize: 13, height: 1.4),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                ),
-              ),
-            ],
-            if (request.status == LeaveStatus.pending) ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _updateStatus(context, ref, LeaveStatus.rejected),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.errorRed,
-                        side: const BorderSide(color: AppTheme.errorRed),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: const Text('Reject / رفض', style: TextStyle(fontWeight: FontWeight.bold)),
+                  if (request.status == LeaveStatus.pending) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _updateStatus(context, ref, LeaveStatus.rejected),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.errorRed,
+                              side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.5)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('Reject', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _updateStatus(context, ref, LeaveStatus.approved),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.mintGreen,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              elevation: 0,
+                            ),
+                            child: const Text('Approve',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _updateStatus(context, ref, LeaveStatus.approved),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.emeraldGreen,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        elevation: 0,
-                      ),
-                      child: const Text('Approve / موافقة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
+                  ],
                 ],
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -247,29 +297,19 @@ class _StatusBadge extends StatelessWidget {
 
     switch (status) {
       case LeaveStatus.approved:
-        color = AppTheme.emeraldGreen;
-        text = 'APPROVED';
+        color = AppTheme.mintGreen;
+        text = 'Approved';
         break;
       case LeaveStatus.rejected:
         color = AppTheme.errorRed;
-        text = 'REJECTED';
+        text = 'Rejected';
         break;
       case LeaveStatus.pending:
-        color = AppTheme.accentGold;
-        text = 'PENDING';
+        color = AppTheme.mutedAmber;
+        text = 'Pending';
         break;
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-    );
+    return WorklyStatusBadge(label: text, color: color);
   }
 }
