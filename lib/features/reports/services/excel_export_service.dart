@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../data/report_repository.dart';
+import 'download_helper.dart';
 
 class ExcelExportService {
   static final _df = DateFormat('dd MMM yyyy');
@@ -43,18 +41,8 @@ class ExcelExportService {
     if (attendance.isNotEmpty) _buildAttendanceSheet(excel, attendance);
 
     final bytes = excel.encode()!;
-    final dir = await getTemporaryDirectory();
     final safeTitle = reportTitle.replaceAll(' ', '_').replaceAll('/', '-');
-    final file = File('${dir.path}/$safeTitle.xlsx');
-    await file.writeAsBytes(bytes);
-
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
-        subject: reportTitle,
-        text: 'Workly Work Report: $reportTitle',
-      ),
-    );
+    await downloadExcelFile(bytes, '$safeTitle.xlsx', reportTitle);
   }
 
   // ── Sheet builders ─────────────────────────────────────────────────────────

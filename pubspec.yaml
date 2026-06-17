@@ -54,6 +54,7 @@ dependencies:
   local_auth: ^2.3.0
   connectivity_plus: ^7.1.1
   flutter_local_notifications: ^20.1.0
+  web: ^1.0.0
 
   timezone: any
   file_picker: ^11.0.2
