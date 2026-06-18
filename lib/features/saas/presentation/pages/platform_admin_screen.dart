@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/organization.dart';
 import '../providers/saas_provider.dart';
 import 'create_organization_screen.dart';
-import 'organization_detail_screen.dart';
 import '../../../../core/theme/pattern_painter.dart';
 import '../../../../core/widgets/animated_hover_card.dart';
 
@@ -18,8 +18,9 @@ class PlatformAdminScreen extends ConsumerWidget {
     final orgsAsync = ref.watch(allOrganizationsProvider);
     final isDesktop = MediaQuery.of(context).size.width >= 800;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       body: RefreshIndicator(
         color: AppTheme.navyDark,
         onRefresh: () async {
@@ -418,10 +419,8 @@ class _OrgCard extends ConsumerWidget {
       borderRadius: 24,
       padding: EdgeInsets.zero,
       margin: EdgeInsets.zero,
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => OrganizationDetailScreen(org: org)),
-      ).then((_) => ref.invalidate(allOrganizationsProvider)),
+      onTap: () => context.push('/dashboard/org-detail', extra: org)
+          .then((_) => ref.invalidate(allOrganizationsProvider)),
       child: Column(
         children: [
           // ── Top bar ──────────────────────────────────────────────

@@ -184,8 +184,9 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
   @override
   Widget build(BuildContext context) {
     final activeFilters = _filters.activeCount;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(
         title: 'Export Report',
         actions: [
@@ -202,7 +203,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
         children: [
           // Tab bar
           Container(
-            color: AppTheme.surfaceWhite,
+            color: isDark ? AppTheme.darkSurface : AppTheme.surfaceWhite,
             child: TabBar(
               controller: _tabController,
               labelColor: AppTheme.emeraldGreen,
@@ -368,12 +369,13 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
   }
 
   Widget _customDateTile() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: _pickCustomRange,
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceWhite,
+          color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.4)),
         ),
@@ -457,9 +459,10 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
   }
 
   Widget _sectionsCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
@@ -503,24 +506,25 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
   }
 
   Widget _exportButton() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: _exporting ? null : _export,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.emeraldGreen,
+          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
           disabledBackgroundColor: Colors.grey.shade300,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           elevation: 0,
         ),
         icon: _exporting
-            ? const SizedBox(width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Icon(Icons.download_rounded, color: Colors.white, size: 22),
+            ? SizedBox(width: 20, height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? AppTheme.ink900 : Colors.white))
+            : Icon(Icons.download_rounded, color: isDark ? AppTheme.ink900 : Colors.white, size: 22),
         label: Text(
           _exporting ? 'Generating Excel...' : 'Export & Share Excel',
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
       ),
     );
@@ -529,6 +533,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
   // ─── Filters Tab ──────────────────────────────────────────────────────────
 
   Widget _filtersTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_loadingOptions) {
       return SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -539,13 +544,13 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
             child: Container(
               height: i == 0 ? 24 : 100,
               decoration: BoxDecoration(
-                color: AppTheme.backgroundLight,
+                color: isDark ? AppTheme.darkCard : AppTheme.backgroundLight,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
                 child: LinearProgressIndicator(
-                  backgroundColor: AppTheme.backgroundLight,
+                  backgroundColor: isDark ? AppTheme.darkCard : AppTheme.backgroundLight,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     AppTheme.emeraldGreen.withValues(alpha: 0.15),
                   ),
@@ -738,12 +743,13 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
     required void Function(String) onToggle,
     required Color chipColor,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (options.isEmpty) return const SizedBox();
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
       ),

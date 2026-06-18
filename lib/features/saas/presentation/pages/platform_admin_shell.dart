@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/collapsible_sidebar.dart';
 import '../../../auth/presentation/providers/profile_provider.dart';
-import '../../../auth/presentation/pages/login_screen.dart';
 import '../../../../core/providers/theme_provider.dart';
 import 'platform_admin_screen.dart';
 import 'platform_plans_screen.dart';
@@ -17,11 +17,7 @@ class PlatformAdminShell extends ConsumerWidget {
 
   Future<void> _signOut(BuildContext context) async {
     await Supabase.instance.client.auth.signOut();
-    if (context.mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    }
+    if (context.mounted) context.go('/login');
   }
 
   @override
@@ -65,9 +61,10 @@ class PlatformAdminShell extends ConsumerWidget {
       onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
     );
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (isDesktop) {
       return Scaffold(
-        backgroundColor: AppTheme.backgroundLight,
+        backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
         body: Row(
           children: [
             CollapsibleSidebar(

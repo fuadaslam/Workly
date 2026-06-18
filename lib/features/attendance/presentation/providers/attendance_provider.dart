@@ -51,12 +51,12 @@ final attendanceControllerProvider = StateNotifierProvider<AttendanceController,
   return AttendanceController(ref.watch(attendanceRepositoryProvider), ref);
 });
 
-final dailyAttendanceProvider = FutureProvider.family<List<Map<String, dynamic>>, DateTime>((ref, date) async {
+final dailyAttendanceProvider = FutureProvider.family.autoDispose<List<Map<String, dynamic>>, DateTime>((ref, date) async {
   final repo = ref.watch(attendanceRepositoryProvider);
   return repo.getDailyAttendance(date);
 });
 
-final attendanceHistoryProvider = FutureProvider.family<List<Map<String, dynamic>>, ({String? userId, DateTime? start, DateTime? end})>((ref, params) async {
+final attendanceHistoryProvider = FutureProvider.family.autoDispose<List<Map<String, dynamic>>, ({String? userId, DateTime? start, DateTime? end})>((ref, params) async {
   final repo = ref.watch(attendanceRepositoryProvider);
   return repo.getAttendanceHistory(userId: params.userId, start: params.start, end: params.end);
 });

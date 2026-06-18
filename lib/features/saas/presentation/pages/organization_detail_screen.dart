@@ -45,8 +45,9 @@ class _OrganizationDetailScreenState extends ConsumerState<OrganizationDetailScr
   @override
   Widget build(BuildContext context) {
     final sc = _statusColor(_org.subStatus);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       body: NestedScrollView(
         headerSliverBuilder: (_, __) => [
           SliverAppBar(
@@ -258,6 +259,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
 
   void _showChangePlanDialog(BuildContext context, List<OrgPlan> plans) {
     String? selected = plans.firstWhere((p) => p.name == widget.org.planName, orElse: () => plans.first).id;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -278,13 +280,16 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+              foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+            ),
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(saasRepositoryProvider).updateSubscriptionPlan(widget.org.id, selected!, 'active');
               ref.invalidate(allOrganizationsProvider);
             },
-            child: const Text('Update Plan', style: TextStyle(color: Colors.white)),
+            child: Text('Update Plan', style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white)),
           ),
         ],
       ),
@@ -348,6 +353,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
   );
 
   Widget _editField(TextEditingController ctrl, {TextInputType? keyboardType, int maxLines = 1}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return TextFormField(
       controller: ctrl,
       keyboardType: keyboardType,
@@ -356,7 +362,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
       decoration: InputDecoration(
         isDense: true,
         filled: true,
-        fillColor: AppTheme.backgroundLight,
+        fillColor: isDark ? AppTheme.darkCard : AppTheme.backgroundLight,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppTheme.emeraldGreen)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -418,11 +424,12 @@ class _MemberTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rc = _roleColor(member.role);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)],
       ),
@@ -504,6 +511,7 @@ class _InvitationsTabState extends ConsumerState<_InvitationsTab> {
   @override
   Widget build(BuildContext context) {
     final invitesAsync = ref.watch(orgInvitationsProvider(widget.org.id));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -512,7 +520,7 @@ class _InvitationsTabState extends ConsumerState<_InvitationsTab> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.surfaceWhite,
+            color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
           ),
@@ -525,7 +533,7 @@ class _InvitationsTabState extends ConsumerState<_InvitationsTab> {
               decoration: InputDecoration(
                 hintText: 'Email address',
                 prefixIcon: const Icon(Icons.email_outlined, size: 18, color: AppTheme.emeraldGreen),
-                filled: true, fillColor: AppTheme.backgroundLight,
+                filled: true, fillColor: isDark ? AppTheme.darkCard : AppTheme.backgroundLight,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -537,7 +545,7 @@ class _InvitationsTabState extends ConsumerState<_InvitationsTab> {
                   value: _selectedRole,
                   decoration: InputDecoration(
                     labelText: 'Role',
-                    filled: true, fillColor: AppTheme.backgroundLight,
+                    filled: true, fillColor: isDark ? AppTheme.darkCard : AppTheme.backgroundLight,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   ),
@@ -554,14 +562,14 @@ class _InvitationsTabState extends ConsumerState<_InvitationsTab> {
               ElevatedButton.icon(
                 onPressed: _sending ? null : _sendInvite,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
+                  backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 icon: _sending
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.send_outlined, color: Colors.white, size: 18),
-                label: const Text('Send', style: TextStyle(color: Colors.white)),
+                    ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? AppTheme.ink900 : Colors.white))
+                    : Icon(Icons.send_outlined, color: isDark ? AppTheme.ink900 : Colors.white, size: 18),
+                label: Text('Send', style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white)),
               ),
             ]),
           ]),
@@ -610,6 +618,7 @@ class _InviteTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final df = DateFormat('dd MMM yyyy');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     Color statusColor = invite.isAccepted ? AppTheme.statusCompleted : invite.isExpired ? AppTheme.statusPending : AppTheme.statusProgress;
     String statusLabel = invite.isAccepted ? 'Accepted' : invite.isExpired ? 'Expired' : 'Pending';
 
@@ -617,7 +626,7 @@ class _InviteTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade100),
       ),

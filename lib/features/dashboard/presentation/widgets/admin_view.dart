@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/dashboard_provider.dart';
 import '../../domain/models/work_order.dart';
 import 'profile_view.dart';
-import '../pages/task_detail_screen.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/providers/locale_provider.dart';
 import 'assignment_sheet.dart';
 import '../../../../core/widgets/responsive_layout.dart';
@@ -71,9 +72,10 @@ class _AdminViewState extends ConsumerState<AdminView> {
     final workOrdersAsync = ref.watch(allWorkOrdersProvider);
     final staffAsync = ref.watch(staffProfilesProvider);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       endDrawer: const Drawer(width: 400, child: ProfileView()),
       body: Navigator(
         key: _adminNavKey,
@@ -87,6 +89,7 @@ class _AdminViewState extends ConsumerState<AdminView> {
   }
 
   Widget _buildMainBody(BuildContext context, AsyncValue<List<WorkOrder>> workOrdersAsync, AsyncValue<List<dynamic>> staffAsync) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: WorkqlyAppBar(
         title: 'Operations Tracking',
@@ -227,29 +230,31 @@ class _AdminViewState extends ConsumerState<AdminView> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAssignmentModal(context, ref),
-        backgroundColor: AppTheme.emeraldGreen,
+        backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
         elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.assignment_add, color: Colors.white, size: 24),
-        label: const Text(
+        icon: Icon(Icons.assignment_add, color: isDark ? AppTheme.ink900 : Colors.white, size: 24),
+        label: Text(
           'Assign Work',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
       ),
     );
   }
 
   Widget _buildFilterChip(String label, bool isSelected, Function(bool) onSelected) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.primaryAccent(isDark);
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
-        label: Text(label, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black87)),
+        label: Text(label, style: TextStyle(fontSize: 12, color: isSelected ? (isDark ? AppTheme.ink900 : Colors.white) : (isDark ? AppTheme.darkSubtext : Colors.black87))),
         selected: isSelected,
         onSelected: onSelected,
-        selectedColor: AppTheme.emeraldGreen,
-        backgroundColor: Colors.white,
-        checkmarkColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: Colors.grey.shade300)),
+        selectedColor: accent,
+        backgroundColor: isDark ? AppTheme.darkCardAlt : Colors.white,
+        checkmarkColor: isDark ? AppTheme.ink900 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: isDark ? AppTheme.darkBorder : Colors.grey.shade300)),
       ),
     );
   }
@@ -289,16 +294,13 @@ class _AdminViewState extends ConsumerState<AdminView> {
         highPriority: order.priority == PriorityLevel.high,
         contactable: (order.clientPhoneNumber ?? '').isNotEmpty,
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TaskDetailScreen(
-                taskId: order.id,
-                clientName: order.clientName ?? 'Unknown',
-                clientPhone: order.clientPhoneNumber,
-                priority: order.priority.name,
-                initialStatus: order.status.name,
-              ),
+          context.push(
+            '/dashboard/task/${order.id}',
+            extra: TaskRouteArgs(
+              clientName: order.clientName ?? 'Unknown',
+              clientPhone: order.clientPhoneNumber,
+              priority: order.priority.name,
+              initialStatus: order.status.name,
             ),
           );
         },

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/router/app_router.dart';
 import '../../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import '../../../features/enquiries/presentation/providers/enquiry_provider.dart';
-import '../../../features/enquiries/presentation/pages/enquiry_detail_screen.dart';
-import '../../../features/dashboard/presentation/pages/task_detail_screen.dart';
 import '../../../features/dashboard/domain/models/work_order.dart';
 import '../../../features/enquiries/domain/models/enquiry.dart';
 
@@ -273,15 +273,15 @@ class _GlobalSearchBarState extends ConsumerState<GlobalSearchBar> {
       visualDensity: VisualDensity.compact,
       onTap: () {
         _close();
-        Navigator.push(context, MaterialPageRoute(
-          builder: (_) => TaskDetailScreen(
-            taskId: o.id,
+        context.push(
+          '/dashboard/task/${o.id}',
+          extra: TaskRouteArgs(
             clientName: o.clientName ?? '—',
             clientPhone: o.clientPhoneNumber,
             priority: o.priority.name,
             initialStatus: o.status.name,
           ),
-        ));
+        );
       },
       leading: _leadingIcon(Icons.assignment_outlined, isDark),
       title: Text(o.clientName ?? '—',
@@ -311,9 +311,7 @@ class _GlobalSearchBarState extends ConsumerState<GlobalSearchBar> {
       visualDensity: VisualDensity.compact,
       onTap: () async {
         _close();
-        await Navigator.push(context, MaterialPageRoute(
-          builder: (_) => EnquiryDetailScreen(enquiry: e),
-        ));
+        await context.push('/dashboard/enquiries/detail', extra: e);
         ref.invalidate(allEnquiriesProvider);
       },
       leading: _leadingIcon(Icons.track_changes_outlined, isDark),

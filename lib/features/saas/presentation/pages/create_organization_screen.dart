@@ -93,6 +93,7 @@ class _CreateOrgDrawerState extends ConsumerState<_CreateOrgDrawer> {
   Widget build(BuildContext context) {
     final plansAsync = ref.watch(orgPlansProvider);
     final drawerWidth = min(520.0, MediaQuery.of(context).size.width * 0.92);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Align(
       alignment: Alignment.centerRight,
@@ -101,8 +102,8 @@ class _CreateOrgDrawerState extends ConsumerState<_CreateOrgDrawer> {
         child: Container(
           width: drawerWidth,
           height: double.infinity,
-          decoration: const BoxDecoration(
-            color: AppTheme.backgroundLight,
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkSurface : AppTheme.backgroundLight,
             borderRadius: BorderRadius.horizontal(left: Radius.circular(24)),
             boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 40, offset: Offset(-8, 0))],
           ),
@@ -111,10 +112,10 @@ class _CreateOrgDrawerState extends ConsumerState<_CreateOrgDrawer> {
               children: [
                 // ── Header ────────────────────────────────────────────
                 Container(
-                  decoration: const BoxDecoration(
-                    color: AppTheme.surfaceWhite,
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(24)),
-                    border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(24)),
+                    border: const Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Row(
@@ -123,7 +124,7 @@ class _CreateOrgDrawerState extends ConsumerState<_CreateOrgDrawer> {
                         onTap: () => Navigator.pop(context),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
+                          decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
                           child: const Icon(Icons.close, size: 18, color: AppTheme.darkBlue),
                         ),
                       ),
@@ -141,13 +142,14 @@ class _CreateOrgDrawerState extends ConsumerState<_CreateOrgDrawer> {
                       FilledButton(
                         onPressed: _saving ? null : _save,
                         style: FilledButton.styleFrom(
-                          backgroundColor: AppTheme.emeraldGreen,
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         child: _saving
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('Create', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? AppTheme.ink900 : Colors.white))
+                            : Text('Create', style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -197,7 +199,7 @@ class _CreateOrgDrawerState extends ConsumerState<_CreateOrgDrawer> {
                                   margin: const EdgeInsets.only(bottom: 10),
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.surfaceWhite,
+                                    color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
                                       color: selected ? AppTheme.emeraldGreen : Colors.grey.shade200,
@@ -285,15 +287,18 @@ class _CreateOrgDrawerState extends ConsumerState<_CreateOrgDrawer> {
     child: Text(t, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppTheme.emeraldGreen, letterSpacing: 0.5)),
   );
 
-  Widget _card(List<Widget> children) => Container(
+  Widget _card(List<Widget> children) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
     decoration: BoxDecoration(
-      color: AppTheme.surfaceWhite,
+      color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: Colors.grey.withValues(alpha: 0.12), width: 1.5),
       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
     ),
     child: Column(children: children),
   );
+  }
 
   Widget _divider() => const Divider(height: 1, indent: 16, endIndent: 16);
 
@@ -329,9 +334,12 @@ class _CreateOrgDrawerState extends ConsumerState<_CreateOrgDrawer> {
     child: Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold)),
   );
 
-  Widget _featureChip(String label) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(color: AppTheme.backgroundLight, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.grey.shade200)),
-    child: Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.emeraldGreen, fontWeight: FontWeight.w600)),
-  );
+  Widget _featureChip(String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.grey.shade200)),
+      child: Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.emeraldGreen, fontWeight: FontWeight.w600)),
+    );
+  }
 }

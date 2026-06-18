@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/utils/supabase_org_utils.dart';
 import '../../domain/models/enquiry.dart';
 
 class EnquiryRepository {
@@ -31,7 +32,13 @@ class EnquiryRepository {
       query = query.eq('nature_of_enquiry', service);
     }
     if (searchQuery.isNotEmpty) {
-      query = query.or('client_name.ilike.%$searchQuery%,enquiry_code.ilike.%$searchQuery%,contact_number.ilike.%$searchQuery%');
+      // ',' and '(' / ')' are structural in PostgREST's or() filter grammar —
+      // strip them so a search term containing one can't break the filter
+      // (or silently change which conditions get OR'd together).
+      final safeQuery = searchQuery.replaceAll(RegExp(r'[,()]'), '');
+      if (safeQuery.isNotEmpty) {
+        query = query.or('client_name.ilike.%$safeQuery%,enquiry_code.ilike.%$safeQuery%,contact_number.ilike.%$safeQuery%');
+      }
     }
 
     final response = await query
@@ -51,9 +58,10 @@ class EnquiryRepository {
   }
 
   Future<Enquiry> createEnquiry(Map<String, dynamic> data) async {
+    final orgId = await fetchCallerOrgId(_client);
     final response = await _client
         .from('enquiries')
-        .insert(data)
+        .insert({...data, 'org_id': orgId})
         .select('*, profiles:responsible_staff_id(name)')
         .single();
     return Enquiry.fromJson(response);
@@ -73,8 +81,30 @@ class EnquiryRepository {
     await _client.from('enquiries').delete().eq('id', id);
   }
 
+  /// Fetches every enquiry in batches, for stats aggregation. Unlike
+  /// [getAllEnquiries] (capped at 200 for the list view), this must see the
+  /// whole table or totals/rates silently become wrong once the org has
+  /// more than one page of enquiries.
+  Future<List<Enquiry>> _getAllEnquiriesForStats() async {
+    const batchSize = 1000;
+    final all = <Enquiry>[];
+    var offset = 0;
+    while (true) {
+      final response = await _client
+          .from('enquiries')
+          .select('*, profiles:responsible_staff_id(name)')
+          .order('created_at', ascending: false)
+          .range(offset, offset + batchSize - 1);
+      final batch = (response as List).map((j) => Enquiry.fromJson(j)).toList();
+      all.addAll(batch);
+      if (batch.length < batchSize) break;
+      offset += batchSize;
+    }
+    return all;
+  }
+
   Future<Map<String, dynamic>> getSummaryStats() async {
-    final all = await getAllEnquiries();
+    final all = await _getAllEnquiriesForStats();
     final total = all.length;
     final accepted = all.where((e) => e.clientStatus == ClientStatus.accepted).length;
     final rejected = all.where((e) => e.clientStatus == ClientStatus.rejected).length;

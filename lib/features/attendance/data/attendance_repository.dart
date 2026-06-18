@@ -7,18 +7,15 @@ class AttendanceRepository {
   AttendanceRepository(this._client);
 
   Future<Map<String, dynamic>?> getCurrentSession(String userId) async {
-    try {
-      final response = await _client
-          .from('attendance')
-          .select()
-          .eq('user_id', userId)
-          .filter('check_out_time', 'is', null)
-          .maybeSingle(); // Returns null if no match found
-      return response;
-    } catch (e) {
-      // Handle error or return null
-      return null;
-    }
+    // maybeSingle() already returns null when there's no open session;
+    // letting real failures (network/RLS) propagate lets the caller's
+    // AsyncValue.error distinguish "no session" from "fetch failed".
+    return await _client
+        .from('attendance')
+        .select()
+        .eq('user_id', userId)
+        .filter('check_out_time', 'is', null)
+        .maybeSingle();
   }
 
   Future<void> checkIn(String userId, String? gpsLocation) async {
@@ -38,15 +35,11 @@ class AttendanceRepository {
   }
 
   Future<int> getActiveSessionsCount() async {
-    try {
-      final response = await _client
-          .from('attendance')
-          .select('id')
-          .filter('check_out_time', 'is', null);
-      return response.length;
-    } catch (e) {
-      return 0;
-    }
+    final response = await _client
+        .from('attendance')
+        .select('id')
+        .filter('check_out_time', 'is', null);
+    return response.length;
   }
 
   Future<List<Map<String, dynamic>>> getDailyAttendance(DateTime date) async {

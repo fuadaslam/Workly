@@ -306,12 +306,12 @@ final filteredAgentsProvider = Provider<AsyncValue<List<Map<String, dynamic>>>>(
 });
 
 
-final taskHistoryProvider = FutureProvider.family<List<TaskHistory>, String>((ref, taskId) async {
+final taskHistoryProvider = FutureProvider.family.autoDispose<List<TaskHistory>, String>((ref, taskId) async {
   final repo = ref.watch(workOrderRepositoryProvider);
   return repo.getTaskHistory(taskId);
 });
 
-final taskDocumentsProvider = FutureProvider.family<List<TaskDocument>, String>((ref, taskId) async {
+final taskDocumentsProvider = FutureProvider.family.autoDispose<List<TaskDocument>, String>((ref, taskId) async {
   final repo = ref.watch(workOrderRepositoryProvider);
   return repo.getTaskDocuments(taskId);
 });
@@ -425,7 +425,7 @@ final staffActiveTaskCountsProvider = FutureProvider<Map<String, int>>((ref) asy
   return counts;
 });
 
-final workOrderByIdProvider = FutureProvider.family<WorkOrder?, String>((ref, id) async {
+final workOrderByIdProvider = FutureProvider.family.autoDispose<WorkOrder?, String>((ref, id) async {
   final client = Supabase.instance.client;
   final response = await client
       .from('work_orders')

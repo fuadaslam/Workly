@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/dashboard_provider.dart';
 import '../../domain/models/work_order.dart';
-import 'task_detail_screen.dart';
-import 'client_detail_screen.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/app_section_header.dart';
@@ -85,8 +85,9 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
     final isStaff = _role == 'staff';
     final performanceAsync = ref.watch(staffWorkOrdersProvider(widget.admin['id']));
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(
         title: isStaff ? l10n.staffDetails : l10n.adminDetails,
         actions: [
@@ -433,13 +434,14 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
   }
 
   Widget _buildSmallStat(String label, String value, IconData icon, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: AppTheme.shadowMd,
+        border: Border.all(color: isDark ? AppTheme.darkBorder : Colors.grey.shade100),
+        boxShadow: isDark ? [] : AppTheme.shadowMd,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,11 +505,12 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
           ));
         }
 
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? AppTheme.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(18),
-            boxShadow: AppTheme.shadowMd,
+            boxShadow: isDark ? [] : AppTheme.shadowMd,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
@@ -515,22 +518,19 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: orders.length > 5 ? 5 : orders.length,
-              separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade100),
+              separatorBuilder: (context, index) => Divider(height: 1, color: isDark ? AppTheme.darkBorder : Colors.grey.shade100),
               itemBuilder: (context, index) {
                 final order = orders[index];
                 final isCompleted = order.status == WorkStatus.completed;
                 final statusColor = isCompleted ? AppTheme.emeraldGreen : AppTheme.accentGold;
                 return InkWell(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TaskDetailScreen(
-                          taskId: order.id,
-                          clientName: order.clientName ?? 'Unknown',
-                          priority: order.priority.name,
-                          initialStatus: order.status.name,
-                        ),
+                    context.push(
+                      '/dashboard/task/${order.id}',
+                      extra: TaskRouteArgs(
+                        clientName: order.clientName ?? 'Unknown',
+                        priority: order.priority.name,
+                        initialStatus: order.status.name,
                       ),
                     );
                   },
@@ -636,14 +636,9 @@ class _AdminDetailScreenState extends ConsumerState<AdminDetailScreen> {
               final client = clients[index];
               return ListTile(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ClientDetailScreen(
-                        clientName: client['name']!,
-                        clientPhone: client['phone'],
-                      ),
-                    ),
+                  context.push(
+                    '/dashboard/client-detail',
+                    extra: ClientRouteArgs(clientName: client['name']!, clientPhone: client['phone']),
                   );
                 },
                 leading: Container(

@@ -22,8 +22,9 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
     final performanceAsync = ref.watch(staffPerformanceProvider);
     final financialStats = ref.watch(financialStatsProvider);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(
         title: 'Detailed Trends',
         actions: [
@@ -69,13 +70,15 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
   }
 
   Widget _buildTimeRangeSelector() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.primaryAccent(isDark);
     final ranges = ['1W', '1M', '3M', '1Y'];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: isDark ? AppTheme.darkBorder : Colors.grey.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -88,14 +91,14 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.emeraldGreen : Colors.transparent,
+                  color: isSelected ? accent : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   ranges[index],
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey,
+                    color: isSelected ? (isDark ? AppTheme.ink900 : Colors.white) : (isDark ? AppTheme.darkSubtext : Colors.grey),
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -246,16 +249,17 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
 
   Widget _buildPerformanceList(List<Map<String, dynamic>> performance) {
     if (performance.isEmpty) return const Text('No performance data recorded yet.');
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: performance.map((p) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? AppTheme.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
+            boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
           ),
           child: Row(
             children: [
@@ -299,19 +303,20 @@ class _DetailTrendScreenState extends ConsumerState<DetailTrendScreen> {
           return const SizedBox(height: 60, child: Center(child: Text('No service data', style: TextStyle(color: Colors.grey))));
         }
         final totalOrders = kpis.fold<int>(0, (sum, k) => sum + (k['total'] as int));
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? AppTheme.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 5))],
+            boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 5))],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Operational Workload Distribution',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue),
               ),
               const SizedBox(height: 24),
               SizedBox(

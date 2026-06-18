@@ -12,8 +12,9 @@ class PlatformPlansScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final plansAsync = ref.watch(orgPlansProvider);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       body: RefreshIndicator(
         color: AppTheme.emeraldGreen,
         onRefresh: () async => ref.invalidate(orgPlansProvider),
@@ -42,9 +43,9 @@ class PlatformPlansScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCreatePlanSheet(context, ref),
-        backgroundColor: AppTheme.emeraldGreen,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Plan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+        icon: Icon(Icons.add, color: isDark ? AppTheme.ink900 : Colors.white),
+        label: Text('New Plan', style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -166,10 +167,11 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ac = _accentColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: Colors.grey.withValues(alpha: 0.15), width: 1.5),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 24, offset: const Offset(0, 12))],
@@ -309,10 +311,11 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
       ),
       padding: EdgeInsets.only(
         top: 30, left: 24, right: 24,
@@ -334,13 +337,13 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
               Row(children: [
                 Expanded(child: TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(labelText: 'Plan Key (e.g. pro)', prefixIcon: const Icon(Icons.key_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: Colors.grey.shade50),
+                  decoration: InputDecoration(labelText: 'Plan Key (e.g. pro)', prefixIcon: const Icon(Icons.key_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: isDark ? AppTheme.darkCard : Colors.grey.shade50),
                   validator: (v) => v!.isEmpty ? 'Required' : null,
                 )),
                 const SizedBox(width: 12),
                 Expanded(child: TextFormField(
                   controller: _displayController,
-                  decoration: InputDecoration(labelText: 'Display Name', prefixIcon: const Icon(Icons.label_outline), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: Colors.grey.shade50),
+                  decoration: InputDecoration(labelText: 'Display Name', prefixIcon: const Icon(Icons.label_outline), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: isDark ? AppTheme.darkCard : Colors.grey.shade50),
                   validator: (v) => v!.isEmpty ? 'Required' : null,
                 )),
               ]),
@@ -349,14 +352,14 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
                 Expanded(child: TextFormField(
                   controller: _monthlyController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Monthly Price (SAR)', prefixIcon: const Icon(Icons.attach_money), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: Colors.grey.shade50),
+                  decoration: InputDecoration(labelText: 'Monthly Price (SAR)', prefixIcon: const Icon(Icons.attach_money), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: isDark ? AppTheme.darkCard : Colors.grey.shade50),
                   validator: (v) => v!.isEmpty ? 'Required' : null,
                 )),
                 const SizedBox(width: 12),
                 Expanded(child: TextFormField(
                   controller: _yearlyController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Yearly Price (SAR)', prefixIcon: const Icon(Icons.calendar_today_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: Colors.grey.shade50),
+                  decoration: InputDecoration(labelText: 'Yearly Price (SAR)', prefixIcon: const Icon(Icons.calendar_today_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: isDark ? AppTheme.darkCard : Colors.grey.shade50),
                 )),
               ]),
               const SizedBox(height: 14),
@@ -364,19 +367,19 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
                 Expanded(child: TextFormField(
                   controller: _usersController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Max Users (-1=∞)', prefixIcon: const Icon(Icons.people_outline), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: Colors.grey.shade50),
+                  decoration: InputDecoration(labelText: 'Max Users (-1=∞)', prefixIcon: const Icon(Icons.people_outline), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: isDark ? AppTheme.darkCard : Colors.grey.shade50),
                 )),
                 const SizedBox(width: 12),
                 Expanded(child: TextFormField(
                   controller: _officesController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Max Offices (-1=∞)', prefixIcon: const Icon(Icons.business_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: Colors.grey.shade50),
+                  decoration: InputDecoration(labelText: 'Max Offices (-1=∞)', prefixIcon: const Icon(Icons.business_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: isDark ? AppTheme.darkCard : Colors.grey.shade50),
                 )),
                 const SizedBox(width: 12),
                 Expanded(child: TextFormField(
                   controller: _ordersController,
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'Orders/mo (-1=∞)', prefixIcon: const Icon(Icons.assignment_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: Colors.grey.shade50),
+                  decoration: InputDecoration(labelText: 'Orders/mo (-1=∞)', prefixIcon: const Icon(Icons.assignment_outlined), border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), filled: true, fillColor: isDark ? AppTheme.darkCard : Colors.grey.shade50),
                 )),
               ]),
               const SizedBox(height: 28),
@@ -393,8 +396,13 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
                       );
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)), elevation: 0),
-                  child: const Text('Create Plan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                    foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    elevation: 0,
+                  ),
+                  child: Text('Create Plan', style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ),
             ],

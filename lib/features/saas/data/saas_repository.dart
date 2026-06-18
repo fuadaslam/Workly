@@ -15,13 +15,24 @@ class SaasRepository {
     ''').order('created_at', ascending: false);
 
     final List<Map<String, dynamic>> orgs = List<Map<String, dynamic>>.from(rows as List);
+
+    // One batched query for member counts instead of one query per org.
+    final orgIds = orgs.map((o) => o['id'] as String).toList();
+    final memberCounts = <String, int>{};
+    if (orgIds.isNotEmpty) {
+      final profileRows = await _client.from('profiles').select('org_id').inFilter('org_id', orgIds);
+      for (final p in (profileRows as List)) {
+        final orgId = p['org_id'] as String?;
+        if (orgId != null) memberCounts[orgId] = (memberCounts[orgId] ?? 0) + 1;
+      }
+    }
+
     final result = <Organization>[];
     for (final o in orgs) {
       final subRaw = o['subscriptions'];
       final sub = subRaw is List ? subRaw.firstOrNull as Map<String, dynamic>? : subRaw as Map<String, dynamic>?;
       final planRaw = sub?['plans'];
       final plan = planRaw is List ? planRaw.firstOrNull as Map<String, dynamic>? : planRaw as Map<String, dynamic>?;
-      final memberCount = await _client.from('profiles').select('id').eq('org_id', o['id']).count(CountOption.exact).then((r) => r.count);
       result.add(Organization(
         id: o['id'],
         name: o['name'] ?? '',
@@ -41,7 +52,7 @@ class SaasRepository {
         maxOffices: plan?['max_offices'],
         periodEnd: sub?['current_period_end'] != null ? DateTime.parse(sub!['current_period_end']) : null,
         trialEndsAt: sub?['trial_ends_at'] != null ? DateTime.parse(sub!['trial_ends_at']) : null,
-        memberCount: memberCount,
+        memberCount: memberCounts[o['id']] ?? 0,
       ));
     }
     return result;

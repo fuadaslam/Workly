@@ -112,8 +112,9 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
     final staffAsync = ref.watch(staffProfilesProvider);
     final df = DateFormat('dd MMM yyyy');
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(
         title: 'New Enquiry',
         actions: [
@@ -195,10 +196,11 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   }
 
   Widget _card(List<Widget> children) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
@@ -207,10 +209,11 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   }
 
   InputDecoration _inputDec(String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
       filled: true,
-      fillColor: AppTheme.backgroundLight,
+      fillColor: isDark ? AppTheme.darkCard : AppTheme.backgroundLight,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
@@ -261,6 +264,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   }
 
   Widget _dateTile(String label, DateTime? date, DateFormat df, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
@@ -268,7 +272,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            color: AppTheme.backgroundLight,
+            color: isDark ? AppTheme.darkCard : AppTheme.backgroundLight,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(children: [

@@ -212,9 +212,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).brightness == Brightness.dark ? AppTheme.darkCard : Colors.white,
               shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.emeraldGreen, width: 2),
+              border: Border.all(color: AppTheme.primaryAccent(Theme.of(context).brightness == Brightness.dark), width: 2),
             ),
             child: _isUploadingAvatar
                 ? const SizedBox(
@@ -250,8 +250,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: const WorkqlyAppBar(title: 'Edit Profile'),
       body: ResponsiveLayout(
         maxWidth: 800,
@@ -295,13 +296,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _updateProfile,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.emeraldGreen,
+                    backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                    foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Save Changes / حفظ التغييرات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: isDark ? AppTheme.ink900 : Colors.white, strokeWidth: 2))
+                      : Text('Save Changes / حفظ التغييرات', style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -317,21 +319,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     required IconData icon,
     TextInputType? keyboardType,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.primaryAccent(isDark);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.darkBlue, fontSize: 14),
+          style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue, fontSize: 14),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: AppTheme.emeraldGreen),
+            prefixIcon: Icon(icon, color: accent),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: isDark ? AppTheme.darkCard : Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -342,7 +346,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.emeraldGreen, width: 1),
+              borderSide: BorderSide(color: accent, width: 1),
             ),
           ),
         ),

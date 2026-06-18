@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/contact_utils.dart';
+import '../../../../core/router/app_router.dart';
 import '../providers/dashboard_provider.dart';
-import 'task_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/app_section_header.dart';
@@ -37,9 +38,10 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(title: l10n.clientDetails),
       body: RefreshIndicator(
         color: AppTheme.ink900,
@@ -82,10 +84,11 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
   }
 
   Widget _buildHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(30),
-      color: Colors.white,
+      color: isDark ? AppTheme.darkCard : Colors.white,
       child: Column(
         children: [
           Hero(
@@ -235,15 +238,14 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
               final order = orders[index];
               return ListTile(
                 onTap: () {
-                   Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => TaskDetailScreen(
-                        taskId: order.id,
+                   context.push(
+                      '/dashboard/task/${order.id}',
+                      extra: TaskRouteArgs(
                         clientName: order.clientName ?? 'Unknown',
                         clientPhone: order.clientPhoneNumber,
                         priority: order.priority.name,
                         initialStatus: order.status.name,
-                      )),
+                      ),
                     );
                 },
                 shape: index == 0 

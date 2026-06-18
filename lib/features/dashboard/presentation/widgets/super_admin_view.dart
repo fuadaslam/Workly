@@ -2,25 +2,20 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../core/utils/contact_utils.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/services/biometric_service.dart';
 import '../providers/dashboard_provider.dart';
 import 'profile_view.dart';
-import '../pages/detail_trend_screen.dart';
-import '../pages/active_cases_screen.dart';
-import '../pages/task_detail_screen.dart';
-import '../pages/revenue_detail_screen.dart';
-import '../pages/office_detail_screen.dart';
-import '../pages/admin_detail_screen.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../auth/presentation/providers/profile_provider.dart';
 import '../../../auth/domain/models/profile.dart';
-import '../pages/system_detail_screen.dart';
 import '../../../leaves/presentation/widgets/admin_leave_list.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../attendance/presentation/widgets/attendance_monitor.dart';
@@ -28,10 +23,8 @@ import '../../../attendance/presentation/widgets/attendance_monitor.dart';
 import 'assignment_sheet.dart';
 import '../../../enquiries/presentation/pages/enquiry_list_screen.dart';
 import '../../../reports/presentation/report_export_screen.dart';
-import '../../../search/presentation/global_search_screen.dart';
 import '../../../search/presentation/global_search_bar.dart';
 import '../../../../core/providers/theme_provider.dart';
-import '../../../auth/presentation/pages/login_screen.dart';
 
 import '../../../../core/widgets/collapsible_sidebar.dart';
 import '../../../../core/widgets/workly_primitives.dart';
@@ -55,16 +48,14 @@ class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
   Future<void> _signOut(BuildContext context) async {
     await Supabase.instance.client.auth.signOut();
     if (context.mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      context.go('/login');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(superAdminTabIndexProvider);
-    final profile = ref.watch(profileProvider).value;
+    final profile = ref.watch(profileProvider).valueOrNull;
     final isSuperAdmin = profile?.role == AppRole.super_admin;
     final l10n = AppLocalizations.of(context)!;
 
@@ -413,7 +404,7 @@ class _HeaderSection extends ConsumerWidget {
                   ] else ...[
                     _buildHeaderIcon(
                       icon: Icons.search_rounded,
-                      onTap: () => Navigator.push(context, GlobalSearchScreen.route()),
+                      onTap: () => context.push('/dashboard/search'),
                       isDark: isDark,
                     ),
                     const SizedBox(width: 8),
@@ -552,11 +543,8 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                       Text(l10n.operationalTrends, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
                       TextButton(
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const DetailTrendScreen()),
-                          );
-                        }, 
+                          context.push('/dashboard/trend');
+                        },
                         child: Text(l10n.viewDetailed, style: const TextStyle(fontSize: 12))),
                     ],
                   ),
@@ -621,7 +609,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
         label: 'Total Orders',
         value: totalOrders,
         tone: StatTone.ink,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ActiveCasesScreen())),
+        onTap: () => context.push('/dashboard/active-cases'),
       ),
       WorqlyStatCard(
         icon: Icons.task_alt_rounded,
@@ -635,7 +623,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
         value: cashValue,
         unit: cashUnit,
         tone: StatTone.brand,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RevenueDetailScreen())),
+        onTap: () => context.push('/dashboard/revenue'),
       ),
       WorqlyStatCard(
         icon: Icons.bolt_rounded,
@@ -665,7 +653,17 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
 
     return ordersAsync.when(
       loading: () => SizedBox(height: 120, child: Center(child: CircularProgressIndicator(color: accent))),
-      error: (_, __) => const SizedBox(),
+      error: (_, __) => SizedBox(
+        height: 120,
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.error_outline_rounded, color: isDark ? AppTheme.darkSubtext : Colors.grey, size: 28),
+            const SizedBox(height: 6),
+            Text('Failed to load work orders',
+                style: TextStyle(color: isDark ? AppTheme.darkSubtext : Colors.grey, fontSize: 12)),
+          ]),
+        ),
+      ),
       data: (orders) {
         if (orders.isEmpty) {
           return Padding(
@@ -706,16 +704,13 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                   highPriority: o.priority == PriorityLevel.high,
                   contactable: (o.clientPhoneNumber ?? '').isNotEmpty,
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => TaskDetailScreen(
-                          taskId: o.id,
-                          clientName: o.clientName ?? 'Unknown',
-                          clientPhone: o.clientPhoneNumber,
-                          priority: o.priority.name,
-                          initialStatus: o.status.name,
-                        ),
+                    context.push(
+                      '/dashboard/task/${o.id}',
+                      extra: TaskRouteArgs(
+                        clientName: o.clientName ?? 'Unknown',
+                        clientPhone: o.clientPhoneNumber,
+                        priority: o.priority.name,
+                        initialStatus: o.status.name,
                       ),
                     );
                   },
@@ -749,7 +744,17 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
         decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cardBorder)),
         child: Center(child: CircularProgressIndicator(color: accent)),
       ),
-      error: (_, __) => const SizedBox(),
+      error: (_, __) => Container(
+        height: 260,
+        decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cardBorder)),
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.error_outline_rounded, color: metaColor, size: 28),
+            const SizedBox(height: 6),
+            Text('Failed to load trend data', style: TextStyle(color: metaColor, fontSize: 12)),
+          ]),
+        ),
+      ),
       data: (counts) {
         spots = List.generate(6, (i) => FlSpot(i.toDouble(), counts[i]));
         final prev = counts[4];
@@ -884,7 +889,10 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
 
     return kpiAsync.when(
       loading: () => SizedBox(height: 80, child: Center(child: CircularProgressIndicator(color: accent))),
-      error: (_, __) => const SizedBox(),
+      error: (_, __) => SizedBox(
+        height: 80,
+        child: Center(child: Text('Failed to load KPIs', style: TextStyle(color: metaColor, fontSize: 12))),
+      ),
       data: (kpis) {
         if (kpis.isEmpty) return const SizedBox();
         final avgCompletion = kpis.fold(0.0, (sum, k) => sum + (k['percent'] as double)) / kpis.length;
@@ -976,6 +984,7 @@ class _BranchManagementTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final officesAsync = ref.watch(filteredOfficesProvider);
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       children: [
@@ -1016,7 +1025,11 @@ class _BranchManagementTab extends ConsumerWidget {
                         onPressed: () => _showAddOfficeSheet(context, ref),
                         icon: const Icon(Icons.add_location_alt_outlined, size: 16),
                         label: Text(l10n.addNewOffice, style: const TextStyle(fontSize: 12)),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ],
                   ),
@@ -1029,9 +1042,9 @@ class _BranchManagementTab extends ConsumerWidget {
                         onChanged: (value) => ref.read(officeSearchQueryProvider.notifier).state = value,
                         decoration: InputDecoration(
                           hintText: l10n.searchOffices,
-                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                          prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: isDark ? AppTheme.darkCard : Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
@@ -1246,10 +1259,11 @@ class _BranchManagementTab extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        final sheetIsDark = Theme.of(context).brightness == Brightness.dark;
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          decoration: BoxDecoration(
+            color: sheetIsDark ? AppTheme.darkSurface : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           ),
           padding: EdgeInsets.only(
             top: 30,
@@ -1292,7 +1306,7 @@ class _BranchManagementTab extends ConsumerWidget {
                       prefixIcon: const Icon(Icons.business_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                     validator: (v) => v == null || v.isEmpty ? l10n.required : null,
                   ),
@@ -1305,7 +1319,7 @@ class _BranchManagementTab extends ConsumerWidget {
                       prefixIcon: const Icon(Icons.location_on_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                     validator: (v) => v == null || v.isEmpty ? l10n.required : null,
                   ),
@@ -1318,7 +1332,7 @@ class _BranchManagementTab extends ConsumerWidget {
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                   ),
                   const SizedBox(height: 15),
@@ -1331,7 +1345,7 @@ class _BranchManagementTab extends ConsumerWidget {
                       prefixIcon: const Icon(Icons.phone_iphone_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                   ),
                   const SizedBox(height: 15),
@@ -1347,7 +1361,7 @@ class _BranchManagementTab extends ConsumerWidget {
                             prefixIcon: const Icon(Icons.smartphone_outlined),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                           ),
                         ),
                       ),
@@ -1361,7 +1375,7 @@ class _BranchManagementTab extends ConsumerWidget {
                             prefixIcon: const Icon(Icons.phone_outlined),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                           ),
                         ),
                       ),
@@ -1409,7 +1423,8 @@ class _BranchManagementTab extends ConsumerWidget {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.emeraldGreen,
+                        backgroundColor: sheetIsDark ? AppTheme.primaryAccent(sheetIsDark) : AppTheme.emeraldGreen,
+                        foregroundColor: sheetIsDark ? AppTheme.ink900 : Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                       ),
                       child: Text(l10n.addNewOffice, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -1462,10 +1477,7 @@ class _BranchManagementTab extends ConsumerWidget {
 
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => OfficeDetailScreen(office: office)),
-        );
+        context.push('/dashboard/office-detail', extra: office);
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -1512,11 +1524,7 @@ class _BranchManagementTab extends ConsumerWidget {
                         ),
                       IconButton(
                         onPressed: () {
-                           // Navigate to settings directly? Or just same detail screen
-                           Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => OfficeDetailScreen(office: office)),
-                          );
+                           context.push('/dashboard/office-detail', extra: office);
                         },
                         icon: const Icon(Icons.settings_outlined, color: Colors.grey),
                       ),
@@ -1547,10 +1555,7 @@ class _BranchManagementTab extends ConsumerWidget {
                    Text(l10n.regionalHub, style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                    InkWell(
                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => OfficeDetailScreen(office: office)),
-                        );
+                        context.push('/dashboard/office-detail', extra: office);
                      },
                      borderRadius: BorderRadius.circular(4),
                      child: Row(children: [
@@ -1631,6 +1636,7 @@ class _AdminManagementTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filteredAdminsAsync = ref.watch(isStaffView ? filteredStaffProvider : filteredAdminsProvider);
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       children: [
@@ -1671,7 +1677,11 @@ class _AdminManagementTab extends ConsumerWidget {
                         onPressed: () => _showAddAdminDialog(context, ref, forceStaff: isStaffView),
                         icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                         label: Text(l10n.newLabel),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
                       ),
                     ],
                   ),
@@ -1682,9 +1692,9 @@ class _AdminManagementTab extends ConsumerWidget {
                     onChanged: (value) => ref.read(isStaffView ? staffSearchQueryProvider.notifier : adminSearchQueryProvider.notifier).state = value,
                     decoration: InputDecoration(
                       hintText: isStaffView ? l10n.searchStaff : l10n.searchAdmins,
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: isDark ? AppTheme.darkCard : Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -1817,10 +1827,7 @@ class _AdminManagementTab extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: admin)),
-          );
+          context.push('/dashboard/admin-detail', extra: admin);
         },
         borderRadius: BorderRadius.circular(14),
         child: Container(
@@ -1926,7 +1933,11 @@ class _AdminManagementTab extends ConsumerWidget {
                               );
                             },
                             loading: () => const SizedBox(width: 50, height: 20),
-                            error: (_, __) => const SizedBox(),
+                            error: (_, __) => SizedBox(
+                              width: 50,
+                              height: 20,
+                              child: Icon(Icons.error_outline_rounded, size: 12, color: cardMetaColor),
+                            ),
                           ),
                         ],
                       ],
@@ -1941,10 +1952,7 @@ class _AdminManagementTab extends ConsumerWidget {
                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                    children: [
                      _buildActionButton(context, Icons.edit_outlined, l10n.edit, AppTheme.emeraldGreen, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: admin)),
-                        );
+                        context.push('/dashboard/admin-detail', extra: admin);
                      }),
                      if (admin['is_active'] ?? true)
                        _buildActionButton(context, Icons.delete_outline, l10n.delete, AppTheme.errorRed, () async {
@@ -1974,10 +1982,7 @@ class _AdminManagementTab extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.profileReactivated)));
                        }),
                      _buildActionButton(context, Icons.vpn_key_outlined, l10n.accessPermissions, Colors.amber.shade700, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: admin)),
-                    );
+                    context.push('/dashboard/admin-detail', extra: admin);
                   }),
                    ],
                 ),
@@ -2023,10 +2028,12 @@ class _AdminManagementTab extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        builder: (context, setModalState) {
+          final sheetIsDark = Theme.of(context).brightness == Brightness.dark;
+          return Container(
+          decoration: BoxDecoration(
+            color: sheetIsDark ? AppTheme.darkSurface : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           ),
           padding: EdgeInsets.only(
             top: 30,
@@ -2069,7 +2076,7 @@ class _AdminManagementTab extends ConsumerWidget {
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                     validator: (v) => v!.isEmpty ? l10n.nameRequired : null,
                   ),
@@ -2082,7 +2089,7 @@ class _AdminManagementTab extends ConsumerWidget {
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                     validator: (v) => v!.isEmpty ? l10n.emailRequired : null,
                   ),
@@ -2098,7 +2105,7 @@ class _AdminManagementTab extends ConsumerWidget {
                         prefixIcon: const Icon(Icons.lock_outline),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                       ),
                       validator: (v) => v!.isEmpty ? l10n.passwordRequired : null,
                     ),
@@ -2113,7 +2120,7 @@ class _AdminManagementTab extends ConsumerWidget {
                       prefixIcon: const Icon(Icons.phone_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                     validator: (v) => v!.isEmpty ? l10n.phoneRequired : null,
                   ),
@@ -2132,7 +2139,7 @@ class _AdminManagementTab extends ConsumerWidget {
                         prefixIcon: const Icon(Icons.security_outlined),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                       ),
                     ),
                   ],
@@ -2150,7 +2157,7 @@ class _AdminManagementTab extends ConsumerWidget {
                         prefixIcon: const Icon(Icons.business_outlined),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                       ),
                     ),
                     loading: () => const Center(child: LinearProgressIndicator()),
@@ -2218,7 +2225,10 @@ class _AdminManagementTab extends ConsumerWidget {
                                     ElevatedButton.icon(
                                       icon: const Icon(Icons.copy, size: 16),
                                       label: const Text('Copy & Close'),
-                                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, foregroundColor: Colors.white),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: sheetIsDark ? AppTheme.primaryAccent(sheetIsDark) : AppTheme.emeraldGreen,
+                                        foregroundColor: sheetIsDark ? AppTheme.ink900 : Colors.white,
+                                      ),
                                       onPressed: () {
                                         Clipboard.setData(ClipboardData(text: agentPassword));
                                         Navigator.pop(ctx);
@@ -2249,20 +2259,21 @@ class _AdminManagementTab extends ConsumerWidget {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.emeraldGreen,
+                        backgroundColor: sheetIsDark ? AppTheme.primaryAccent(sheetIsDark) : AppTheme.emeraldGreen,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         elevation: 0,
                       ),
                       child: isLoading
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text(l10n.confirmRegistration, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: sheetIsDark ? AppTheme.ink900 : Colors.white))
+                          : Text(l10n.confirmRegistration, style: TextStyle(color: sheetIsDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -2275,11 +2286,12 @@ class _AgentManagementTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filteredAgentsAsync = ref.watch(filteredAgentsProvider);
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       children: [
         _HeaderSection(
-          title: l10n.agents, 
+          title: l10n.agents,
           subtitle: l10n.allAgents.toUpperCase()
         ),
         Expanded(
@@ -2315,7 +2327,11 @@ class _AgentManagementTab extends ConsumerWidget {
                         onPressed: () => const _AdminManagementTab()._showAddAdminDialog(context, ref, isAgent: true),
                         icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                         label: Text(l10n.newLabel),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
                       ),
                     ],
                   ),
@@ -2325,9 +2341,9 @@ class _AgentManagementTab extends ConsumerWidget {
                     onChanged: (value) => ref.read(agentSearchQueryProvider.notifier).state = value,
                     decoration: InputDecoration(
                       hintText: l10n.searchAgents,
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: isDark ? AppTheme.darkCard : Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -2361,6 +2377,7 @@ class _AgentManagementTab extends ConsumerWidget {
 }
 
   Widget _buildEmptyAgentsState(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 60),
       child: Center(
@@ -2392,7 +2409,8 @@ class _AgentManagementTab extends ConsumerWidget {
               icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
               label: Text(l10n.newLabel),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.emeraldGreen,
+                backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
@@ -2414,6 +2432,7 @@ class _AccessControlTab extends ConsumerWidget {
     final securityStats = ref.watch(securityStatsProvider);
     final financialStats = ref.watch(financialStatsProvider);
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       children: [
@@ -2432,28 +2451,28 @@ class _AccessControlTab extends ConsumerWidget {
                   securityStats.when(
                     data: (stats) => Row(
                       children: [
-                        Expanded(child: _buildSecurityStat(l10n.activeSessions, stats['activeSessions'].toString(), Icons.devices, Colors.blue)),
+                        Expanded(child: _buildSecurityStat(l10n.activeSessions, stats['activeSessions'].toString(), Icons.devices, Colors.blue, isDark)),
                         const SizedBox(width: 15),
-                        Expanded(child: _buildSecurityStat(l10n.securityAlerts, stats['securityAlerts'].toString(), Icons.warning_amber_rounded, Colors.orange)),
+                        Expanded(child: _buildSecurityStat(l10n.securityAlerts, stats['securityAlerts'].toString(), Icons.warning_amber_rounded, Colors.orange, isDark)),
                       ],
                     ),
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (e, _) => Row(
                       children: [
-                        Expanded(child: _buildSecurityStat(l10n.activeSessions, '0', Icons.devices, Colors.blue)),
+                        Expanded(child: _buildSecurityStat(l10n.activeSessions, '0', Icons.devices, Colors.blue, isDark)),
                         const SizedBox(width: 15),
-                        Expanded(child: _buildSecurityStat(l10n.securityAlerts, '?', Icons.warning_amber_rounded, Colors.orange)),
+                        Expanded(child: _buildSecurityStat(l10n.securityAlerts, '?', Icons.warning_amber_rounded, Colors.orange, isDark)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 30),
                   Text(l10n.roleHierarchyPermissions, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 15),
-                  _buildRoleCard(context, ref, l10n.superAdmin, l10n.superAdminAccessDesc, Icons.auto_awesome, AppTheme.emeraldGreen, 'Super Admin'),
+                  _buildRoleCard(context, ref, l10n.superAdmin, l10n.superAdminAccessDesc, Icons.auto_awesome, AppTheme.emeraldGreen, 'Super Admin', isDark),
                   const SizedBox(height: 12),
-                  _buildRoleCard(context, ref, l10n.officeAdmin, l10n.officeAdminAccessDesc, Icons.admin_panel_settings, Colors.amber.shade700, 'Admin'),
+                  _buildRoleCard(context, ref, l10n.officeAdmin, l10n.officeAdminAccessDesc, Icons.admin_panel_settings, Colors.amber.shade700, 'Admin', isDark),
                   const SizedBox(height: 12),
-                  _buildRoleCard(context, ref, l10n.operationalStaff, l10n.staffAccessDesc, Icons.engineering, Colors.blueGrey, 'All'),
+                  _buildRoleCard(context, ref, l10n.operationalStaff, l10n.staffAccessDesc, Icons.engineering, Colors.blueGrey, 'All', isDark),
                   
                   const SizedBox(height: 30),
                   Row(
@@ -2549,13 +2568,13 @@ class _AccessControlTab extends ConsumerWidget {
     }
   }
 
-  Widget _buildSecurityStat(String label, String value, IconData icon, Color color) {
+  Widget _buildSecurityStat(String label, String value, IconData icon, Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2569,7 +2588,7 @@ class _AccessControlTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildRoleCard(BuildContext context, WidgetRef ref, String title, String desc, IconData icon, Color color, String filterValue) {
+  Widget _buildRoleCard(BuildContext context, WidgetRef ref, String title, String desc, IconData icon, Color color, String filterValue, bool isDark) {
     return InkWell(
       onTap: () {
         ref.read(adminRoleFilterProvider.notifier).state = filterValue;
@@ -2581,7 +2600,7 @@ class _AccessControlTab extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppTheme.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.1)),
         ),
@@ -2666,16 +2685,19 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
     {
       'category': l10n.notificationsAlerts,
       'items': [
-        {'icon': Icons.sms_rounded, 'title': l10n.smsGateway, 'subtitle': l10n.smsGatewayDesc, 'status': 'Online', 'isHealthy': true},
-        {'icon': Icons.email_rounded, 'title': l10n.smtpServer, 'subtitle': l10n.smtpServerDesc, 'status': l10n.active, 'isHealthy': true},
+        // No SMS gateway or SMTP integration actually exists in this app —
+        // show that honestly instead of a fabricated "Online"/"Active" status.
+        {'icon': Icons.sms_rounded, 'title': l10n.smsGateway, 'subtitle': l10n.smsGatewayDesc, 'status': 'Not configured', 'isHealthy': false},
+        {'icon': Icons.email_rounded, 'title': l10n.smtpServer, 'subtitle': l10n.smtpServerDesc, 'status': 'Not configured', 'isHealthy': false},
         {'icon': Icons.notifications_active_rounded, 'title': l10n.pushNotifications, 'subtitle': l10n.pushNotificationsDesc, 'status': 'Healthy', 'isHealthy': true},
       ]
     },
     {
       'category': l10n.infrastructure,
       'items': [
-        {'icon': Icons.cloud_sync_rounded, 'title': l10n.backupSync, 'subtitle': l10n.backupSyncDesc, 'status': 'Last: 2h ago', 'isHealthy': true},
-        {'icon': Icons.api_rounded, 'title': l10n.apiIntegration, 'subtitle': l10n.apiIntegrationDesc, 'status': '5 Linked', 'isHealthy': true},
+        // No backup/sync job or external API integration exists either.
+        {'icon': Icons.cloud_sync_rounded, 'title': l10n.backupSync, 'subtitle': l10n.backupSyncDesc, 'status': 'Not configured', 'isHealthy': false},
+        {'icon': Icons.api_rounded, 'title': l10n.apiIntegration, 'subtitle': l10n.apiIntegrationDesc, 'status': 'Not configured', 'isHealthy': false},
         {'icon': Icons.update_rounded, 'title': l10n.versionControl, 'subtitle': l10n.versionControlDesc, 'status': 'Latest', 'isHealthy': true},
       ]
     },
@@ -2700,6 +2722,7 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
    @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       children: [
         _HeaderSection(title: l10n.systemAuthority, subtitle: l10n.systemLogs.toUpperCase(), showDate: false),
@@ -2716,12 +2739,12 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: l10n.searchSystemSettings,
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    suffixIcon: _searchQuery.isNotEmpty 
+                    prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
+                    suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => _searchController.clear())
                         : null,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: isDark ? AppTheme.darkCard : Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                       borderSide: BorderSide.none,
@@ -2779,15 +2802,15 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
               status: item['status'], 
               isHealthy: item['isHealthy'],
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SystemDetailScreen(
+                context.push(
+                  '/dashboard/system-detail',
+                  extra: SystemDetailRouteArgs(
                     title: item['title'],
                     subtitle: item['subtitle'],
                     icon: item['icon'],
                     status: item['status'],
                     isHealthy: item['isHealthy'],
-                  )),
+                  ),
                 );
               }
             )).toList()
@@ -2815,15 +2838,15 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
     final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => SystemDetailScreen(
+        context.push(
+          '/dashboard/system-detail',
+          extra: SystemDetailRouteArgs(
             title: l10n.systemHealthPerformance,
             subtitle: l10n.realTimeMonitoringGlobal,
             icon: Icons.monitor_heart_outlined,
             status: '99.9% ${l10n.optimal}',
             isHealthy: true,
-          )),
+          ),
         );
       },
       borderRadius: BorderRadius.circular(24),
@@ -2901,6 +2924,7 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
   }
 
   Widget _buildSettingGroup(String title, List<Widget> children) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2911,9 +2935,9 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? AppTheme.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(24),
-            boxShadow: [
+            boxShadow: isDark ? [] : [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 20,
@@ -3069,6 +3093,7 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final sections = [
       ('Reports', Icons.file_download_outlined),
       if (widget.isSuperAdmin) ('Access', Icons.lock_person_outlined),
@@ -3080,7 +3105,7 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
       children: [
         // Sub-navigation
         Container(
-          color: AppTheme.surfaceWhite,
+          color: isDark ? AppTheme.darkSurface : AppTheme.surfaceWhite,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(
             children: List.generate(sections.length, (i) {
@@ -3145,9 +3170,9 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppTheme.surfaceWhite,
+            color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+            boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
           ),
           child: Column(children: [
             // Dark mode
@@ -3157,7 +3182,7 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
               activeColor: AppTheme.emeraldGreen,
               secondary: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
                 child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, color: AppTheme.emeraldGreen, size: 20),
               ),
               title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -3170,7 +3195,6 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
             // Sign out
             ListTile(
               onTap: () async {
-                final nav = Navigator.of(context);
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (_) => AlertDialog(
@@ -3188,10 +3212,7 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
                 );
                 if (confirm != true) return;
                 await Supabase.instance.client.auth.signOut();
-                nav.pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
+                if (context.mounted) context.go('/login');
               },
               leading: Container(
                 padding: const EdgeInsets.all(8),
@@ -3226,38 +3247,25 @@ class _BiometricToggleState extends ConsumerState<_BiometricToggle> {
   }
 
   Future<void> _load() async {
-    // Import inline to avoid circular
-    final available = await _checkBiometric();
-    final enabled = await _checkEnabled();
+    final available = await BiometricService.isAvailable();
+    final enabled = await BiometricService.isEnabled();
     if (mounted) setState(() { _available = available; _enabled = enabled; _loading = false; });
   }
 
-  Future<bool> _checkBiometric() async {
-    try {
-      // Dynamic import approach
-      return true; // Will be evaluated at runtime via BiometricService
-    } catch (_) { return false; }
-  }
-
-  Future<bool> _checkEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('biometric_enabled') ?? false;
-  }
-
   Future<void> _toggle(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('biometric_enabled', value);
+    await BiometricService.setEnabled(value);
     setState(() => _enabled = value);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_loading) return const ListTile(title: Text('Loading...'));
     if (!_available) {
       return ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
           child: const Icon(Icons.fingerprint_rounded, color: Colors.grey, size: 20),
         ),
         title: const Text('Biometric Login', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -3271,7 +3279,7 @@ class _BiometricToggleState extends ConsumerState<_BiometricToggle> {
       activeColor: AppTheme.emeraldGreen,
       secondary: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
         child: const Icon(Icons.fingerprint_rounded, color: AppTheme.emeraldGreen, size: 20),
       ),
       title: const Text('Biometric Login', style: TextStyle(fontWeight: FontWeight.w600)),

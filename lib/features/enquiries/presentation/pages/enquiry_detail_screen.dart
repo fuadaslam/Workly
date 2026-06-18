@@ -465,16 +465,19 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
     ),
   );
 
-  Widget _card(List<Widget> children) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-    decoration: BoxDecoration(
-      color: AppTheme.surfaceWhite,
+  Widget _card(List<Widget> children) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: Colors.grey.shade200),
       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
   );
+  }
 
   Widget _detailRow(String label, Widget value) => Padding(
     padding: const EdgeInsets.only(bottom: 20),
@@ -515,6 +518,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   }
 
   Widget _editField(TextEditingController ctrl, {TextInputType? keyboardType, int maxLines = 1}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return TextFormField(
       controller: ctrl,
       keyboardType: keyboardType,
@@ -523,7 +527,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
       decoration: InputDecoration(
         isDense: true,
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: isDark ? AppTheme.darkCard : Colors.grey.shade50,
         hoverColor: Colors.grey.shade100,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -586,6 +590,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
 
   void _showRejectionDialog() {
     String? reason;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -598,12 +603,15 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+              foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               _updateClientStatus(ClientStatus.rejected, rejectionReason: reason);
             },
-            child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+            child: Text('Confirm', style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white)),
           ),
         ],
       ),

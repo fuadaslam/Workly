@@ -2,9 +2,9 @@ import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:service_manager_app/features/dashboard/presentation/pages/dashboard_screen.dart';
 import 'package:service_manager_app/features/auth/presentation/providers/profile_provider.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:service_manager_app/core/widgets/responsive_layout.dart';
@@ -52,9 +52,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with TickerProviderSt
       );
       if (mounted) {
         ref.invalidate(profileProvider);
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const DashboardScreen()),
-        );
+        context.go('/dashboard');
       }
     } on AuthException catch (e) {
       if (mounted) {

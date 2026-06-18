@@ -23,8 +23,9 @@ class SystemDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(title: title),
       body: SingleChildScrollView(
         child: ResponsiveLayout(
@@ -32,15 +33,15 @@ class SystemDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeroCard(l10n),
+              _buildHeroCard(l10n, isDark),
               const SizedBox(height: 25),
-              Text(l10n.configurationDetails, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+              Text(l10n.configurationDetails, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? AppTheme.darkSubtext : Colors.grey, letterSpacing: 1.2)),
               const SizedBox(height: 12),
-              _buildDetailsCard(l10n),
+              _buildDetailsCard(l10n, isDark),
               const SizedBox(height: 30),
-              Text(l10n.operationalLogs, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+              Text(l10n.operationalLogs, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? AppTheme.darkSubtext : Colors.grey, letterSpacing: 1.2)),
               const SizedBox(height: 12),
-              _buildLogsCard(l10n),
+              _buildLogsCard(l10n, isDark),
               const SizedBox(height: 40),
               _buildActionButton(context, l10n),
             ],
@@ -50,13 +51,13 @@ class SystemDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroCard(AppLocalizations l10n) {
+  Widget _buildHeroCard(AppLocalizations l10n, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
       ),
       child: Row(
         children: [
@@ -101,13 +102,13 @@ class SystemDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailsCard(AppLocalizations l10n) {
+  Widget _buildDetailsCard(AppLocalizations l10n, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
       ),
       child: Column(
         children: [
@@ -143,13 +144,13 @@ class SystemDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLogsCard(AppLocalizations l10n) {
+  Widget _buildLogsCard(AppLocalizations l10n, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
       ),
       child: Column(
         children: [
@@ -175,6 +176,7 @@ class SystemDetailScreen extends StatelessWidget {
   }
 
   Widget _buildActionButton(BuildContext context, AppLocalizations l10n) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: double.infinity,
       height: 55,
@@ -185,11 +187,12 @@ class SystemDetailScreen extends StatelessWidget {
           );
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.emeraldGreen,
+          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           elevation: 0,
         ),
-        child: Text(l10n.saveVerifyConfig, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        child: Text(l10n.saveVerifyConfig, style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

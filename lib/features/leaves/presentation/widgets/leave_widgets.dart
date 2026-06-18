@@ -26,11 +26,12 @@ class _ApplyLeaveFormState extends ConsumerState<ApplyLeaveForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Form(
         key: _formKey,
@@ -112,13 +113,14 @@ class _ApplyLeaveFormState extends ConsumerState<ApplyLeaveForm> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
+                  backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                  foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: _isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white) 
-                  : const Text('Submit Request', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: _isLoading
+                  ? CircularProgressIndicator(color: isDark ? AppTheme.ink900 : Colors.white)
+                  : Text('Submit Request', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? AppTheme.ink900 : Colors.white)),
               ),
             ),
           ],

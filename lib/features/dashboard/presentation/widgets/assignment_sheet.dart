@@ -34,6 +34,7 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final staffAsync = ref.watch(staffProfilesProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
       return Center(
         child: ConstrainedBox(
@@ -173,14 +174,14 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _submitAssignment,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.emeraldGreen,
-                          foregroundColor: Colors.white,
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
                         ),
-                        child: _isLoading 
-                          ? const CircularProgressIndicator(color: Colors.white) 
-                          : Text(l10n.confirmCreateAssignment, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: _isLoading
+                          ? CircularProgressIndicator(color: isDark ? AppTheme.ink900 : Colors.white)
+                          : Text(l10n.confirmCreateAssignment, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? AppTheme.ink900 : Colors.white)),
                       ),
                     ),
                     const SizedBox(height: 24),

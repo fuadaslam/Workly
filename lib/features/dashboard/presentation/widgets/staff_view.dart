@@ -7,7 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../features/auth/presentation/providers/profile_provider.dart';
 import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import '../../../../features/dashboard/domain/models/work_order.dart';
-import '../pages/task_detail_screen.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../features/enquiries/domain/models/enquiry.dart';
 
 import '../../../../core/theme/pattern_painter.dart';
@@ -19,9 +19,9 @@ import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/workly_primitives.dart';
 import '../../../../features/leaves/presentation/widgets/leave_widgets.dart';
 import '../../../../features/leaves/presentation/providers/leave_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/widgets/collapsible_sidebar.dart';
-import '../../../auth/presentation/pages/login_screen.dart';
 
 class StaffView extends StatefulWidget {
   const StaffView({super.key});
@@ -40,11 +40,7 @@ class _StaffViewState extends State<StaffView> {
 
   Future<void> _signOut(BuildContext context) async {
     await Supabase.instance.client.auth.signOut();
-    if (context.mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    }
+    if (context.mounted) context.go('/login');
   }
 
   @override
@@ -66,13 +62,15 @@ class _StaffViewState extends State<StaffView> {
 
         return LayoutBuilder(
           builder: (context, constraints) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final scaffoldBg = isDark ? AppTheme.darkBackground : AppTheme.backgroundLight;
             if (constraints.maxWidth >= 800) {
               // Desktop Layout with CollapsibleSidebar
               // Map _tabIndex (0, 1, 3, 4) to Sidebar Index (0, 1, 2, 3)
               final sidebarIndex = _tabIndex > 2 ? _tabIndex - 1 : _tabIndex;
 
               return Scaffold(
-                backgroundColor: AppTheme.backgroundLight,
+                backgroundColor: scaffoldBg,
                 body: Row(
                   children: [
                     CollapsibleSidebar(
@@ -94,20 +92,20 @@ class _StaffViewState extends State<StaffView> {
                 ),
                 floatingActionButton: FloatingActionButton.extended(
                   onPressed: () => _showAddTaskModal(context),
-                  backgroundColor: AppTheme.emeraldGreen,
+                  backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
                   elevation: 6,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  icon: const Icon(Icons.add, color: Colors.white, size: 24),
+                  icon: Icon(Icons.add, color: isDark ? AppTheme.ink900 : Colors.white, size: 24),
                   label: Text(
                     l10n.createNewTask,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                   ),
                 ),
               );
             } else {
               // Mobile Layout
               return Scaffold(
-                backgroundColor: AppTheme.backgroundLight,
+                backgroundColor: scaffoldBg,
                 body: _buildBody(),
                 floatingActionButton: Container(
                    height: 64,
@@ -117,10 +115,10 @@ class _StaffViewState extends State<StaffView> {
                     onPressed: () {
                        _showAddTaskModal(context);
                     },
-                    backgroundColor: AppTheme.emeraldGreen,
+                    backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
                     elevation: 4,
                     shape: const CircleBorder(),
-                    child: const Icon(Icons.add, color: Colors.white, size: 32),
+                    child: Icon(Icons.add, color: isDark ? AppTheme.ink900 : Colors.white, size: 32),
                    ),
                 ),
                 floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -135,7 +133,7 @@ class _StaffViewState extends State<StaffView> {
                     ],
                   ),
                   child: NavigationBar(
-                    backgroundColor: Colors.white,
+                    backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
                     elevation: 0,
                     indicatorColor: Colors.transparent, // Disable pill indicator for custom look
                     selectedIndex: _tabIndex,
@@ -269,6 +267,7 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
     final l10n = AppLocalizations.of(context)!;
     return Consumer(
       builder: (context, ref, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Padding(
           padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
           child: Column(
@@ -332,10 +331,11 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : () => _createTask(ref),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.emeraldGreen,
+                      backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                      foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(l10n.createNewTask),
+                  child: _isLoading ? CircularProgressIndicator(color: isDark ? AppTheme.ink900 : Colors.white) : Text(l10n.createNewTask),
                 ),
               ),
             ],
@@ -571,6 +571,7 @@ class _HomeTab extends ConsumerWidget {
 
   Widget _buildWorksSummaryCard(BuildContext context, int pendingCount) {
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return PremiumCard(
       child: Column(
         children: [
@@ -626,7 +627,8 @@ class _HomeTab extends ConsumerWidget {
                  }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.emeraldGreen,
+                backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -774,7 +776,7 @@ class _HomeTab extends ConsumerWidget {
   void _showLanguageBottomSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppTheme.darkSurface : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -811,6 +813,8 @@ class _HomeTab extends ConsumerWidget {
   }
 
   Widget _buildLanguageOption(BuildContext context, WidgetRef ref, String label, String displayCode, String languageCode, bool isSelected) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.primaryAccent(isDark);
     return InkWell(
       onTap: () {
         ref.read(localeProvider.notifier).state = Locale(languageCode);
@@ -823,10 +827,10 @@ class _HomeTab extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.emeraldGreen.withValues(alpha: 0.1) : Colors.white,
+          color: isSelected ? accent.withValues(alpha: 0.12) : (isDark ? AppTheme.darkCardAlt : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade300,
+            color: isSelected ? accent : (isDark ? AppTheme.darkBorder : Colors.grey.shade300),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -835,13 +839,13 @@ class _HomeTab extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade200,
+                color: isSelected ? accent : (isDark ? AppTheme.darkCard : Colors.grey.shade200),
                 shape: BoxShape.circle,
               ),
               child: Text(
                 displayCode,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
+                  color: isSelected ? (isDark ? AppTheme.ink900 : Colors.white) : (isDark ? AppTheme.darkSubtext : Colors.grey.shade700),
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -888,8 +892,9 @@ class _TasksViewState extends State<_TasksView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       body: SafeArea(
         child: ResponsiveLayout(
           maxWidth: double.infinity,
@@ -903,13 +908,13 @@ class _TasksViewState extends State<_TasksView> {
                   // Header & Search
                   Container(
                     padding: const EdgeInsets.all(24),
-                    color: AppTheme.backgroundLight,
+                    color: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                          Text(
                            l10n.workInbox,
-                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue),
                          ),
                          const SizedBox(height: 20),
                          // Search Bar
@@ -1040,23 +1045,25 @@ class _TasksViewState extends State<_TasksView> {
 
   Widget _buildFilterChip(String label) {
     final isSelected = _selectedFilter == label;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.primaryAccent(isDark);
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         label: Text(label),
         selected: isSelected,
         onSelected: (v) => setState(() => _selectedFilter = label),
-        backgroundColor: Colors.white,
-        selectedColor: AppTheme.emeraldGreen.withValues(alpha: 0.2),
-        checkmarkColor: AppTheme.emeraldGreen,
+        backgroundColor: isDark ? AppTheme.darkCardAlt : Colors.white,
+        selectedColor: accent.withValues(alpha: isDark ? 0.18 : 0.15),
+        checkmarkColor: accent,
         labelStyle: TextStyle(
-          color: isSelected ? AppTheme.emeraldGreen : Colors.grey,
+          color: isSelected ? accent : (isDark ? AppTheme.darkSubtext : Colors.grey),
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
             side: BorderSide(
-                color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade200)),
+                color: isSelected ? accent : (isDark ? AppTheme.darkBorder : Colors.grey.shade200))),
       ),
     );
   }
@@ -1086,17 +1093,14 @@ class _TasksViewState extends State<_TasksView> {
           padding: EdgeInsets.zero,
         ),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-               builder: (_) => TaskDetailScreen(
-                 taskId: order.id,
-                 clientName: order.clientName ?? 'Unknown',
-                 clientPhone: order.clientPhoneNumber,
-                 priority: order.priority.name,
-                 initialStatus: order.status.name,
-               )
-            )
+          context.push(
+            '/dashboard/task/${order.id}',
+            extra: TaskRouteArgs(
+              clientName: order.clientName ?? 'Unknown',
+              clientPhone: order.clientPhoneNumber,
+              priority: order.priority.name,
+              initialStatus: order.status.name,
+            ),
           );
         },
       ),
@@ -1188,6 +1192,7 @@ class _UpdateWorkSheetState extends ConsumerState<_UpdateWorkSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
       child: Column(
@@ -1225,7 +1230,7 @@ class _UpdateWorkSheetState extends ConsumerState<_UpdateWorkSheet> {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : Colors.grey[100], borderRadius: BorderRadius.circular(8)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1242,10 +1247,11 @@ class _UpdateWorkSheetState extends ConsumerState<_UpdateWorkSheet> {
                   child: ElevatedButton(
                       onPressed: _isLoading ? null : _updateStatus,
                       style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.emeraldGreen,
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           padding: const EdgeInsets.symmetric(vertical: 16)),
-                      child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(l10n.updateStatus))),
+                      child: _isLoading ? CircularProgressIndicator(color: isDark ? AppTheme.ink900 : Colors.white) : Text(l10n.updateStatus))),
               const SizedBox(width: 12),
               IconButton(
                   onPressed: _launchWhatsApp,
@@ -1265,8 +1271,9 @@ class _LeavesView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
      return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           showModalBottomSheet(

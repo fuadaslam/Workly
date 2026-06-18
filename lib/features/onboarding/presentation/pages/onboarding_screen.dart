@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../auth/presentation/pages/login_screen.dart';
 import '../providers/onboarding_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 
@@ -46,9 +46,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _onFinish(WidgetRef ref) {
     ref.read(onboardingProvider.notifier).completeOnboarding();
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    context.go('/login');
   }
 
   @override

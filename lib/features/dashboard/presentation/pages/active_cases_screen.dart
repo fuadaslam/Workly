@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_bar.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../core/router/app_router.dart';
 import '../providers/dashboard_provider.dart';
 import '../../domain/models/work_order.dart';
-import 'task_detail_screen.dart';
 import '../../../../core/widgets/workly_primitives.dart';
 
 class ActiveCasesScreen extends ConsumerStatefulWidget {
@@ -29,9 +30,10 @@ class _ActiveCasesScreenState extends ConsumerState<ActiveCasesScreen> {
   @override
   Widget build(BuildContext context) {
     final ordersAsync = ref.watch(activeWorkOrdersProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(
         title: 'Active Cases',
         actions: [
@@ -55,11 +57,11 @@ class _ActiveCasesScreenState extends ConsumerState<ActiveCasesScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.assignment_outlined, size: 64, color: Colors.grey.shade300),
+                        Icon(Icons.assignment_outlined, size: 64, color: isDark ? AppTheme.darkSubtext : Colors.grey.shade300),
                         const SizedBox(height: 12),
                         Text(
                           _searchQuery.isNotEmpty ? 'No results for "$_searchQuery"' : 'No active cases',
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                          style: TextStyle(color: isDark ? AppTheme.darkSubtext : Colors.grey.shade500, fontSize: 15),
                         ),
                       ],
                     ),
@@ -83,8 +85,10 @@ class _ActiveCasesScreenState extends ConsumerState<ActiveCasesScreen> {
   }
 
   Widget _buildSearchAndFilter() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.primaryAccent(isDark);
     return Container(
-      color: Colors.white,
+      color: isDark ? AppTheme.darkSurface : Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: ResponsiveLayout(
         maxWidth: double.infinity,
@@ -95,7 +99,7 @@ class _ActiveCasesScreenState extends ConsumerState<ActiveCasesScreen> {
               onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search client, service, staff…',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.close, size: 18),
@@ -106,7 +110,7 @@ class _ActiveCasesScreenState extends ConsumerState<ActiveCasesScreen> {
                       )
                     : null,
                 filled: true,
-                fillColor: AppTheme.backgroundLight,
+                fillColor: isDark ? AppTheme.darkCard : AppTheme.backgroundLight,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               ),
@@ -123,15 +127,15 @@ class _ActiveCasesScreenState extends ConsumerState<ActiveCasesScreen> {
                       label: Text(f),
                       selected: isSelected,
                       onSelected: (_) => setState(() => _statusFilter = f),
-                      selectedColor: AppTheme.emeraldGreen.withValues(alpha: 0.15),
-                      checkmarkColor: AppTheme.emeraldGreen,
+                      selectedColor: accent.withValues(alpha: isDark ? 0.18 : 0.12),
+                      checkmarkColor: accent,
                       labelStyle: TextStyle(
-                        color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade700,
+                        color: isSelected ? accent : (isDark ? AppTheme.darkSubtext : Colors.grey.shade700),
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         fontSize: 12,
                       ),
-                      side: BorderSide(color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade300),
-                      backgroundColor: Colors.white,
+                      side: BorderSide(color: isSelected ? accent : (isDark ? AppTheme.darkBorder : Colors.grey.shade300)),
+                      backgroundColor: isDark ? AppTheme.darkCardAlt : Colors.white,
                     ),
                   );
                 }).toList(),
@@ -186,16 +190,13 @@ class _ActiveCasesScreenState extends ConsumerState<ActiveCasesScreen> {
         highPriority: order.priority == PriorityLevel.high,
         contactable: (order.clientPhoneNumber ?? '').isNotEmpty,
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TaskDetailScreen(
-                taskId: order.id,
-                clientName: order.clientName ?? 'Unknown',
-                clientPhone: order.clientPhoneNumber,
-                priority: order.priority.name,
-                initialStatus: order.status == WorkStatus.inProgress ? 'In-Progress' : 'Pending',
-              ),
+          context.push(
+            '/dashboard/task/${order.id}',
+            extra: TaskRouteArgs(
+              clientName: order.clientName ?? 'Unknown',
+              clientPhone: order.clientPhoneNumber,
+              priority: order.priority.name,
+              initialStatus: order.status == WorkStatus.inProgress ? 'In-Progress' : 'Pending',
             ),
           ).then((_) => ref.invalidate(activeWorkOrdersProvider));
         },

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/contact_utils.dart';
+import '../../../../core/router/app_router.dart';
 import '../providers/dashboard_provider.dart';
-import 'admin_detail_screen.dart';
-import 'task_detail_screen.dart';
-import 'client_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/app_section_header.dart';
@@ -138,8 +137,9 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
     final color = _getColorFromHex(hexColor);
     final l10n = AppLocalizations.of(context)!;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(
         title: l10n.officeDetails,
         actions: [
@@ -457,15 +457,16 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
   }
 
   Widget _buildBigStatCard(String label, String value, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isRevenue = label.contains('Revenue') || label.contains('الإيرادات');
     final icon = isRevenue ? Icons.monetization_on_outlined : Icons.people_outline;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: AppTheme.shadowMd,
+        border: Border.all(color: isDark ? AppTheme.darkBorder : Colors.grey.shade100),
+        boxShadow: isDark ? [] : AppTheme.shadowMd,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -521,10 +522,7 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
                      subtitle: Text(staff['role']?.toString().toUpperCase() ?? l10n.staff, style: const TextStyle(fontSize: 10, color: Colors.grey)),
                      trailing: const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: staff)),
-                        );
+                        context.push('/dashboard/admin-detail', extra: staff);
                      },
                    );
                  }).toList(),
@@ -563,16 +561,13 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
               final order = orders[index];
               return ListTile(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TaskDetailScreen(
-                        taskId: order.id,
-                        clientName: order.clientName ?? 'Unknown',
-                        clientPhone: order.clientPhoneNumber,
-                        priority: order.priority.name,
-                        initialStatus: order.status.name,
-                      ),
+                  context.push(
+                    '/dashboard/task/${order.id}',
+                    extra: TaskRouteArgs(
+                      clientName: order.clientName ?? 'Unknown',
+                      clientPhone: order.clientPhoneNumber,
+                      priority: order.priority.name,
+                      initialStatus: order.status.name,
                     ),
                   );
                 },
@@ -627,14 +622,9 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
               final client = clients[index];
               return ListTile(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ClientDetailScreen(
-                        clientName: client['name']!,
-                        clientPhone: client['phone'],
-                      ),
-                    ),
+                  context.push(
+                    '/dashboard/client-detail',
+                    extra: ClientRouteArgs(clientName: client['name']!, clientPhone: client['phone']),
                   );
                 },
                 leading: Container(

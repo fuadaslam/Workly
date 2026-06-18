@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/pattern_painter.dart';
 import '../providers/saas_provider.dart';
-import '../../../../features/auth/presentation/pages/login_screen.dart';
 
 class PlatformSettingsScreen extends ConsumerStatefulWidget {
   const PlatformSettingsScreen({super.key});
@@ -23,8 +23,9 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
   Widget build(BuildContext context) {
     final statsAsync = ref.watch(platformStatsProvider);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _buildHeader(statsAsync)),
@@ -175,12 +176,13 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
   }
 
   Widget _card({required List<Widget> children}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.12), width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 8))],
+        border: Border.all(color: isDark ? AppTheme.darkBorder : Colors.grey.withValues(alpha: 0.12), width: 1.5),
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Column(children: children),
     );
@@ -218,6 +220,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
   }
 
   Widget _buildPlatformIdentityCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return _card(children: [
       _settingTile(
         icon: Icons.public_rounded,
@@ -226,7 +229,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
         subtitle: 'Workly by xoviq Labs',
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: AppTheme.backgroundLight, borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(8)),
           child: const Text('Workly', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.darkBlue)),
         ),
       ),
@@ -381,9 +384,10 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
   }
 
   Widget _buildDangerZone(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [BoxShadow(color: AppTheme.errorRed.withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 8))],
@@ -409,12 +413,7 @@ class _PlatformSettingsScreenState extends ConsumerState<PlatformSettingsScreen>
               );
               if (confirm == true && context.mounted) {
                 await Supabase.instance.client.auth.signOut();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
-                  );
-                }
+                if (context.mounted) context.go('/login');
               }
             },
           ),

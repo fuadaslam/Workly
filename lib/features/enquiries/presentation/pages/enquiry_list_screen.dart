@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/workly_primitives.dart';
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
-import 'add_enquiry_screen.dart';
-import 'enquiry_detail_screen.dart';
-import 'enquiry_summary_screen.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 import 'package:service_manager_app/core/widgets/infinite_scroll_list.dart';
 
@@ -103,10 +101,7 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
           IconButton(
             icon: const Icon(Icons.bar_chart_rounded),
             tooltip: 'Summary',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const EnquirySummaryScreen()),
-            ),
+            onPressed: () => context.push('/dashboard/enquiries/summary'),
           ),
           const SizedBox(width: 4),
         ],
@@ -122,10 +117,7 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
         padding: const EdgeInsets.only(bottom: 8),
         child: FloatingActionButton.extended(
           onPressed: () async {
-            final created = await Navigator.push<bool>(
-              context,
-              MaterialPageRoute(builder: (_) => const AddEnquiryScreen()),
-            );
+            final created = await context.push<bool>('/dashboard/enquiries/add');
             if (created == true) ref.read(paginatedEnquiriesProvider.notifier).refresh();
           },
           backgroundColor: AppTheme.electricBlue,
@@ -245,10 +237,7 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
 
     return GestureDetector(
       onTap: () async {
-        final updated = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(builder: (_) => EnquiryDetailScreen(enquiry: e)),
-        );
+        final updated = await context.push<bool>('/dashboard/enquiries/detail', extra: e);
         if (updated == true) ref.read(paginatedEnquiriesProvider.notifier).refresh();
       },
       child: Container(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/enquiry_provider.dart';
-import '../../../reports/presentation/report_export_screen.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class EnquirySummaryScreen extends ConsumerWidget {
@@ -12,18 +12,16 @@ class EnquirySummaryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(enquirySummaryProvider);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       appBar: WorkqlyAppBar(
         title: 'Enquiry Summary',
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
             tooltip: 'Export Report',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ReportExportScreen()),
-            ),
+            onPressed: () => context.push('/dashboard/reports/export'),
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -40,6 +38,7 @@ class EnquirySummaryScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(BuildContext context, Map<String, dynamic> stats) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final total = stats['total'] as int;
     final accepted = stats['accepted'] as int;
     final rejected = stats['rejected'] as int;
@@ -66,29 +65,29 @@ class EnquirySummaryScreen extends ConsumerWidget {
             // Status breakdown
             _sectionLabel('Status Breakdown'),
             Row(children: [
-              Expanded(child: _kpiTile('Settled / Executed', '$settled', AppTheme.statusCompleted, Icons.check_circle_outline)),
+              Expanded(child: _kpiTile('Settled / Executed', '$settled', AppTheme.statusCompleted, Icons.check_circle_outline, isDark)),
               const SizedBox(width: 12),
-              Expanded(child: _kpiTile('In Progress', '$inProgress', AppTheme.accentGold, Icons.timelapse_outlined)),
+              Expanded(child: _kpiTile('In Progress', '$inProgress', AppTheme.accentGold, Icons.timelapse_outlined, isDark)),
             ]),
             const SizedBox(height: 12),
             Row(children: [
-              Expanded(child: _kpiTile('Avg. Days to Settle', '${avgDays.toStringAsFixed(1)} days', AppTheme.statusCompleted, Icons.schedule_outlined)),
+              Expanded(child: _kpiTile('Avg. Days to Settle', '${avgDays.toStringAsFixed(1)} days', AppTheme.statusCompleted, Icons.schedule_outlined, isDark)),
               const SizedBox(width: 12),
-              Expanded(child: _kpiTile('Total Revenue', 'SAR ${_fmt(revenue)}', AppTheme.emeraldGreen, Icons.payments_outlined)),
+              Expanded(child: _kpiTile('Total Revenue', 'SAR ${_fmt(revenue)}', AppTheme.emeraldGreen, Icons.payments_outlined, isDark)),
             ]),
             const SizedBox(height: 20),
 
             // By Staff
             if (byStaff.isNotEmpty) ...[
               _sectionLabel('Performance by Employee'),
-              _card(_buildStaffTable(byStaff)),
+              _card(_buildStaffTable(byStaff), isDark),
               const SizedBox(height: 20),
             ],
 
             // By Service
             if (byService.isNotEmpty) ...[
               _sectionLabel('Enquiries by Service Type'),
-              _card(_buildServiceChart(byService, total)),
+              _card(_buildServiceChart(byService, total, isDark), isDark),
               const SizedBox(height: 40),
             ],
           ],
@@ -142,21 +141,21 @@ class EnquirySummaryScreen extends ConsumerWidget {
     child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.darkBlue)),
   );
 
-  Widget _card(Widget child) => Container(
+  Widget _card(Widget child, bool isDark) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: AppTheme.surfaceWhite,
+      color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
       borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+      boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
     ),
     child: child,
   );
 
-  Widget _kpiTile(String label, String value, Color color, IconData icon) {
+  Widget _kpiTile(String label, String value, Color color, IconData icon, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
+        color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
       ),
@@ -215,7 +214,7 @@ class EnquirySummaryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildServiceChart(Map<String, int> byService, int total) {
+  Widget _buildServiceChart(Map<String, int> byService, int total, bool isDark) {
     final sorted = byService.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     final maxCount = sorted.isNotEmpty ? sorted.first.value : 1;
 
@@ -237,7 +236,7 @@ class EnquirySummaryScreen extends ConsumerWidget {
               child: LinearProgressIndicator(
                 value: barPct,
                 minHeight: 8,
-                backgroundColor: AppTheme.backgroundLight,
+                backgroundColor: isDark ? AppTheme.darkBorder : AppTheme.backgroundLight,
                 valueColor: const AlwaysStoppedAnimation(AppTheme.emeraldGreen),
               ),
             ),

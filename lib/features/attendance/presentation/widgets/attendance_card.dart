@@ -12,13 +12,14 @@ class AttendanceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final attendanceAsync = ref.watch(currentAttendanceProvider);
     final controllerState = ref.watch(attendanceControllerProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return PremiumCard(
       padding: EdgeInsets.zero,
       borderRadius: 24,
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkCard : Colors.white,
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(

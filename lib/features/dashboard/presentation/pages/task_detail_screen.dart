@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/contact_utils.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
+import '../../domain/models/work_order.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
@@ -49,6 +50,17 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   bool _isSaving = false;
   bool _initialized = false;
   bool _isUploadingDoc = false;
+
+  // Prefer the freshly-fetched work order over the constructor's display
+  // hints (which are only ever passed when navigating from a list that
+  // already had this data). Without this fallback, reaching this screen
+  // without those hints — e.g. a hard refresh on web, where go_router's
+  // `extra` doesn't survive — would show "—"/placeholder text forever
+  // instead of the real client/priority this screen already fetches.
+  WorkOrder? get _fetchedOrder => ref.watch(workOrderByIdProvider(widget.taskId)).valueOrNull;
+  String get _effectiveClientName => _fetchedOrder?.clientName ?? widget.clientName;
+  String? get _effectiveClientPhone => _fetchedOrder?.clientPhoneNumber ?? widget.clientPhone;
+  String get _effectivePriority => _fetchedOrder?.priority.name ?? widget.priority;
 
   @override
   void initState() {
@@ -374,6 +386,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
 
   Future<String?> _askForTitle({String defaultTitle = ''}) async {
     final controller = TextEditingController(text: defaultTitle);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -391,7 +404,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
               final v = controller.text.trim();
               Navigator.pop(ctx, v.isEmpty ? defaultTitle : v);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+              foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+            ),
             child: const Text('Save'),
           ),
         ],
@@ -502,7 +518,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     });
 
     final statusColor = _getStatusColor(_status);
-    final priorityColor = _getPriorityColor(widget.priority);
+    final priorityColor = _getPriorityColor(_effectivePriority);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -511,10 +527,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         title: l10n.taskDetails,
         actions: [
           _buildActionButton(Icons.phone_outlined, Colors.blue,
-              () => ContactUtils.callNumber(widget.clientPhone)),
+              () => ContactUtils.callNumber(_effectiveClientPhone)),
           _buildActionButton(Icons.message_outlined, Colors.green, () {
             final message = "Update on Task #${widget.taskId.substring(0, 8)}: Status is now $_status.";
-            ContactUtils.openWhatsApp(widget.clientPhone, message: message);
+            ContactUtils.openWhatsApp(_effectiveClientPhone, message: message);
           }),
           const SizedBox(width: 8),
         ],
@@ -540,8 +556,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   _sectionTitle(l10n.generalInfo),
                   _card([
                     _detailRow(l10n.caseId, Text('#${widget.taskId}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.darkBlue))),
-                    _detailRow(l10n.clientName, Text(widget.clientName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppTheme.darkBlue))),
-                    _detailRow(l10n.priority, _buildPriorityBadge(widget.priority, l10n)),
+                    _detailRow(l10n.clientName, Text(_effectiveClientName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppTheme.darkBlue))),
+                    _detailRow(l10n.priority, _buildPriorityBadge(_effectivePriority, l10n)),
                     _detailRow(l10n.status, _buildStatusDropdown(l10n)),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -610,18 +626,19 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                     child: ElevatedButton(
                       onPressed: _isSaving ? null : _updateTask,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.emeraldGreen,
+                        backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                        foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: _isSaving
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: isDark ? AppTheme.ink900 : Colors.white, strokeWidth: 2))
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.save, color: Colors.white, size: 20),
+                                Icon(Icons.save, color: isDark ? AppTheme.ink900 : Colors.white, size: 20),
                                 const SizedBox(width: 8),
-                                Text(l10n.saveChanges, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                Text(l10n.saveChanges, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? AppTheme.ink900 : Colors.white)),
                               ],
                             ),
                     ),
@@ -847,7 +864,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.clientName, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
+                    Text(_effectiveClientName, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -885,9 +902,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: _metricTile('Priority', _getPriorityLabel(widget.priority, l10n), priorityColor, isDark: isDark, icon: Icons.flag)),
+              Expanded(child: _metricTile('Priority', _getPriorityLabel(_effectivePriority, l10n), priorityColor, isDark: isDark, icon: Icons.flag)),
               Container(width: 1, height: 30, color: Theme.of(context).dividerColor.withValues(alpha: 0.5)),
-              Expanded(child: Center(child: _metricTile('Phone', widget.clientPhone?.isNotEmpty == true ? widget.clientPhone! : '—', Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black, isDark: isDark, icon: Icons.phone))),
+              Expanded(child: Center(child: _metricTile('Phone', _effectiveClientPhone?.isNotEmpty == true ? _effectiveClientPhone! : '—', Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black, isDark: isDark, icon: Icons.phone))),
               Container(width: 1, height: 30, color: Theme.of(context).dividerColor.withValues(alpha: 0.5)),
               Expanded(child: Align(alignment: Alignment.centerRight, child: _metricTile('Role', 'Client', Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey, isDark: isDark, icon: Icons.person))),
             ],

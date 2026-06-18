@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/services/biometric_service.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../dashboard/presentation/pages/dashboard_screen.dart';
-import '../../../auth/presentation/pages/login_screen.dart';
 
 class BiometricLockScreen extends StatefulWidget {
-  const BiometricLockScreen({super.key});
+  /// True when reached from the splash screen on cold start (no real screen
+  /// underneath, so success/give-up should replace the whole stack). False
+  /// when pushed on top of an in-progress session after the app resumes
+  /// from the background — in that case success should just reveal the
+  /// screen underneath, and the lock must not be back-button dismissible.
+  final bool isInitialLaunch;
+
+  const BiometricLockScreen({super.key, this.isInitialLaunch = true});
 
   @override
   State<BiometricLockScreen> createState() => _BiometricLockScreenState();
@@ -27,18 +34,35 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
     final success = await BiometricService.authenticate();
     if (!mounted) return;
     if (success) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
-      );
+      if (widget.isInitialLaunch) {
+        context.go('/dashboard');
+      } else {
+        Navigator.of(context).pop();
+      }
     } else {
       setState(() { _authenticating = false; _errorMessage = 'Authentication failed. Try again.'; });
     }
   }
 
+  Future<void> _signInWithPassword() async {
+    // The biometric check failed/was skipped — the existing Supabase session
+    // must not remain valid, otherwise backing out of the login screen (or
+    // any deep link) would reach the dashboard without ever proving identity.
+    await Supabase.instance.client.auth.signOut();
+    if (!mounted) return;
+    context.go('/login');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return PopScope(
+      // Only the initial-launch lock is the root of the stack (back exits the
+      // app, which is fine). A resume-triggered lock sits on top of a real
+      // screen, so it must not be dismissible without authenticating.
+      canPop: widget.isInitialLaunch,
+      child: Scaffold(
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -51,7 +75,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceWhite,
+                    color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
                     shape: BoxShape.circle,
                     boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 4))],
                   ),
@@ -87,9 +111,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                   ),
                   const SizedBox(height: 16),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    ),
+                    onPressed: _signInWithPassword,
                     child: const Text('Sign in with password', style: TextStyle(color: Colors.grey)),
                   ),
                 ],
@@ -98,6 +120,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }
