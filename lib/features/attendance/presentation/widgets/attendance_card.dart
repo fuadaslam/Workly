@@ -17,11 +17,8 @@ class AttendanceCard extends ConsumerWidget {
     return PremiumCard(
       padding: EdgeInsets.zero,
       borderRadius: 24,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCard : Colors.white,
-        ),
-        clipBehavior: Clip.antiAlias,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
             // Decorative Corner

@@ -1,12 +1,15 @@
 {
   "projects": {
-    "default": "xoviqlabs"
+    "default": "ultra-sound-202607"
   },
   "targets": {
-    "xoviqlabs": {
+    "ultra-sound-202607": {
       "hosting": {
         "app": [
-          "xoviqlabs"
+          "worqly"
+        ],
+        "landing": [
+          "ultra-sound-202607"
         ]
       }
     }
