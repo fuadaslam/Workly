@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flutter-app-web",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": ["run", "-d", "chrome", "--web-port", "8080"],
+      "port": 8080
+    },
+    {
+      "name": "worqly-landing",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "worqly-landing", "dev", "--port", "5173"],
+      "port": 5173
+    }
+  ]
+}

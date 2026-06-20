@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/contact_utils.dart';
+import '../../../../core/router/app_router.dart';
 import '../providers/dashboard_provider.dart';
-import '../../domain/models/work_order.dart';
-import 'admin_detail_screen.dart';
-import 'task_detail_screen.dart';
-import 'client_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../core/widgets/premium_card.dart';
+import '../../../../core/widgets/app_section_header.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class OfficeDetailScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> office;
@@ -28,14 +29,6 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
   late TextEditingController _landlinePhoneController;
   bool _isEditing = false;
   bool _isLoading = false;
-
-  Future<void> _callNumber(String? number) async {
-    await ContactUtils.callNumber(number);
-  }
-
-  Future<void> _openWhatsApp(String? number) async {
-    await ContactUtils.openWhatsApp(number);
-  }
 
   @override
   void initState() {
@@ -80,19 +73,20 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
           if (_landlinePhoneController.text.isNotEmpty) {'number': _landlinePhoneController.text, 'type': 'landline'},
         ],
       });
-      // Refresh the list in the background
-      ref.refresh(officesProvider);
+      ref.invalidate(officesProvider);
       
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Office updated successfully'), backgroundColor: AppTheme.emeraldGreen),
+          SnackBar(content: Text(l10n.officeUpdatedSuccessfully), backgroundColor: AppTheme.emeraldGreen),
         );
         setState(() => _isEditing = false);
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating office: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('${l10n.errorUpdatingOffice}: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -100,18 +94,18 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
     }
   }
 
-  Future<void> _deleteOffice() async {
+  Future<void> _deleteOffice(AppLocalizations l10n) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Office'),
-        content: const Text('Are you sure you want to delete this office?'),
+        title: Text(l10n.deleteOffice),
+        content: Text(l10n.confirmDelete),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
           TextButton(
             onPressed: () => Navigator.pop(context, true), 
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete')
+            child: Text(l10n.delete)
           ),
         ],
       ),
@@ -121,14 +115,15 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
       setState(() => _isLoading = true);
       try {
         await ref.read(officeRepositoryProvider).deleteOffice(widget.office['id']);
-        ref.refresh(officesProvider);
+        ref.invalidate(officesProvider);
         if (mounted) {
-          Navigator.pop(context); // Go back
+          Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting office: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('${l10n.errorDeletingOffice}: $e'), backgroundColor: Colors.red),
           );
           setState(() => _isLoading = false);
         }
@@ -138,75 +133,72 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine dynamic color or default
-    final hexColor = widget.office['color_hex'] as String? ?? '#10B981';
+    final hexColor = widget.office['color_hex'] as String? ?? '#0E693F';
     final color = _getColorFromHex(hexColor);
+    final l10n = AppLocalizations.of(context)!;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Office Details', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
+      appBar: WorkqlyAppBar(
+        title: l10n.officeDetails,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.emeraldGreen),
-            onPressed: () {
-              ref.refresh(officesProvider);
-              ref.refresh(staffProfilesProvider);
-              ref.refresh(allWorkOrdersProvider);
-            },
-          ),
           if (!_isEditing)
             IconButton(
               onPressed: () => setState(() => _isEditing = true),
               icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Edit Office',
+              tooltip: l10n.editOffice,
             ),
           if (_isEditing)
-             IconButton(
+            IconButton(
               onPressed: _saveChanges,
               icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.check, color: AppTheme.emeraldGreen),
-              tooltip: 'Save Changes',
+              tooltip: l10n.save,
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: ResponsiveLayout(
-          maxWidth: 1000,
+      body: RefreshIndicator(
+        color: AppTheme.ink900,
+        onRefresh: () async {
+          ref.invalidate(officesProvider);
+          ref.invalidate(staffProfilesProvider);
+          ref.invalidate(allWorkOrdersProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ResponsiveLayout(
+          maxWidth: double.infinity,
           padding: EdgeInsets.zero,
           child: Column(
             children: [
-              _buildHeader(color),
+              _buildHeader(color, l10n),
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [
-                     _buildInfoCard(),
+                     _buildInfoCard(l10n),
                     const SizedBox(height: 20),
-                     _buildStatsSection(),
+                     _buildStatsSection(l10n),
                      const SizedBox(height: 20),
-                     const SizedBox(height: 20),
-                     _buildStaffSection(context, ref),
+                     _buildStaffSection(context, ref, l10n),
                      const SizedBox(height: 24),
 
-                     _buildSectionHeader('OFFICE WORK HISTORY / تاريخ عمل المكتب'),
-                     const SizedBox(height: 12),
-                     _buildWorkHistorySection(ref),
+                     AppSectionHeader(title: l10n.officeWorkHistory),
+                     const SizedBox(height: 8),
+                     _buildWorkHistorySection(ref, l10n),
                      const SizedBox(height: 24),
 
-                     _buildSectionHeader('OFFICE CLIENTS / عملاء المكتب'),
-                     const SizedBox(height: 12),
-                     _buildClientListSection(ref),
+                     AppSectionHeader(title: l10n.officeClients),
+                     const SizedBox(height: 8),
+                     _buildClientListSection(ref, l10n),
                      const SizedBox(height: 24),
 
                      if (_isEditing) 
                        ElevatedButton.icon(
-                         onPressed: _deleteOffice,
+                         onPressed: () => _deleteOffice(l10n),
                          icon: const Icon(Icons.delete_outline, size: 18),
-                         label: const Text('Delete Office'),
+                         label: Text(l10n.deleteOffice),
                          style: ElevatedButton.styleFrom(
                            backgroundColor: Colors.red.shade50,
                            foregroundColor: Colors.red,
@@ -217,195 +209,140 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
+        ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(Color color) {
+  Widget _buildHeader(Color color, AppLocalizations l10n) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(30),
+      padding: const EdgeInsets.fromLTRB(30, 36, 30, 30),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+        gradient: LinearGradient(
+          colors: [AppTheme.ink900, color.withValues(alpha: 0.75)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: Column(
         children: [
-           Container(
-             padding: const EdgeInsets.all(20),
-             decoration: BoxDecoration(
-               color: color.withOpacity(0.1),
-               shape: BoxShape.circle,
-             ),
-             child: Icon(Icons.business, size: 40, color: color),
-           ),
-           const SizedBox(height: 15),
-           Text(
-             _isEditing ? 'Editing ${_nameController.text}' : widget.office['name'],
-             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-           ),
-           Text(
-             widget.office['location'],
-             style: const TextStyle(fontSize: 14, color: Colors.grey),
-           ),
-           if (widget.office['phone_numbers'] != null && (widget.office['phone_numbers'] as List).isNotEmpty) ...[
-             const SizedBox(height: 8),
-             InkWell(
-               onTap: () {
-                  final numbers = widget.office['phone_numbers'] as List;
-                  if (numbers.isNotEmpty) _callNumber(numbers[0]['number']);
-               },
-               child: Row(
-                 mainAxisSize: MainAxisSize.min,
-                 children: [
-                   const Icon(Icons.phone_outlined, size: 14, color: AppTheme.emeraldGreen),
-                   const SizedBox(width: 5),
-                   Text(
-                     (widget.office['phone_numbers'] as List)[0]['number'],
-                     style: const TextStyle(fontSize: 13, color: AppTheme.emeraldGreen, fontWeight: FontWeight.w600),
-                   ),
-                   const SizedBox(width: 8),
-                   IconButton(
-                     onPressed: () => _openWhatsApp((widget.office['phone_numbers'] as List)[0]['number']),
-                     icon: const Icon(Icons.message, size: 14, color: Colors.green),
-                     padding: EdgeInsets.zero,
-                     constraints: const BoxConstraints(),
-                   ),
-                 ],
-               ),
-             ),
-           ],
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+              boxShadow: [
+                BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 20, spreadRadius: 2),
+              ],
+            ),
+            child: const Icon(Icons.business, size: 40, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _isEditing ? _nameController.text : widget.office['name'],
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.3),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.location_on, size: 14, color: Colors.white.withValues(alpha: 0.6)),
+              const SizedBox(width: 4),
+              Text(
+                widget.office['location'] ?? '',
+                style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-     decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
-      ),
+  Widget _buildInfoCard(AppLocalizations l10n) {
+    return PremiumCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
           if (_isEditing) ...[
-             const Text('EDIT DETAILS', style: TextStyle( fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-             const SizedBox(height: 15),
              TextField(
                controller: _nameController,
                decoration: InputDecoration(
-                 labelText: 'Office Name',
+                 labelText: l10n.officeName,
                  prefixIcon: const Icon(Icons.business_outlined),
-                 filled: true,
-                 fillColor: Colors.grey.shade50,
-                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                ),
              ),
-             const SizedBox(height: 10),
+             const SizedBox(height: 12),
              TextField(
                controller: _locationController,
                decoration: InputDecoration(
-                 labelText: 'Location',
+                 labelText: l10n.location,
                  prefixIcon: const Icon(Icons.location_on_outlined),
-                 filled: true,
-                 fillColor: Colors.grey.shade50,
-                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                ),
              ),
-             const SizedBox(height: 10),
+             const SizedBox(height: 12),
              TextField(
                controller: _managerController,
                decoration: InputDecoration(
-                 labelText: 'Manager Name',
+                 labelText: l10n.managerName,
                  prefixIcon: const Icon(Icons.person_outline),
-                 filled: true,
-                 fillColor: Colors.grey.shade50,
-                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                ),
              ),
-             const SizedBox(height: 10),
+             const SizedBox(height: 12),
              TextField(
                controller: _managerPhoneController,
                decoration: InputDecoration(
-                 labelText: 'Manager Phone',
+                 labelText: l10n.managerPhone,
                  prefixIcon: const Icon(Icons.phone_iphone),
-                 filled: true,
-                 fillColor: Colors.grey.shade50,
-                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                ),
              ),
-             const SizedBox(height: 10),
+             const SizedBox(height: 12),
              TextField(
                controller: _mobilePhoneController,
                decoration: InputDecoration(
-                 labelText: 'Office Mobile',
+                 labelText: l10n.officeMobile,
                  prefixIcon: const Icon(Icons.smartphone),
-                 filled: true,
-                 fillColor: Colors.grey.shade50,
-                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                ),
              ),
-             const SizedBox(height: 10),
+             const SizedBox(height: 12),
              TextField(
                controller: _landlinePhoneController,
                decoration: InputDecoration(
-                 labelText: 'Office Landline',
+                 labelText: l10n.officeLandline,
                  prefixIcon: const Icon(Icons.phone),
-                 filled: true,
-                 fillColor: Colors.grey.shade50,
-                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                ),
              ),
           ] else ...[
              Row(
                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                children: [
-                 const Text('OFFICE DETAILS', style: TextStyle( fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                 Text(l10n.contactInfo, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
                  if (widget.office['manager_name'] != null)
-                   InkWell(
-                     onTap: () => _callNumber(widget.office['manager_phone']),
-                     child: Chip(
-                       avatar: const Icon(Icons.person, size: 14), 
-                       label: Row(
-                         mainAxisSize: MainAxisSize.min,
-                         children: [
-                           Text(widget.office['manager_name'], style: const TextStyle(fontSize: 11)),
-                           if (widget.office['manager_phone'] != null && widget.office['manager_phone'].toString().isNotEmpty) ...[
-                             const SizedBox(width: 5),
-                             const Icon(Icons.phone, size: 12, color: AppTheme.emeraldGreen),
-                           ],
-                         ],
-                       ),
-                       backgroundColor: AppTheme.emeraldLight.withOpacity(0.5),
-                       side: BorderSide.none,
-                     ),
+                   Chip(
+                     avatar: const Icon(Icons.person, size: 14, color: AppTheme.emeraldGreen), 
+                     label: Text(widget.office['manager_name'], style: const TextStyle(fontSize: 11)),
+                     backgroundColor: AppTheme.emeraldLight.withValues(alpha: 0.5),
+                     side: BorderSide.none,
                    ),
-                   if (widget.office['manager_phone'] != null && widget.office['manager_phone'].toString().isNotEmpty)
-                     IconButton(
-                       onPressed: () => _openWhatsApp(widget.office['manager_phone']),
-                       icon: const Icon(Icons.message, size: 16, color: Colors.green),
-                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                       constraints: const BoxConstraints(),
-                     ),
                ],
              ),
              const SizedBox(height: 15),
-             _buildDetailRow(Icons.location_on, 'Location', widget.office['location']),
+             _buildDetailRow(Icons.location_on, l10n.location, widget.office['location']),
              if (widget.office['manager_phone'] != null && widget.office['manager_phone'].toString().isNotEmpty) ...[
                const Divider(height: 30),
                _buildDetailRow(
                  Icons.phone_iphone, 
-                 'Manager Phone', 
+                 l10n.managerPhone, 
                  widget.office['manager_phone'], 
-                 onCall: () => _callNumber(widget.office['manager_phone']),
-                 onWhatsApp: () => _openWhatsApp(widget.office['manager_phone']),
+                 onCall: () => ContactUtils.callNumber(widget.office['manager_phone']),
+                 onWhatsApp: () => ContactUtils.openWhatsApp(widget.office['manager_phone']),
                ),
              ],
              if (widget.office['phone_numbers'] != null) ...[
@@ -414,15 +351,13 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
                     const Divider(height: 30),
                     _buildDetailRow(
                       p['type'] == 'mobile' ? Icons.smartphone : Icons.phone, 
-                      p['type'] == 'mobile' ? 'Office Mobile' : 'Office Landline', 
+                      p['type'] == 'mobile' ? l10n.officeMobile : l10n.officeLandline, 
                       p['number'],
-                      onCall: () => _callNumber(p['number']),
-                      onWhatsApp: p['type'] == 'mobile' ? () => _openWhatsApp(p['number']) : null,
+                      onCall: () => ContactUtils.callNumber(p['number']),
+                      onWhatsApp: p['type'] == 'mobile' ? () => ContactUtils.openWhatsApp(p['number']) : null,
                     ),
                   ],
              ],
-             const Divider(height: 30),
-             _buildDetailRow(Icons.calendar_today, 'Created At', widget.office['created_at'] != null ? widget.office['created_at'].substring(0, 10) : 'N/A'),
           ],
         ],
       ),
@@ -450,7 +385,6 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
-        if (onWhatsApp != null) const SizedBox(width: 10),
         if (onCall != null)
           IconButton(
             onPressed: onCall,
@@ -462,46 +396,58 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
     );
   }
 
-  Widget _buildStatsSection() {
+  Widget _buildStatsSection(AppLocalizations l10n) {
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _buildBigStatCard('Revenue', '${(widget.office['revenue'] ?? 0)}', Colors.amber)),
+            Expanded(child: _buildBigStatCard(l10n.revenue, '${(widget.office['revenue'] ?? 0)}', Colors.amber)),
             const SizedBox(width: 15),
-            Expanded(child: _buildBigStatCard('Staff', '${widget.office['staff_count'] ?? 0}', Colors.blue)),
+            Expanded(child: _buildBigStatCard(l10n.staffCount, '${widget.office['staff_count'] ?? 0}', Colors.blue)),
           ],
         ),
         const SizedBox(height: 15),
         Container(
-          width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppTheme.emeraldGreen,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: AppTheme.emeraldGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
+            gradient: const LinearGradient(
+              colors: [AppTheme.ink900, AppTheme.ink900],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: AppTheme.shadowMd,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('WORKLOAD CAPACITY', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('${widget.office['workload_percentage'] ?? 0}%', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                    child: const Text('Optimal', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.speed_outlined, color: Colors.white, size: 18),
                   ),
+                  const SizedBox(width: 10),
+                  Text(l10n.workloadCapacity.toUpperCase(),
+                      style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                 ],
               ),
+              const SizedBox(height: 14),
+              Text('${widget.office['workload_percentage'] ?? 0}%',
+                  style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -1)),
               const SizedBox(height: 10),
-              LinearProgressIndicator(
-                value: (widget.office['workload_percentage'] ?? 0) / 100,
-                backgroundColor: Colors.black12,
-                color: Colors.white,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: (widget.office['workload_percentage'] ?? 0) / 100,
+                  backgroundColor: Colors.white.withValues(alpha: 0.15),
+                  color: AppTheme.accentGold,
+                  minHeight: 6,
+                ),
               ),
             ],
           ),
@@ -511,144 +457,101 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
   }
 
   Widget _buildBigStatCard(String label, String value, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isRevenue = label.contains('Revenue') || label.contains('الإيرادات');
+    final icon = isRevenue ? Icons.monetization_on_outlined : Icons.people_outline;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
-        border: Border(top: BorderSide(color: color, width: 3)),
+        color: isDark ? AppTheme.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: isDark ? AppTheme.darkBorder : Colors.grey.shade100),
+        boxShadow: isDark ? [] : AppTheme.shadowMd,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-              Icon(label == 'Revenue' ? Icons.monetization_on_outlined : Icons.people_outline, color: color, size: 18),
-            ],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 10),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 14),
+          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.5)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 
-  Widget _buildStaffSection(BuildContext context, WidgetRef ref) {
+  Widget _buildStaffSection(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final staffAsync = ref.watch(staffProfilesProvider);
     
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
-      ),
+    return PremiumCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('ASSIGNED STAFF', style: TextStyle( fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-              TextButton.icon(
+          AppSectionHeader(
+            title: l10n.assignedStaff,
+            padding: EdgeInsets.zero,
+            action: TextButton.icon(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Manage Staff assignments feature coming soon')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.manageStaffComingSoon)));
                 },
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Assign'),
+                label: Text(l10n.assign),
               ),
-            ],
           ),
           const SizedBox(height: 10),
           staffAsync.when(
             data: (staffList) {
-               // Filter staff if 'office_id' was available. Now just showing top 3 as example
-               if (staffList.isEmpty) return const Text('No staff assigned.', style: TextStyle(color: Colors.grey));
+               if (staffList.isEmpty) return Text(l10n.noStaffAssigned, style: const TextStyle(color: Colors.grey));
                return Column(
                  children: staffList.take(3).map((staff) {
                    return ListTile(
                      contentPadding: EdgeInsets.zero,
                      leading: CircleAvatar(
                        backgroundColor: AppTheme.emeraldLight,
-                       child: Text(staff['name']?[0] ?? 'S', style: const TextStyle(color: AppTheme.emeraldGreen)),
+                       child: Text(staff['name']?[0] ?? 'S', style: const TextStyle(color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold)),
                      ),
                      title: Text(staff['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                     subtitle: Column(
-                       crossAxisAlignment: CrossAxisAlignment.start,
-                       children: [
-                         Text(staff['role']?.toString().toUpperCase() ?? 'STAFF', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                         if (staff['phone_number'] != null && staff['phone_number'].toString().isNotEmpty)
-                           Text(staff['phone_number'], style: const TextStyle(fontSize: 10, color: AppTheme.emeraldGreen, fontWeight: FontWeight.bold)),
-                       ],
-                     ),
-                     trailing: Row(
-                       mainAxisSize: MainAxisSize.min,
-                       children: [
-                         if (staff['phone_number'] != null && staff['phone_number'].toString().isNotEmpty)
-                           IconButton(
-                             onPressed: () => _callNumber(staff['phone_number']),
-                             icon: const Icon(Icons.phone_outlined, size: 16, color: AppTheme.emeraldGreen),
-                             padding: EdgeInsets.zero,
-                             constraints: const BoxConstraints(),
-                           ),
-                         const SizedBox(width: 8),
-                         if (staff['phone_number'] != null && staff['phone_number'].toString().isNotEmpty)
-                           IconButton(
-                             onPressed: () => _openWhatsApp(staff['phone_number']),
-                             icon: const Icon(Icons.message, size: 16, color: Colors.green),
-                             padding: EdgeInsets.zero,
-                             constraints: const BoxConstraints(),
-                           ),
-                         const SizedBox(width: 8),
-                         const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
-                       ],
-                     ),
+                     subtitle: Text(staff['role']?.toString().toUpperCase() ?? l10n.staff, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                     trailing: const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: staff)),
-                        );
+                        context.push('/dashboard/admin-detail', extra: staff);
                      },
                    );
                  }).toList(),
                );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => const Text('Error loading staff'),
+            error: (e, _) => Text(l10n.errorLoadingStaff),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
-    );
-  }
-
-  Widget _buildWorkHistorySection(WidgetRef ref) {
+  Widget _buildWorkHistorySection(WidgetRef ref, AppLocalizations l10n) {
     final workOrdersAsync = ref.watch(allWorkOrdersProvider);
 
     return workOrdersAsync.when(
       data: (orders) {
         if (orders.isEmpty) {
-          return const Center(child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text('No work history found for this office.', style: TextStyle(color: Colors.grey)),
-          ));
+          return PremiumCard(
+            child: Center(child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(l10n.noWorkHistory, style: const TextStyle(color: Colors.grey)),
+            )),
+          );
         }
 
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-          ),
+        return PremiumCard(
+          padding: EdgeInsets.zero,
           child: ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -658,50 +561,30 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
               final order = orders[index];
               return ListTile(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TaskDetailScreen(
-                        taskId: order.id,
-                        clientName: order.clientName ?? 'Unknown',
-                        clientPhone: order.clientPhoneNumber,
-                        priority: order.priority.name,
-                        initialStatus: order.status.name,
-                      ),
+                  context.push(
+                    '/dashboard/task/${order.id}',
+                    extra: TaskRouteArgs(
+                      clientName: order.clientName ?? 'Unknown',
+                      clientPhone: order.clientPhoneNumber,
+                      priority: order.priority.name,
+                      initialStatus: order.status.name,
                     ),
                   );
                 },
-                title: Text(order.serviceType ?? 'General Service', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text('By: ${order.assignedStaffId?.substring(0, 8) ?? "Unassigned"} • Client: ${order.clientName ?? "N/A"}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      order.status.name.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: order.status == WorkStatus.completed ? AppTheme.emeraldGreen : AppTheme.accentGold,
-                      ),
-                    ),
-                    Text(
-                      order.createdAt?.toString().substring(0, 10) ?? '',
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
-                    ),
-                  ],
-                ),
+                title: Text(order.serviceType ?? l10n.generalService, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: Text('${l10n.status}: ${order.status.name.toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                trailing: const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
               );
             },
           ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Text('Error: $e'),
+      error: (e, _) => Text('${l10n.error}: $e'),
     );
   }
 
-  Widget _buildClientListSection(WidgetRef ref) {
+  Widget _buildClientListSection(WidgetRef ref, AppLocalizations l10n) {
     final workOrdersAsync = ref.watch(allWorkOrdersProvider);
 
     return workOrdersAsync.when(
@@ -720,18 +603,16 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
             );
 
         if (clients.isEmpty) {
-          return const Center(child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text('No clients found.', style: TextStyle(color: Colors.grey)),
-          ));
+          return PremiumCard(
+            child: Center(child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(l10n.noClientsFound, style: const TextStyle(color: Colors.grey)),
+            )),
+          );
         }
 
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-          ),
+        return PremiumCard(
+          padding: EdgeInsets.zero,
           child: ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -741,27 +622,22 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
               final client = clients[index];
               return ListTile(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ClientDetailScreen(
-                        clientName: client['name']!,
-                        clientPhone: client['phone'],
-                      ),
-                    ),
+                  context.push(
+                    '/dashboard/client-detail',
+                    extra: ClientRouteArgs(clientName: client['name']!, clientPhone: client['phone']),
                   );
                 },
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.emeraldLight.withOpacity(0.2),
+                    color: AppTheme.emeraldLight.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.person_outline, color: AppTheme.emeraldGreen, size: 20),
                 ),
                 title: Text(client['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: Text(
-                  client['phone'] != null && client['phone']!.isNotEmpty ? client['phone']! : 'No phone number',
+                  client['phone'] != null && client['phone']!.isNotEmpty ? client['phone']! : l10n.noPhoneNumber,
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
@@ -771,7 +647,7 @@ class _OfficeDetailScreenState extends ConsumerState<OfficeDetailScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Text('Error: $e'),
+      error: (e, _) => Text('${l10n.error}: $e'),
     );
   }
 

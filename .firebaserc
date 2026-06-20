@@ -6,9 +6,9 @@
     "ultra-sound-202607": {
       "hosting": {
         "app": [
-          "saudi-service-manager"
+          "worqly"
         ],
-        "old-site": [
+        "landing": [
           "ultra-sound-202607"
         ]
       }

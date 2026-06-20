@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/premium_card.dart';
 import '../../data/models/leave_request.dart';
 import '../providers/leave_provider.dart';
 
@@ -25,11 +26,12 @@ class _ApplyLeaveFormState extends ConsumerState<ApplyLeaveForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Form(
         key: _formKey,
@@ -111,13 +113,14 @@ class _ApplyLeaveFormState extends ConsumerState<ApplyLeaveForm> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.emeraldGreen,
+                  backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                  foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: _isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white) 
-                  : const Text('Submit Request', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: _isLoading
+                  ? CircularProgressIndicator(color: isDark ? AppTheme.ink900 : Colors.white)
+                  : Text('Submit Request', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? AppTheme.ink900 : Colors.white)),
               ),
             ),
           ],
@@ -190,16 +193,13 @@ class UpcomingHolidaysList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final holidays = ref.watch(upcomingHolidaysProvider);
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+    return PremiumCard(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             Row(
-               children: const [
+             const Row(
+               children: [
                  Icon(Icons.celebration, color: AppTheme.accentGold),
                  SizedBox(width: 8),
                  Text('Upcoming Holidays / العطلات القادمة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.darkBlue)),
@@ -215,7 +215,7 @@ class UpcomingHolidaysList extends ConsumerWidget {
                    Container(
                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                      decoration: BoxDecoration(
-                       color: AppTheme.accentGold.withOpacity(0.1),
+                       color: AppTheme.accentGold.withValues(alpha: 0.1),
                        borderRadius: BorderRadius.circular(8),
                      ),
                      child: Text(DateFormat('d MMM y').format(h.date), style: const TextStyle(color: AppTheme.accentGold, fontSize: 12, fontWeight: FontWeight.bold)),
@@ -225,7 +225,6 @@ class UpcomingHolidaysList extends ConsumerWidget {
              )),
           ],
         ),
-      ),
     );
   }
 }
@@ -256,12 +255,12 @@ class LeaveHistoryList extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: state.requests.map((request) {
-        return Card(
+        return PremiumCard(
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: EdgeInsets.zero,
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: _getStatusColor(request.status).withOpacity(0.1),
+              backgroundColor: _getStatusColor(request.status).withValues(alpha: 0.1),
               child: Icon(_getTypeIcon(request.type), color: _getStatusColor(request.status), size: 20),
             ),
             title: Text('${request.type.name.toUpperCase()} LEAVE', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -269,7 +268,7 @@ class LeaveHistoryList extends ConsumerWidget {
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getStatusColor(request.status).withOpacity(0.1),
+                color: _getStatusColor(request.status).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

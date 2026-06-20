@@ -1,45 +1,84 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:intl/intl.dart';
+import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../core/utils/contact_utils.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/theme/pattern_painter.dart';
+import '../../../../core/services/biometric_service.dart';
 import '../providers/dashboard_provider.dart';
 import 'profile_view.dart';
-import '../pages/detail_trend_screen.dart';
-import '../pages/revenue_detail_screen.dart';
-import '../pages/office_detail_screen.dart';
-import '../pages/admin_detail_screen.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../auth/presentation/providers/profile_provider.dart';
 import '../../../auth/domain/models/profile.dart';
-import '../pages/system_detail_screen.dart';
 import '../../../leaves/presentation/widgets/admin_leave_list.dart';
 import '../../../../core/widgets/responsive_layout.dart';
 import '../../../attendance/presentation/widgets/attendance_monitor.dart';
 
 import 'assignment_sheet.dart';
+import '../../../enquiries/presentation/pages/enquiry_list_screen.dart';
+import '../../../reports/presentation/report_export_screen.dart';
+import '../../../search/presentation/global_search_bar.dart';
+import '../../../../core/providers/theme_provider.dart';
+
+import '../../../../core/widgets/collapsible_sidebar.dart';
+import '../../../../core/widgets/workly_primitives.dart';
+import '../../domain/models/work_order.dart';
 
 final superAdminTabIndexProvider = StateProvider<int>((ref) => 0);
 
-class SuperAdminView extends ConsumerWidget {
+class SuperAdminView extends ConsumerStatefulWidget {
   const SuperAdminView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SuperAdminView> createState() => _SuperAdminViewState();
+}
+
+class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
+  final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
+    8,
+    (_) => GlobalKey<NavigatorState>(),
+  );
+
+  Future<void> _signOut(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (context.mounted) {
+      context.go('/login');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(superAdminTabIndexProvider);
-    final profile = ref.watch(profileProvider).value;
+    final profile = ref.watch(profileProvider).valueOrNull;
     final isSuperAdmin = profile?.role == AppRole.super_admin;
+    final l10n = AppLocalizations.of(context)!;
 
     final tabs = [
-       const BottomNavigationBarItem(icon: Icon(Icons.grid_view_rounded), label: 'Home'),
+       BottomNavigationBarItem(icon: const Icon(Icons.grid_view_rounded), label: l10n.dashboard),
        const BottomNavigationBarItem(icon: Icon(Icons.business_outlined), label: 'Offices'),
-       const BottomNavigationBarItem(icon: Icon(Icons.how_to_reg_outlined), label: 'Attendance'),
+       const BottomNavigationBarItem(icon: Icon(Icons.how_to_reg_outlined), label: 'Attend.'),
        const BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), label: 'Leaves'),
-       BottomNavigationBarItem(icon: const Icon(Icons.people_outline), label: isSuperAdmin ? 'Admins' : 'Staff'),
-       if (isSuperAdmin) const BottomNavigationBarItem(icon: Icon(Icons.lock_person_outlined), label: 'Access'),
-       if (isSuperAdmin) const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'System'),
+       BottomNavigationBarItem(icon: const Icon(Icons.people_outline), label: l10n.staff),
+       BottomNavigationBarItem(icon: const Icon(Icons.support_agent_outlined), label: l10n.agents),
+       const BottomNavigationBarItem(icon: Icon(Icons.track_changes_outlined), label: 'Enquiries'),
+       const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+    ];
+
+    final sidebarItems = [
+      SidebarItem(icon: Icons.grid_view_rounded, label: l10n.dashboard),
+      const SidebarItem(icon: Icons.business_outlined, label: 'Offices'),
+      const SidebarItem(icon: Icons.how_to_reg_outlined, label: 'Attendance'),
+      const SidebarItem(icon: Icons.calendar_month_outlined, label: 'Leaves'),
+      SidebarItem(icon: Icons.people_outline, label: l10n.staff),
+      SidebarItem(icon: Icons.support_agent_outlined, label: l10n.agents),
+      const SidebarItem(icon: Icons.track_changes_outlined, label: 'Enquiries'),
+      const SidebarItem(icon: Icons.settings_outlined, label: 'Settings'),
     ];
 
     // Reset index if out of bounds
@@ -49,39 +88,50 @@ class SuperAdminView extends ConsumerWidget {
       });
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? AppTheme.darkBackground : AppTheme.backgroundLight;
+    final navBg      = isDark ? AppTheme.darkSurface    : Colors.white;
+    final selectedColor   = isDark ? AppTheme.accentGold   : AppTheme.emeraldGreen;
+    final unselectedColor = isDark ? AppTheme.darkSubtext  : Colors.grey;
+
+    final userName = profile?.name ?? 'Super Admin';
+    final userRole = isSuperAdmin ? 'Super Admin' : 'Admin';
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 800) {
-          // Desktop Layout
+          // Desktop Layout with CollapsibleSidebar
           return Scaffold(
-            backgroundColor: AppTheme.backgroundLight,
+            backgroundColor: scaffoldBg,
+            endDrawer: const Drawer(width: 400, child: ProfileView()),
             body: Row(
               children: [
-                NavigationRail(
-                  selectedIndex: currentIndex < tabs.length ? currentIndex : 0,
+                CollapsibleSidebar(
+                  selectedIndex: currentIndex < sidebarItems.length ? currentIndex : 0,
+                  items: sidebarItems,
                   onDestinationSelected: (idx) => ref.read(superAdminTabIndexProvider.notifier).state = idx,
-                  labelType: NavigationRailLabelType.all,
-                  selectedLabelTextStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.emeraldGreen),
-                  unselectedLabelTextStyle: const TextStyle(fontSize: 11, color: Colors.grey),
-                  selectedIconTheme: const IconThemeData(color: AppTheme.emeraldGreen),
-                  unselectedIconTheme: const IconThemeData(color: Colors.grey),
-                  destinations: tabs.map((t) => NavigationRailDestination(
-                    icon: t.icon as Icon, 
-                    label: Text(t.label!),
-                  )).toList(),
+                  onSignOut: () => _signOut(context),
+                  userName: userName,
+                  userRole: userRole,
                 ),
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      child: _buildCurrentTab(currentIndex, isSuperAdmin),
-                    ),
+                  child: IndexedStack(
+                    index: currentIndex < sidebarItems.length ? currentIndex : 0,
+                    children: List.generate(8, (index) {
+                      return Navigator(
+                        key: _navKeys[index],
+                        onGenerateRoute: (settings) {
+                          return MaterialPageRoute(
+                            builder: (context) => _buildCurrentTab(index, isSuperAdmin),
+                          );
+                        },
+                      );
+                    }),
                   ),
                 ),
               ],
             ),
-             floatingActionButton: (currentIndex == 0 || currentIndex == 1) 
+             floatingActionButton: (currentIndex == 0 || currentIndex == 1)
               ? FloatingActionButton.extended(
                   onPressed: () {
                     showModalBottomSheet(
@@ -91,13 +141,14 @@ class SuperAdminView extends ConsumerWidget {
                       builder: (context) => const AssignmentSheet(),
                     );
                   },
-                  backgroundColor: AppTheme.emeraldGreen,
+                  backgroundColor: selectedColor,
+                  foregroundColor: isDark ? Colors.black : Colors.white,
                   elevation: 6,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  icon: const Icon(Icons.assignment_add, color: Colors.white, size: 24),
-                  label: const Text(
-                    'Assign Work', 
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                  icon: Icon(Icons.assignment_add, color: isDark ? Colors.black : Colors.white, size: 24),
+                  label: Text(
+                    l10n.assignWork,
+                    style: TextStyle(color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                   ),
                 )
               : null,
@@ -105,9 +156,22 @@ class SuperAdminView extends ConsumerWidget {
         } else {
           // Mobile Layout
           return Scaffold(
-            backgroundColor: AppTheme.backgroundLight,
-            body: _buildCurrentTab(currentIndex, isSuperAdmin),
-            floatingActionButton: (currentIndex == 0 || currentIndex == 1) 
+            backgroundColor: scaffoldBg,
+            endDrawer: const Drawer(width: 350, child: ProfileView()),
+            body: IndexedStack(
+              index: currentIndex < tabs.length ? currentIndex : 0,
+              children: List.generate(8, (index) {
+                return Navigator(
+                  key: _navKeys[index],
+                  onGenerateRoute: (settings) {
+                    return MaterialPageRoute(
+                      builder: (context) => _buildCurrentTab(index, isSuperAdmin),
+                    );
+                  },
+                );
+              }),
+            ),
+            floatingActionButton: (currentIndex == 0 || currentIndex == 1)
                 ? FloatingActionButton.extended(
                     onPressed: () {
                       showModalBottomSheet(
@@ -117,33 +181,33 @@ class SuperAdminView extends ConsumerWidget {
                         builder: (context) => const AssignmentSheet(),
                       );
                     },
-                    backgroundColor: AppTheme.emeraldGreen,
+                    backgroundColor: selectedColor,
+                    foregroundColor: isDark ? Colors.black : Colors.white,
                     elevation: 6,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    icon: const Icon(Icons.assignment_add, color: Colors.white, size: 24),
-                    label: const Text(
-                      'Assign Work', 
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)
+                    icon: Icon(Icons.assignment_add, color: isDark ? Colors.black : Colors.white, size: 24),
+                    label: Text(
+                      l10n.assignWork,
+                      style: TextStyle(color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                     ),
                   )
                 : null,
             bottomNavigationBar: Container(
               decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
+                color: navBg,
+                border: Border(top: BorderSide(color: isDark ? AppTheme.darkBorder : const Color(0xFFF1F5F9), width: 1)),
+                boxShadow: isDark
+                    ? null
+                    : const [BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, -4))],
               ),
               child: BottomNavigationBar(
                 currentIndex: currentIndex < tabs.length ? currentIndex : 0,
                 onTap: (idx) => ref.read(superAdminTabIndexProvider.notifier).state = idx,
                 type: BottomNavigationBarType.fixed,
-                backgroundColor: Colors.white,
-                selectedItemColor: AppTheme.emeraldGreen,
-                unselectedItemColor: Colors.grey,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                selectedItemColor: selectedColor,
+                unselectedItemColor: unselectedColor,
                 selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
                 unselectedLabelStyle: const TextStyle(fontSize: 11),
                 items: tabs,
@@ -162,8 +226,9 @@ class SuperAdminView extends ConsumerWidget {
       case 2: return const _AttendanceTab();
       case 3: return const _LeaveManagementTab();
       case 4: return _AdminManagementTab(isStaffView: !isSuperAdmin);
-      case 5: return isSuperAdmin ? const _AccessControlTab() : const SizedBox();
-      case 6: return isSuperAdmin ? const _SystemSettingsTab() : const SizedBox();
+      case 5: return isSuperAdmin ? const _AgentManagementTab() : const SizedBox.shrink();
+      case 6: return const EnquiryListScreen();
+      case 7: return _SettingsTab(isSuperAdmin: isSuperAdmin);
       default: return const _ExecutiveDashboardTab();
     }
   }
@@ -174,10 +239,11 @@ class _AttendanceTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-        const _HeaderSection(title: 'Staff Attendance', subtitle: 'REAL-TIME MONITORING', showDate: false),
-        Expanded(child: const AttendanceMonitor()),
+        _HeaderSection(title: l10n.staffAttendance, subtitle: l10n.realTimeMonitoring, showDate: false),
+        const Expanded(child: AttendanceMonitor()),
       ],
     );
   }
@@ -197,6 +263,7 @@ class _HeaderSection extends ConsumerWidget {
   });
 
   void _showLanguagePicker(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -208,24 +275,24 @@ class _HeaderSection extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Select Language / اختر اللغة',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+              Text(
+                l10n.selectLanguage,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
               ),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.language, color: AppTheme.emeraldGreen),
+                leading: const Icon(Icons.language, color: AppTheme.electricBlue),
                 title: const Text('English'),
-                trailing: ref.watch(localeProvider).languageCode == 'en' ? const Icon(Icons.check, color: AppTheme.emeraldGreen) : null,
+                trailing: ref.watch(localeProvider).languageCode == 'en' ? const Icon(Icons.check, color: AppTheme.electricBlue) : null,
                 onTap: () {
                   ref.read(localeProvider.notifier).state = const Locale('en');
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.language, color: AppTheme.emeraldGreen),
+                leading: const Icon(Icons.language, color: AppTheme.electricBlue),
                 title: const Text('العربية'),
-                trailing: ref.watch(localeProvider).languageCode == 'ar' ? const Icon(Icons.check, color: AppTheme.emeraldGreen) : null,
+                trailing: ref.watch(localeProvider).languageCode == 'ar' ? const Icon(Icons.check, color: AppTheme.electricBlue) : null,
                 onTap: () {
                   ref.read(localeProvider.notifier).state = const Locale('ar');
                   Navigator.pop(context);
@@ -238,119 +305,149 @@ class _HeaderSection extends ConsumerWidget {
     );
   }
 
+  Widget _buildHeaderIcon({required IconData icon, required VoidCallback onTap, required bool isDark}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.02),
+          borderRadius: BorderRadius.circular(8),
+          border: isDark ? Border.all(color: Colors.white.withValues(alpha: 0.1)) : null,
+        ),
+        child: Icon(icon, color: isDark ? Colors.white70 : Colors.black87, size: 16),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentLocale = ref.watch(localeProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      decoration: const BoxDecoration(color: AppTheme.emeraldGreen),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: CustomPaint(
-              painter: MashrabiyaPatternPainter(color: Colors.white.withOpacity(0.05)),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 5), // Minimal padding after removal
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(title, 
-                                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                                      overflow: TextOverflow.ellipsis),
-                                  Text(subtitle, 
-                                      style: const TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 1.2),
-                                      overflow: TextOverflow.ellipsis),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => _showLanguagePicker(context, ref),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.white30),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                currentLocale.languageCode == 'en' ? 'عربي' : 'English',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ProfileView()),
-                              );
-                            },
-                            child: const CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Color(0xFFFFB29D),
-                              child: Icon(Icons.person, color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  if (showDate) ...[
-                    const SizedBox(height: 25),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        border: Border(bottom: BorderSide(color: isDark ? AppTheme.darkBorder : const Color(0xFFEAEAEA))),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('SYSTEM AUTHORITY • سلطة النظام', 
-                                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                                  overflow: TextOverflow.ellipsis),
-                              Text('14 Ramadan 1445 | 24 March 2024', 
-                                  style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
-                                  overflow: TextOverflow.ellipsis),
-                            ],
+                        Text(title, 
+                            style: TextStyle(color: isDark ? Colors.white : AppTheme.darkBlue, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+                            overflow: TextOverflow.ellipsis),
+                        if (showDate) ...[
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppTheme.darkCardAlt : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFEAEAEA)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.circle, color: AppTheme.electricBlue, size: 6),
+                                const SizedBox(width: 6),
+                                Text(l10n.systemAuthority.toUpperCase(), style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                              ]
+                            )
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.security, color: AppTheme.emeraldGreen, size: 20),
-                        ),
+                        ]
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(subtitle, 
+                            style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis),
+                        if (showDate) ...[
+                          const SizedBox(width: 8),
+                          Text('•', style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFF64748B))),
+                          const SizedBox(width: 8),
+                          Text(_currentDateFormatted(),
+                              style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500),
+                              overflow: TextOverflow.ellipsis),
+                        ],
                       ],
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeaderIcon(
+                    icon: ref.watch(themeModeProvider) == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                    onTap: () => ref.read(themeModeProvider.notifier).toggle(),
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 8),
+                  if (MediaQuery.of(context).size.width >= 700) ...[
+                    const GlobalSearchBar(width: 300),
+                    const SizedBox(width: 8),
+                  ] else ...[
+                    _buildHeaderIcon(
+                      icon: Icons.search_rounded,
+                      onTap: () => context.push('/dashboard/search'),
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  GestureDetector(
+                    onTap: () => _showLanguagePicker(context, ref),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
+                      ),
+                      child: Text(
+                        currentLocale.languageCode == 'en' ? 'عربي' : 'EN',
+                        style: TextStyle(color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.w600, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Builder(
+                    builder: (context) => GestureDetector(
+                      onTap: () {
+                        Scaffold.of(context).openEndDrawer();
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0), width: 1),
+                        ),
+                        child: const CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppTheme.electricBlue,
+                          child: Text('SA', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -363,17 +460,26 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final financialStats = ref.watch(financialStatsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
-    return SingleChildScrollView(
-      child: ResponsiveLayout(
-        maxWidth: 1000,
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _HeaderSection(title: 'Super Admin', subtitle: 'VISION 2030 PORTAL'),
-            Padding(
+    return Column(
+      children: [
+        _HeaderSection(title: l10n.superAdmin, subtitle: l10n.vision2030Portal.toUpperCase()),
+        Expanded(
+          child: RefreshIndicator(
+            color: AppTheme.ink900,
+            onRefresh: () async {
+              ref.invalidate(financialStatsProvider);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ResponsiveLayout(
+              maxWidth: double.infinity,
+              padding: EdgeInsets.zero,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,231 +487,491 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
                   Row(
                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                      children: [
-                       const Text('EXECUTIVE OVERVIEW', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
-                       Row(
-                         children: [
-                           const Icon(Icons.filter_list, size: 16, color: Colors.grey),
-                           const SizedBox(width: 4),
-                           const Text('Filters', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-                         ],
+                       Text(l10n.executiveOverview.toUpperCase(), style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+                       Consumer(
+                         builder: (ctx, cRef, _) {
+                           final dr = cRef.watch(dashboardDateRangeProvider);
+                           return GestureDetector(
+                             onTap: () => _showDashboardDateFilter(ctx, cRef),
+                             child: Container(
+                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                               decoration: BoxDecoration(
+                                 color: dr != null ? AppTheme.emeraldGreen.withValues(alpha: 0.08) : Colors.transparent,
+                                 borderRadius: BorderRadius.circular(20),
+                                 border: Border.all(color: dr != null ? AppTheme.emeraldGreen : Colors.grey.shade300),
+                               ),
+                               child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                 Icon(Icons.filter_list, size: 14, color: dr != null ? AppTheme.emeraldGreen : Colors.grey),
+                                 const SizedBox(width: 4),
+                                 Text(
+                                   dr != null
+                                       ? '${DateFormat('d MMM').format(dr.start)} – ${DateFormat('d MMM').format(dr.end)}'
+                                       : l10n.filters,
+                                   style: TextStyle(color: dr != null ? AppTheme.emeraldGreen : Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                                 ),
+                                 if (dr != null) ...[
+                                   const SizedBox(width: 4),
+                                   GestureDetector(
+                                     onTap: () => cRef.read(dashboardDateRangeProvider.notifier).state = null,
+                                     child: const Icon(Icons.close, size: 12, color: AppTheme.emeraldGreen),
+                                   ),
+                                 ],
+                               ]),
+                             ),
+                           );
+                         },
                        ),
                      ],
                   ),
                   const SizedBox(height: 15),
-                  
-                  // Revenue Card
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const RevenueDetailScreen()),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(20),
-                    child: financialStats.when(
-                      data: (stats) => _buildRevenueCard('Monthly Revenue', 'SAR ${(stats['totalReceivables']/1000000).toStringAsFixed(1)}M', '+15.4%', true),
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => _buildRevenueCard('Monthly Revenue', 'SAR 4.2M', '+15.4%', true),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 15),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const DetailTrendScreen()),
-                            );
-                          }, 
-                          borderRadius: BorderRadius.circular(16), 
-                          child: _buildSmallStatCard('Active Cases', '1,284', '+12%', true)
-                        )
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            ref.read(superAdminTabIndexProvider.notifier).state = 3; // Switch to Access tab
-                          }, 
-                          borderRadius: BorderRadius.circular(16), 
-                          child: _buildSmallStatCard('Pending Approvals', '42', '-5%', false)
-                        )
-                      ),
-                    ],
-                  ),
-                  
-                  
+
+                  // KPI StatCard row (Operations Dashboard layout)
+                  _buildKpiGrid(context, ref),
+
+                  const SizedBox(height: 30),
+
+                  // Live operations feed
+                  const Text('LIVE OPERATIONS FEED',
+                      style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+                  const SizedBox(height: 14),
+                  _buildOpsFeed(context, ref),
+
                   const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Operational Trends', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                      Text(l10n.operationalTrends, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
                       TextButton(
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const DetailTrendScreen()),
-                          );
-                        }, 
-                        child: const Text('View Detailed', style: TextStyle(fontSize: 12))),
+                          context.push('/dashboard/trend');
+                        },
+                        child: Text(l10n.viewDetailed, style: const TextStyle(fontSize: 12))),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  _buildRevenueChart(),
-                  
+                  _buildRevenueChart(context, ref),
+
                   const SizedBox(height: 30),
-                  _buildStaffKPIs(),
+                  _buildStaffKPIs(context, l10n, ref),
                 ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildRevenueCard(String title, String value, String growth, bool isPositive) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: const Border(left: BorderSide(color: AppTheme.emeraldGreen, width: 4)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-              const Icon(Icons.money_outlined, color: AppTheme.emeraldGreen),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(isPositive ? Icons.trending_up : Icons.trending_down, size: 16, color: isPositive ? AppTheme.emeraldGreen : Colors.red),
-              const SizedBox(width: 4),
-              Text(growth, style: TextStyle(color: isPositive ? AppTheme.emeraldGreen : Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
-              const SizedBox(width: 8),
-              const Text('vs last month', style: TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSmallStatCard(String title, String value, String growth, bool isPositive) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: const Border(left: BorderSide(color: AppTheme.emeraldGreen, width: 2)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-          const SizedBox(height: 4),
-          Text(growth, style: TextStyle(color: isPositive ? AppTheme.emeraldGreen : Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRevenueChart() {
-    return Container(
-      height: 200,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(show: false),
-          titlesData: FlTitlesData(show: false),
-          borderData: FlBorderData(show: false),
-          lineBarsData: [
-            LineChartBarData(
-              spots: const [
-                FlSpot(0, 2), FlSpot(1, 4), FlSpot(2, 3), FlSpot(3, 5), FlSpot(4, 3.5), FlSpot(5, 6),
-              ],
-              isCurved: true,
-              color: AppTheme.emeraldGreen,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(
-                show: true,
-                color: AppTheme.emeraldGreen.withOpacity(0.1),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStaffKPIs() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Staff KPIs by Department', style: TextStyle(color: Colors.grey, fontSize: 13)),
-              const Text('4% Avg', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 40),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildKPIBar('LOGISTICS', 0.8),
-              _buildKPIBar('VISA', 0.6),
-              _buildKPIBar('LEGAL', 0.4),
-              _buildKPIBar('ADMIN', 0.9),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKPIBar(String label, double percent) {
-    return Column(
-      children: [
-        Container(
-          height: 100, width: 8,
-          decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4)),
-          child: FractionallySizedBox(
-            heightFactor: percent, alignment: Alignment.bottomCenter,
-            child: Container(decoration: BoxDecoration(color: AppTheme.emeraldGreen, borderRadius: BorderRadius.circular(4))),
           ),
         ),
-        const SizedBox(height: 10),
-        Text(label, style: const TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold)),
       ],
     );
+  }
+
+  /// 4-up KPI grid — Total Orders, Completed (wk), Cash Collected, High Priority.
+  /// Falls to 2 columns under 720px, single column under 460px.
+  Widget _buildKpiGrid(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(dashboardStatsProvider);
+    final financialStats = ref.watch(financialStatsProvider);
+    final ordersAsync = ref.watch(allWorkOrdersProvider);
+
+    String s(AsyncValue v, String Function(dynamic) f) =>
+        v.maybeWhen(data: f, orElse: () => '—');
+
+    final totalOrders = s(statsAsync, (d) => '${d['total'] ?? 0}');
+    final completedWk = s(statsAsync, (d) => '${d['completedThisWeek'] ?? 0}');
+    final highPriority = ordersAsync.maybeWhen(
+      data: (orders) => orders
+          .where((o) => o.priority == PriorityLevel.high && o.status != WorkStatus.completed)
+          .length
+          .toString(),
+      orElse: () => '—',
+    );
+
+    String cashValue = '—';
+    String? cashUnit;
+    financialStats.maybeWhen(
+      data: (d) {
+        final total = (d['totalReceivables'] as num? ?? 0).toDouble();
+        cashUnit = 'SAR';
+        if (total >= 1000000) {
+          cashValue = '${(total / 1000000).toStringAsFixed(1)}M';
+        } else if (total >= 1000) {
+          cashValue = '${(total / 1000).toStringAsFixed(0)}K';
+        } else {
+          cashValue = total.toStringAsFixed(0);
+        }
+      },
+      orElse: () {},
+    );
+
+    final cards = <Widget>[
+      WorqlyStatCard(
+        icon: Icons.receipt_long_rounded,
+        label: 'Total Orders',
+        value: totalOrders,
+        tone: StatTone.ink,
+        onTap: () => context.push('/dashboard/active-cases'),
+      ),
+      WorqlyStatCard(
+        icon: Icons.task_alt_rounded,
+        label: 'Completed (wk)',
+        value: completedWk,
+        tone: StatTone.completed,
+      ),
+      WorqlyStatCard(
+        icon: Icons.payments_rounded,
+        label: 'Cash Collected',
+        value: cashValue,
+        unit: cashUnit,
+        tone: StatTone.brand,
+        onTap: () => context.push('/dashboard/revenue'),
+      ),
+      WorqlyStatCard(
+        icon: Icons.bolt_rounded,
+        label: 'High Priority',
+        value: highPriority,
+        tone: StatTone.danger,
+      ),
+    ];
+
+    return LayoutBuilder(builder: (context, c) {
+      final cols = c.maxWidth >= 720 ? 4 : (c.maxWidth >= 460 ? 2 : 1);
+      const gap = 16.0;
+      final cardWidth = (c.maxWidth - gap * (cols - 1)) / cols;
+      return Wrap(
+        spacing: gap,
+        runSpacing: gap,
+        children: cards.map((w) => SizedBox(width: cardWidth, child: w)).toList(),
+      );
+    });
+  }
+
+  /// Live operations feed — recent work orders rendered as WorkOrderCards.
+  Widget _buildOpsFeed(BuildContext context, WidgetRef ref) {
+    final ordersAsync = ref.watch(allWorkOrdersProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.primaryAccent(isDark);
+
+    return ordersAsync.when(
+      loading: () => SizedBox(height: 120, child: Center(child: CircularProgressIndicator(color: accent))),
+      error: (_, __) => SizedBox(
+        height: 120,
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.error_outline_rounded, color: isDark ? AppTheme.darkSubtext : Colors.grey, size: 28),
+            const SizedBox(height: 6),
+            Text('Failed to load work orders',
+                style: TextStyle(color: isDark ? AppTheme.darkSubtext : Colors.grey, fontSize: 12)),
+          ]),
+        ),
+      ),
+      data: (orders) {
+        if (orders.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+              child: Column(children: [
+                Icon(Icons.inbox_rounded, size: 40, color: isDark ? AppTheme.darkBorder : const Color(0xFFD4D4D8)),
+                const SizedBox(height: 8),
+                Text('No active work orders.',
+                    style: TextStyle(color: isDark ? AppTheme.darkSubtext : const Color(0xFFA1A1AA), fontSize: 13)),
+              ]),
+            ),
+          );
+        }
+        final recent = orders.take(9).toList();
+        return LayoutBuilder(builder: (context, c) {
+          final cols = (c.maxWidth / 340).floor().clamp(1, 3);
+          const gap = 16.0;
+          final cardWidth = (c.maxWidth - gap * (cols - 1)) / cols;
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: recent.map((o) {
+              final status = switch (o.status) {
+                WorkStatus.inProgress => WorqlyOrderStatus.progress,
+                WorkStatus.completed => WorqlyOrderStatus.completed,
+                WorkStatus.pending => WorqlyOrderStatus.pending,
+              };
+              return SizedBox(
+                width: cardWidth,
+                child: WorqlyWorkOrderCard(
+                  serviceType: o.serviceType ?? 'General Service',
+                  orderId: o.id.length > 8 ? 'WO-${o.id.substring(0, 6).toUpperCase()}' : o.id,
+                  clientName: o.clientName,
+                  staffName: o.assignedStaffName,
+                  officeName: o.assignedOfficeName,
+                  status: status,
+                  highPriority: o.priority == PriorityLevel.high,
+                  contactable: (o.clientPhoneNumber ?? '').isNotEmpty,
+                  onTap: () {
+                    context.push(
+                      '/dashboard/task/${o.id}',
+                      extra: TaskRouteArgs(
+                        clientName: o.clientName ?? 'Unknown',
+                        clientPhone: o.clientPhoneNumber,
+                        priority: o.priority.name,
+                        initialStatus: o.status.name,
+                      ),
+                    );
+                  },
+                ),
+              );
+            }).toList(),
+          );
+        });
+      },
+    );
+  }
+
+  Widget _buildRevenueChart(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFEAEAEA);
+    final metaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
+    final gridColor = isDark ? AppTheme.darkBorder.withValues(alpha: 0.5) : Colors.grey.withValues(alpha: 0.08);
+    final accent = AppTheme.primaryAccent(isDark);
+
+    final trendAsync = ref.watch(monthlyWorkOrderTrendProvider);
+    final now = DateTime.now();
+    final months = List.generate(6, (i) => DateFormat('MMM').format(DateTime(now.year, now.month - 5 + i)));
+
+    String growthLabel = '— Enquiries / 6 mo';
+    List<FlSpot> spots = List.generate(6, (i) => FlSpot(i.toDouble(), 0));
+
+    return trendAsync.when(
+      loading: () => Container(
+        height: 260,
+        decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cardBorder)),
+        child: Center(child: CircularProgressIndicator(color: accent)),
+      ),
+      error: (_, __) => Container(
+        height: 260,
+        decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cardBorder)),
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.error_outline_rounded, color: metaColor, size: 28),
+            const SizedBox(height: 6),
+            Text('Failed to load trend data', style: TextStyle(color: metaColor, fontSize: 12)),
+          ]),
+        ),
+      ),
+      data: (counts) {
+        spots = List.generate(6, (i) => FlSpot(i.toDouble(), counts[i]));
+        final prev = counts[4];
+        final curr = counts[5];
+        if (prev > 0) {
+          final pct = ((curr - prev) / prev * 100).round();
+          growthLabel = pct >= 0 ? '+$pct% vs last month' : '$pct% vs last month';
+        } else if (curr > 0) {
+          growthLabel = 'New enquiries this month';
+        }
+
+        final maxY = (counts.reduce((a, b) => a > b ? a : b) + 2).clamp(4.0, double.infinity);
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cardBorder, width: 1),
+            boxShadow: [
+              if (!isDark) const BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Enquiry Activity', style: TextStyle(color: metaColor, fontSize: 13, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 4),
+                      Text(growthLabel, style: TextStyle(
+                        color: curr >= prev ? AppTheme.mintGreen : AppTheme.errorRed,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      )),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkCardAlt : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('6 Months', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: metaColor)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 180,
+                child: LineChart(
+                  LineChartData(
+                    minY: 0,
+                    maxY: maxY,
+                    gridData: FlGridData(
+                      show: true, drawVerticalLine: false,
+                      horizontalInterval: (maxY / 4).ceilToDouble().clamp(1, double.infinity),
+                      getDrawingHorizontalLine: (_) => FlLine(color: gridColor, strokeWidth: 1, dashArray: [4, 4]),
+                    ),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 28,
+                          interval: 1,
+                          getTitlesWidget: (value, meta) {
+                            final idx = value.toInt();
+                            if (idx < 0 || idx >= months.length) return const SizedBox();
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              child: Text(months[idx], style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: metaColor)),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        curveSmoothness: 0.35,
+                        color: accent,
+                        barWidth: 2,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                            radius: index == 5 ? 4 : 3,
+                            color: cardBg,
+                            strokeWidth: 2,
+                            strokeColor: accent,
+                          ),
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            colors: [accent.withValues(alpha: 0.18), accent.withValues(alpha: 0.0)],
+                            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutCubic,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStaffKPIs(BuildContext context, AppLocalizations l10n, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final kpiAsync = ref.watch(serviceTypeKpiProvider);
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE9EEF5);
+    final titleColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final metaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
+    final accent = AppTheme.primaryAccent(isDark);
+
+    return kpiAsync.when(
+      loading: () => SizedBox(height: 80, child: Center(child: CircularProgressIndicator(color: accent))),
+      error: (_, __) => SizedBox(
+        height: 80,
+        child: Center(child: Text('Failed to load KPIs', style: TextStyle(color: metaColor, fontSize: 12))),
+      ),
+      data: (kpis) {
+        if (kpis.isEmpty) return const SizedBox();
+        final avgCompletion = kpis.fold(0.0, (sum, k) => sum + (k['percent'] as double)) / kpis.length;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cardBorder, width: 1),
+            boxShadow: [
+              if (!isDark) const BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Completion by Service Type', style: TextStyle(color: titleColor, fontSize: 15, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 3),
+                      Text('Top ${kpis.length} service categories', style: TextStyle(color: metaColor, fontSize: 12)),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${(avgCompletion * 100).toStringAsFixed(0)}% Avg',
+                      style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: kpis.map((k) => _buildKPIBar(
+                  context, k['label'] as String, (k['percent'] as double), k['total'] as int,
+                  isDark, titleColor, metaColor, accent,
+                )).toList(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildKPIBar(BuildContext context, String label, double percent, int total,
+      bool isDark, Color titleColor, Color metaColor, Color accent) {
+    final trackColor = isDark ? AppTheme.darkCardAlt : const Color(0xFFF1F5F9);
+    return Column(children: [
+      Text('$total', style: TextStyle(fontSize: 11, color: titleColor, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 6),
+      Container(
+        height: 110, width: 8,
+        decoration: BoxDecoration(color: trackColor, borderRadius: BorderRadius.circular(12)),
+        child: FractionallySizedBox(
+          heightFactor: percent.clamp(0.0, 1.0),
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      Text(label, style: TextStyle(fontSize: 9, color: metaColor, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+      const SizedBox(height: 3),
+      Text('${(percent * 100).toInt()}%', style: TextStyle(fontSize: 11, color: titleColor, fontWeight: FontWeight.w600)),
+    ]);
   }
 }
 
@@ -617,16 +983,24 @@ class _BranchManagementTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final officesAsync = ref.watch(filteredOfficesProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          const _HeaderSection(title: 'Regional Offices', subtitle: 'BRANCH MANAGEMENT', showDate: false),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+    return Column(
+      children: [
+        _HeaderSection(title: l10n.regionalOffices, subtitle: l10n.branchManagement.toUpperCase(), showDate: false),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: double.infinity,
+            padding: EdgeInsets.zero,
+            child: RefreshIndicator(
+              color: AppTheme.ink900,
+              onRefresh: () async {
+                ref.invalidate(officesProvider);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -637,11 +1011,11 @@ class _BranchManagementTab extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('KSA NETWORK', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                            Text(l10n.ksaNetwork.toUpperCase(), style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                             officesAsync.when(
-                               data: (offices) => Text('${offices.length} Active Branches', style: const TextStyle(fontSize: 16, color: Colors.blueGrey), overflow: TextOverflow.ellipsis),
-                               loading: () => const Text('Loading...', style: TextStyle(fontSize: 16, color: Colors.blueGrey)),
-                               error: (_,__) => const Text('Error', style: TextStyle(fontSize: 16, color: Colors.red)),
+                               data: (offices) => Text('${offices.length} ${l10n.activeBranches}', style: const TextStyle(fontSize: 16, color: Colors.blueGrey), overflow: TextOverflow.ellipsis),
+                               loading: () => Text(l10n.loading, style: const TextStyle(fontSize: 16, color: Colors.blueGrey)),
+                               error: (_,__) => Text(l10n.error, style: const TextStyle(fontSize: 16, color: Colors.red)),
                             ),
                           ],
                         ),
@@ -650,8 +1024,12 @@ class _BranchManagementTab extends ConsumerWidget {
                       ElevatedButton.icon(
                         onPressed: () => _showAddOfficeSheet(context, ref),
                         icon: const Icon(Icons.add_location_alt_outlined, size: 16),
-                        label: const Text('Add New Office', style: TextStyle(fontSize: 12)),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                        label: Text(l10n.addNewOffice, style: const TextStyle(fontSize: 12)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ],
                   ),
@@ -663,10 +1041,10 @@ class _BranchManagementTab extends ConsumerWidget {
                       TextField(
                         onChanged: (value) => ref.read(officeSearchQueryProvider.notifier).state = value,
                         decoration: InputDecoration(
-                          hintText: 'Search offices...',
-                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                          hintText: l10n.searchOffices,
+                          prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: isDark ? AppTheme.darkCard : Colors.white,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
@@ -679,11 +1057,11 @@ class _BranchManagementTab extends ConsumerWidget {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            _buildFilterChip(ref, 'Default', Icons.sort),
+                            _buildFilterChip(context, ref, 'Default', Icons.sort),
                             const SizedBox(width: 10),
-                            _buildFilterChip(ref, 'Revenue', Icons.monetization_on_outlined),
+                            _buildFilterChip(context, ref, 'Revenue', Icons.monetization_on_outlined, displayLabel: l10n.revenue),
                             const SizedBox(width: 10),
-                            _buildFilterChip(ref, 'Workload', Icons.bar_chart),
+                            _buildFilterChip(context, ref, 'Workload', Icons.bar_chart, displayLabel: l10n.workloadCapacity),
                           ],
                         ),
                       ),
@@ -695,7 +1073,7 @@ class _BranchManagementTab extends ConsumerWidget {
                   // Static Map Image Placeholder or Custom Painter
                   // Performance Overview Dashboard
                   officesAsync.when(
-                    data: (offices) => _buildPerformanceDashboard(offices),
+                    data: (offices) => _buildPerformanceDashboard(context, offices),
                     loading: () => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
                     error: (_,__) => const SizedBox(),
                   ),
@@ -704,9 +1082,9 @@ class _BranchManagementTab extends ConsumerWidget {
                   officesAsync.when(
                     data: (offices) {
                       if (offices.isEmpty) {
-                        return const Center(child: Padding(
-                          padding: EdgeInsets.all(20.0),
-                          child: Text('No offices found. Add one to get started!'),
+                        return Center(child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Text(l10n.noHistoryFound),
                         ));
                       }
                       return Column(
@@ -722,44 +1100,48 @@ class _BranchManagementTab extends ConsumerWidget {
                       );
                     },
                     loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, st) => Center(child: Text('Error loading offices: $e')),
+                    error: (e, st) => Center(child: Text('${l10n.error}: $e')),
                   ),
                 ],
               ),
             ),
           ),
-        ],
+        ),
       ),
-    );
-  }
+    ],
+  );
+}
 
-  Widget _buildPerformanceDashboard(List<Map<String, dynamic>> offices) {
+  Widget _buildPerformanceDashboard(BuildContext context, List<Map<String, dynamic>> offices) {
     if (offices.isEmpty) return const SizedBox();
+    final l10n = AppLocalizations.of(context)!;
 
-    double totalRevenue = 0;
+    double totalRevenueValue = 0;
     double totalWorkload = 0;
     
     for (var o in offices) {
-      totalRevenue += (o['revenue'] as num? ?? 0).toDouble();
+      totalRevenueValue += (o['revenue'] as num? ?? 0).toDouble();
       totalWorkload += (o['workload_percentage'] as num? ?? 0).toDouble();
     }
     
     final avgWorkload = offices.isEmpty ? 0 : totalWorkload / offices.length;
-    final displayRevenue = totalRevenue >= 1000000 
-        ? '${(totalRevenue / 1000000).toStringAsFixed(1)}M' 
-        : '${(totalRevenue / 1000).toStringAsFixed(0)}K';
+    final displayRevenue = totalRevenueValue >= 1000000
+        ? '${(totalRevenueValue / 1000000).toStringAsFixed(1)}M'
+        : totalRevenueValue >= 1000
+            ? '${(totalRevenueValue / 1000).toStringAsFixed(0)}K'
+            : totalRevenueValue.toStringAsFixed(0);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppTheme.emeraldGreen, Color(0xFF34D399)],
+          colors: [AppTheme.ink900, AppTheme.ink800],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: AppTheme.emeraldGreen.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
+          BoxShadow(color: AppTheme.emeraldGreen.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8)),
         ],
       ),
       child: Column(
@@ -768,7 +1150,7 @@ class _BranchManagementTab extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('NETWORK PERFORMANCE', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+              Text(l10n.networkPerformance.toUpperCase(), style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(8)),
@@ -784,7 +1166,7 @@ class _BranchManagementTab extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(displayRevenue, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const Text('Total Revenue', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text(l10n.totalRevenue, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),
               ),
@@ -795,7 +1177,7 @@ class _BranchManagementTab extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('${avgWorkload.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const Text('Avg. Workload Capacity', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text(l10n.avgWorkloadCapacity, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),
               ),
@@ -806,12 +1188,12 @@ class _BranchManagementTab extends ConsumerWidget {
            Column(
              crossAxisAlignment: CrossAxisAlignment.start,
              children: [
-               const Text('Overall Network Capacity', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+               Text(l10n.networkPerformance, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
                const SizedBox(height: 8),
                ClipRRect(
                  borderRadius: BorderRadius.circular(4),
                  child: LinearProgressIndicator(
-                   value: avgWorkload / 100,
+                   value: (avgWorkload / 100).clamp(0.0, 1.0),
                    backgroundColor: Colors.black12,
                    color: Colors.white,
                    minHeight: 6,
@@ -824,40 +1206,46 @@ class _BranchManagementTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterChip(WidgetRef ref, String label, IconData icon) {
+  Widget _buildFilterChip(BuildContext context, WidgetRef ref, String sortKey, IconData icon, {String? displayLabel}) {
+    final label = displayLabel ?? sortKey;
     final currentSort = ref.watch(officeSortProvider);
-    final isSelected = currentSort == label;
+    final isSelected = currentSort == sortKey;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = AppTheme.primaryAccent(isDark);
+    final inactiveBg = isDark ? AppTheme.darkCard : Colors.white;
+    final inactiveBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0);
+    final inactiveText = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
 
-    return InkWell(
-      onTap: () => ref.read(officeSortProvider.notifier).state = label,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return GestureDetector(
+      onTap: () => ref.read(officeSortProvider.notifier).state = sortKey,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.emeraldGreen : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected ? null : Border.all(color: Colors.grey.shade300),
+          color: isSelected ? activeColor.withValues(alpha: isDark ? 0.18 : 0.08) : inactiveBg,
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: isSelected ? activeColor.withValues(alpha: 0.45) : inactiveBorder,
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey),
-            const SizedBox(width: 8),
-            Text(
-              label, 
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey, 
-                fontWeight: FontWeight.bold, 
-                fontSize: 12
-              )
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: isSelected ? activeColor : inactiveText),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? activeColor : inactiveText,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              fontSize: 12,
             ),
-          ],
-        ),
+          ),
+        ]),
       ),
     );
   }
 
   void _showAddOfficeSheet(BuildContext context, WidgetRef ref) {
-    // ... same code ...
+    final l10n = AppLocalizations.of(context)!;
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final locationController = TextEditingController();
@@ -871,10 +1259,11 @@ class _BranchManagementTab extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
+        final sheetIsDark = Theme.of(context).brightness == Brightness.dark;
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          decoration: BoxDecoration(
+            color: sheetIsDark ? AppTheme.darkSurface : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           ),
           padding: EdgeInsets.only(
             top: 30,
@@ -900,50 +1289,50 @@ class _BranchManagementTab extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 25),
-                  const Text(
-                    'Add New Office',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                  Text(
+                    l10n.addNewOffice,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                   ),
-                  const Text(
-                    'Expand your operational presence with a new branch',
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  Text(
+                    l10n.addOfficeProgress,
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 25),
                   
                   TextFormField(
                     controller: nameController,
                     decoration: InputDecoration(
-                      labelText: 'Office Name',
+                      labelText: l10n.officeName,
                       prefixIcon: const Icon(Icons.business_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) => v == null || v.isEmpty ? l10n.required : null,
                   ),
                   const SizedBox(height: 15),
                   
                   TextFormField(
                     controller: locationController,
                     decoration: InputDecoration(
-                      labelText: 'Location',
+                      labelText: l10n.location,
                       prefixIcon: const Icon(Icons.location_on_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) => v == null || v.isEmpty ? l10n.required : null,
                   ),
                   const SizedBox(height: 15),
                   
                   TextFormField(
                     controller: managerController,
                     decoration: InputDecoration(
-                      labelText: 'Manager Name (Optional)',
+                      labelText: l10n.managerName,
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                   ),
                   const SizedBox(height: 15),
@@ -952,11 +1341,11 @@ class _BranchManagementTab extends ConsumerWidget {
                     controller: managerPhoneController,
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
-                      labelText: 'Manager Phone',
+                      labelText: l10n.managerPhone,
                       prefixIcon: const Icon(Icons.phone_iphone_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
                   ),
                   const SizedBox(height: 15),
@@ -968,11 +1357,11 @@ class _BranchManagementTab extends ConsumerWidget {
                           controller: mobilePhoneController,
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
-                            labelText: 'Office Mobile',
+                            labelText: l10n.officeMobile,
                             prefixIcon: const Icon(Icons.smartphone_outlined),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                           ),
                         ),
                       ),
@@ -982,11 +1371,11 @@ class _BranchManagementTab extends ConsumerWidget {
                           controller: landlinePhoneController,
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
-                            labelText: 'Office Landline',
+                            labelText: l10n.officeLandline,
                             prefixIcon: const Icon(Icons.phone_outlined),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                           ),
                         ),
                       ),
@@ -1015,12 +1404,12 @@ class _BranchManagementTab extends ConsumerWidget {
                               'staff_count': 0,
                               'revenue': 0,
                             });
-                            ref.refresh(officesProvider);
+                            ref.invalidate(officesProvider);
                             if (context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Office Added Successfully'), 
+                                SnackBar(
+                                  content: Text(l10n.officeAddedSuccessfully),
                                   backgroundColor: AppTheme.emeraldGreen
                                 )
                               );
@@ -1028,16 +1417,17 @@ class _BranchManagementTab extends ConsumerWidget {
                           } catch (e) {
                              if (context.mounted) {
                                Navigator.pop(context);
-                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l10n.error}: $e')));
                              }
                           }
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.emeraldGreen,
+                        backgroundColor: sheetIsDark ? AppTheme.primaryAccent(sheetIsDark) : AppTheme.emeraldGreen,
+                        foregroundColor: sheetIsDark ? AppTheme.ink900 : Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                       ),
-                      child: const Text('Add Office', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      child: Text(l10n.addNewOffice, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
                 ],
@@ -1050,39 +1440,51 @@ class _BranchManagementTab extends ConsumerWidget {
   }
 
   Color _getColorFromHex(String? hexColor) {
-    if (hexColor == null) return AppTheme.emeraldGreen;
+    if (hexColor == null || hexColor.trim().isEmpty) return AppTheme.emeraldGreen;
     hexColor = hexColor.replaceAll('#', '');
     if (hexColor.length == 6) {
       hexColor = 'FF$hexColor';
     }
-    return Color(int.parse(hexColor, radix: 16));
+    try {
+      return Color(int.parse(hexColor, radix: 16));
+    } catch (e) {
+      return AppTheme.emeraldGreen;
+    }
   }
 
   Widget _buildOfficeCard(BuildContext context, Map<String, dynamic> office) {
     // Extract values
     final String name = office['name'] ?? 'Unknown';
     final String loc = office['location'] ?? 'Unknown';
+    final l10n = AppLocalizations.of(context)!;
     final String workload = '${office['workload_percentage'] ?? 0}%';
     final String staff = '${office['staff_count'] ?? 0}';
-    final String revenue = '${(office['revenue'] ?? 0).toString()}';
+    final String revenue = (office['revenue'] ?? 0).toString();
     final Color workloadColor = _getColorFromHex(office['color_hex']);
     
     // Check revenue format if needed (e.g. millions)
     // For simplicity just showing raw or formatted if string
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE9EEF5);
+    final titleColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final metaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
+    final iconBg = isDark ? AppTheme.darkCardAlt : const Color(0xFFF1F5F9);
+    final iconColor = isDark ? AppTheme.darkSubtext : const Color(0xFF94A3B8);
+    final dividerColor = isDark ? AppTheme.darkBorder : const Color(0xFFF1F5F9);
+    final accent = AppTheme.primaryAccent(isDark);
+
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => OfficeDetailScreen(office: office)),
-        );
+        context.push('/dashboard/office-detail', extra: office);
       },
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cardBorder, width: 1),
         ),
         child: Column(
           children: [
@@ -1091,23 +1493,23 @@ class _BranchManagementTab extends ConsumerWidget {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
-                    child: Icon(Icons.business, color: Colors.grey.shade600),
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)),
+                    child: Icon(Icons.business_outlined, color: iconColor, size: 20),
                   ),
-                  const SizedBox(width: 15),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text(loc, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text(name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: titleColor)),
+                        Text(loc, style: TextStyle(color: metaColor, fontSize: 12)),
                         if (office['phone_numbers'] != null && (office['phone_numbers'] as List).isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
-                              (office['phone_numbers'] as List)[0]['number'],
-                              style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                              ((office['phone_numbers'] as List)[0]['number']?.toString() ?? ''),
+                              style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w600),
                             ),
                           ),
                       ],
@@ -1117,16 +1519,12 @@ class _BranchManagementTab extends ConsumerWidget {
                     children: [
                       if (office['phone_numbers'] != null && (office['phone_numbers'] as List).isNotEmpty)
                         IconButton(
-                          onPressed: () => ContactUtils.openWhatsApp((office['phone_numbers'] as List)[0]['number']),
+                          onPressed: () => ContactUtils.openWhatsApp(((office['phone_numbers'] as List)[0]['number']?.toString() ?? '')),
                           icon: const Icon(Icons.message, size: 20, color: Colors.green),
                         ),
                       IconButton(
                         onPressed: () {
-                           // Navigate to settings directly? Or just same detail screen
-                           Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => OfficeDetailScreen(office: office)),
-                          );
+                           context.push('/dashboard/office-detail', extra: office);
                         },
                         icon: const Icon(Icons.settings_outlined, color: Colors.grey),
                       ),
@@ -1140,35 +1538,30 @@ class _BranchManagementTab extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: _buildMiniStat('WORKLOAD', workload, workloadColor, true)),
+                  Expanded(child: _buildMiniStat(context, l10n.workload, workload, workloadColor, true, isDark)),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildMiniStat('STAFF', staff, Colors.blueGrey, false)),
+                  Expanded(child: _buildMiniStat(context, l10n.staffCount.toUpperCase(), staff, AppTheme.electricBlue, false, isDark)),
                   const SizedBox(width: 8),
-                  Expanded(child: _buildMiniStat('REVENUE', revenue, Colors.amber.shade700, false)),
+                  Expanded(child: _buildMiniStat(context, l10n.revenue, revenue, AppTheme.mutedAmber, false, isDark)),
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: dividerColor),
             Padding(
                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                child: Row(
                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
-                   const Text('REGIONAL HUB', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold)),
+                   Text(l10n.regionalHub, style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                    InkWell(
                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => OfficeDetailScreen(office: office)),
-                        );
+                        context.push('/dashboard/office-detail', extra: office);
                      },
                      borderRadius: BorderRadius.circular(4),
-                     child: Row(
-                       children: const [
-                         Text('Branch Settings', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 12, fontWeight: FontWeight.bold)),
-                         Icon(Icons.chevron_right, size: 16, color: AppTheme.emeraldGreen),
-                       ],
-                     ),
+                     child: Row(children: [
+                       Text(l10n.branchSettings, style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w600)),
+                       Icon(Icons.chevron_right, size: 14, color: accent),
+                     ]),
                    ),
                  ],
                ),
@@ -1180,25 +1573,27 @@ class _BranchManagementTab extends ConsumerWidget {
   }
 
 
-  Widget _buildMiniStat(String label, String val, Color color, bool showProgress) {
+  Widget _buildMiniStat(BuildContext context, String label, String val, Color color, bool showProgress, bool isDark) {
+    final bg = isDark ? AppTheme.darkCardAlt : const Color(0xFFF8FAFC);
+    final textColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final metaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF94A3B8);
+    final trackColor = isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0);
+
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(fontSize: 8, color: metaColor, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
           const SizedBox(height: 4),
-          Row(
-           children: [
-              // Use Flexible to avoid overflow
-              Flexible(child: Text(val, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
-              if (label == 'STAFF') const Icon(Icons.people, size: 10, color: Colors.grey),
-            ],
-          ),
+          Text(val, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor), overflow: TextOverflow.ellipsis),
           if (showProgress) ...[
-            const SizedBox(height: 4),
-            LinearProgressIndicator(value: 0.8, backgroundColor: Colors.grey.shade200, color: color, minHeight: 4),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(value: 0.8, backgroundColor: trackColor, color: color, minHeight: 3),
+            ),
           ],
         ],
       ),
@@ -1206,28 +1601,27 @@ class _BranchManagementTab extends ConsumerWidget {
   }
 }
 
-/// --- TAB: LEAVE MANAGEMENT ---
-
 class _LeaveManagementTab extends ConsumerWidget {
   const _LeaveManagementTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: const [
-          _HeaderSection(
-            title: 'Leave Management', 
-            subtitle: 'إدارة الإجازات',
-            showDate: false,
-          ),
-          Expanded(
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      children: [
+        _HeaderSection(
+          title: l10n.leaveManagement, 
+          subtitle: l10n.leaves.toUpperCase(),
+          showDate: false,
+        ),
+        const Expanded(
+          child: ResponsiveLayout(
+            maxWidth: double.infinity,
+            padding: EdgeInsets.zero,
             child: AdminLeaveList(),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1241,19 +1635,27 @@ class _AdminManagementTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filteredAdminsAsync = ref.watch(isStaffView ? filteredStaffProvider : filteredAdminsProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          _HeaderSection(
-            title: isStaffView ? 'Staff Command Center' : 'Total Control Hub', 
-            subtitle: isStaffView ? 'مركز قيادة الموظفين' : 'مركز التحكم الشامل'
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+    return Column(
+      children: [
+        _HeaderSection(
+          title: isStaffView ? l10n.staffCommandCenter : l10n.totalControlHub, 
+          subtitle: (isStaffView ? l10n.manageStaff : l10n.manageAdmins).toUpperCase()
+        ),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: double.infinity,
+            padding: EdgeInsets.zero,
+            child: RefreshIndicator(
+              color: AppTheme.ink900,
+              onRefresh: () async {
+                 ref.invalidate(isStaffView ? allProfilesProvider : allProfilesProvider); // simple invalidation of profiles
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1266,8 +1668,7 @@ class _AdminManagementTab extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(isStaffView ? 'Manage Staff' : 'Manage Admins', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                            Text(isStaffView ? 'إدارة الموظفين' : 'إدارة المسؤولين', style: const TextStyle(color: Colors.amber, fontSize: 12), overflow: TextOverflow.ellipsis),
+                            Text(isStaffView ? l10n.manageStaff : l10n.manageAdmins, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                           ],
                         ),
                       ),
@@ -1275,8 +1676,12 @@ class _AdminManagementTab extends ConsumerWidget {
                       ElevatedButton.icon(
                         onPressed: () => _showAddAdminDialog(context, ref, forceStaff: isStaffView),
                         icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                        label: const Text('New'),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.emeraldGreen, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12)),
+                        label: Text(l10n.newLabel),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
                       ),
                     ],
                   ),
@@ -1286,10 +1691,10 @@ class _AdminManagementTab extends ConsumerWidget {
                   TextField(
                     onChanged: (value) => ref.read(isStaffView ? staffSearchQueryProvider.notifier : adminSearchQueryProvider.notifier).state = value,
                     decoration: InputDecoration(
-                      hintText: isStaffView ? 'Search staff...' : 'Search admins...',
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      hintText: isStaffView ? l10n.searchStaff : l10n.searchAdmins,
+                      prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: isDark ? AppTheme.darkCard : Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
                         borderSide: BorderSide.none,
@@ -1304,7 +1709,7 @@ class _AdminManagementTab extends ConsumerWidget {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildFilterChip(ref, 'All'),
+                          _buildFilterChip(ref, l10n.all),
                           const SizedBox(width: 8),
                           _buildFilterChip(ref, 'Admin'),
                           const SizedBox(width: 8),
@@ -1317,20 +1722,20 @@ class _AdminManagementTab extends ConsumerWidget {
                   const SizedBox(height: 20),
                   filteredAdminsAsync.when(
                     data: (profiles) {
-                      if (profiles.isEmpty) return Center(child: Text(isStaffView ? 'No staff found' : 'No admins found'));
+                      if (profiles.isEmpty) return Center(child: Text(isStaffView ? l10n.noStaffAssigned : l10n.noAdminsFound));
                       return Column(
                         children: profiles.map((p) => _buildLargeAdminCard(context, ref, p, isStaff: isStaffView)).toList(),
                       );
                     },
                     loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Text('Error loading: $e'),
+                    error: (e, _) => Text('${l10n.errorLoading}: $e'),
                   ),
                   
                   if (!isStaffView) ...[
                     const SizedBox(height: 20),
                     InkWell(
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening global access control center...')));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.globalAccessControl)));
                       },
                       borderRadius: BorderRadius.circular(15),
                       child: Container(
@@ -1339,14 +1744,14 @@ class _AdminManagementTab extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: AppTheme.emeraldGreen,
                           borderRadius: BorderRadius.circular(15),
-                          boxShadow: [BoxShadow(color: AppTheme.emeraldGreen.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
+                          boxShadow: [BoxShadow(color: AppTheme.emeraldGreen.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.security, color: Colors.white, size: 20),
-                            SizedBox(width: 10),
-                            Text('Global Access Control', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          children: [
+                            const Icon(Icons.security, color: Colors.white, size: 20),
+                            const SizedBox(width: 10),
+                            Text(l10n.globalAccessControl, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                           ],
                         ),
                       ),
@@ -1356,124 +1761,228 @@ class _AdminManagementTab extends ConsumerWidget {
               ),
             ),
           ),
-        ],
+        ),
       ),
-    );
-  }
+    ],
+  );
+}
 
   Widget _buildFilterChip(WidgetRef ref, String label) {
     final currentFilter = ref.watch(adminRoleFilterProvider);
     final isSelected = currentFilter == label;
-    return InkWell(
-      onTap: () => ref.read(adminRoleFilterProvider.notifier).state = label,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.emeraldGreen : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade300),
+    // Note: using Builder pattern since context is not a param here.
+    return Builder(builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final activeColor = AppTheme.primaryAccent(isDark);
+      final inactiveBg = isDark ? AppTheme.darkCard : Colors.white;
+      final inactiveBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0);
+      final inactiveText = isDark ? AppTheme.darkSubtext : const Color(0xFF64748B);
+
+      return GestureDetector(
+        onTap: () => ref.read(adminRoleFilterProvider.notifier).state = label,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: isSelected ? activeColor.withValues(alpha: isDark ? 0.18 : 0.08) : inactiveBg,
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(
+              color: isSelected ? activeColor.withValues(alpha: 0.45) : inactiveBorder,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? activeColor : inactiveText,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
         ),
-        child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-      ),
-    );
+      );
+    });
   }
 
 
 
   Widget _buildLargeAdminCard(BuildContext context, WidgetRef ref, Map<String, dynamic> admin, {bool isStaff = false}) {
+    final l10n = AppLocalizations.of(context)!;
     final name = admin['name'] ?? (isStaff ? 'Unknown Staff' : 'Unknown Admin');
     final role = admin['role'] ?? (isStaff ? 'staff' : 'admin');
     final id = admin['id'];
+    final officeName = (admin['offices'] as Map?)?['name'] as String?;
+    final isActive = admin['is_active'] as bool? ?? true;
+    final isAgent = role.toString().toLowerCase() == 'agent';
+    final roleColor = isAgent ? Colors.purple : (isStaff ? AppTheme.statBlue : AppTheme.emeraldGreen);
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final cardBorder = isDark ? AppTheme.darkBorder : const Color(0xFFE9EEF5);
+    final titleTextColor = isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue;
+    final cardMetaColor = isDark ? AppTheme.darkSubtext : const Color(0xFF94A3B8);
+    final cardDivColor = isDark ? AppTheme.darkBorder : const Color(0xFFF1F5F9);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: admin)),
-          );
+          context.push('/dashboard/admin-detail', extra: admin);
         },
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+            color: cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cardBorder, width: 1),
           ),
           child: Column(
             children: [
-              ListTile(
-                contentPadding: const EdgeInsets.all(15),
-                leading: const CircleAvatar(radius: 30, backgroundColor: AppTheme.emeraldLight, child: Icon(Icons.person, color: AppTheme.emeraldGreen, size: 30)),
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
                   children: [
-                    Text(role.toString().toUpperCase(), style: const TextStyle(fontSize: 12, color: AppTheme.emeraldGreen)),
-                    if (admin['phone_number'] != null)
-                      Text(admin['phone_number'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: roleColor.withValues(alpha: 0.12),
+                          child: Text(initial, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: roleColor)),
+                        ),
+                        Positioned(
+                          bottom: -2, right: -2,
+                          child: Container(
+                            width: 13, height: 13,
+                            decoration: BoxDecoration(
+                              color: isActive ? AppTheme.mintGreen : cardMetaColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: cardBg, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: titleTextColor)),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: roleColor.withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(role.toString().toUpperCase(),
+                                    style: TextStyle(fontSize: 10, color: roleColor, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+                              ),
+                              if (officeName != null) ...[
+                                const SizedBox(width: 6),
+                                Icon(Icons.business_outlined, size: 11, color: cardMetaColor),
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(officeName,
+                                      style: TextStyle(fontSize: 11, color: cardMetaColor),
+                                      overflow: TextOverflow.ellipsis),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (admin['phone_number'] != null && admin['phone_number'].toString().isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(admin['phone_number'], style: TextStyle(fontSize: 11, color: cardMetaColor)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isActive ? AppTheme.mintGreen.withValues(alpha: 0.10) : cardMetaColor.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isActive ? l10n.active : l10n.inactive,
+                            style: TextStyle(color: isActive ? AppTheme.mintGreen : cardMetaColor, fontWeight: FontWeight.w600, fontSize: 10),
+                          ),
+                        ),
+                        if (isStaff && id != null) ...[
+                          const SizedBox(height: 6),
+                          ref.watch(staffActiveTaskCountsProvider).when(
+                            data: (counts) {
+                              final count = counts[id] ?? 0;
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: count > 0 ? AppTheme.mutedAmber.withValues(alpha: 0.10) : cardMetaColor.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '$count task${count == 1 ? '' : 's'}',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
+                                      color: count > 0 ? AppTheme.mutedAmber : cardMetaColor),
+                                ),
+                              );
+                            },
+                            loading: () => const SizedBox(width: 50, height: 20),
+                            error: (_, __) => SizedBox(
+                              width: 50,
+                              height: 20,
+                              child: Icon(Icons.error_outline_rounded, size: 12, color: cardMetaColor),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), 
-                  decoration: BoxDecoration(
-                    color: (admin['is_active'] ?? true) ? AppTheme.emeraldLight : Colors.grey.shade100, 
-                    borderRadius: BorderRadius.circular(8)
-                  ), 
-                  child: Text(
-                    (admin['is_active'] ?? true) ? 'ACTIVE' : 'INACTIVE', 
-                    style: TextStyle(
-                      color: (admin['is_active'] ?? true) ? AppTheme.emeraldGreen : Colors.grey, 
-                      fontWeight: FontWeight.bold, 
-                      fontSize: 10
-                    )
-                  )
-                ),
               ),
-              const Divider(height: 1),
+              Container(height: 1, margin: const EdgeInsets.symmetric(horizontal: 16), color: cardDivColor),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(
                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                    children: [
-                     _buildActionButton(context, Icons.edit, 'Edit', Colors.green, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: admin)),
-                        );
+                     _buildActionButton(context, Icons.edit_outlined, l10n.edit, AppTheme.emeraldGreen, () {
+                        context.push('/dashboard/admin-detail', extra: admin);
                      }),
                      if (admin['is_active'] ?? true)
-                       _buildActionButton(context, Icons.block, 'Remove', Colors.red, () async {
+                       _buildActionButton(context, Icons.delete_outline, l10n.delete, AppTheme.errorRed, () async {
                           if (id == null) return;
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: Text(isStaff ? 'Remove Staff?' : 'Remove Admin?'),
-                              content: Text('Are you sure you want to remove $name? This will deactivate their account.'),
+                              title: Text(isStaff ? l10n.removeStaff : l10n.removeAdmin),
+                              content: Text(l10n.confirmRemoveAccount(name)),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Remove')),
+                                TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.cancel)),
+                                TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: Text(l10n.delete)),
                               ],
                             ),
                           );
                           if (confirm == true) {
                              await ref.read(profileRepositoryProvider).deleteProfile(id);
-                             ref.refresh(allProfilesProvider);
+                             ref.invalidate(allProfilesProvider);
                           }
                        })
                      else
-                       _buildActionButton(context, Icons.check_circle_outline, 'Reactivate', AppTheme.emeraldGreen, () async {
+                       _buildActionButton(context, Icons.check_circle_outline, l10n.reactivate, AppTheme.emeraldGreen, () async {
                           if (id == null) return;
                           await ref.read(profileRepositoryProvider).reactivateProfile(id);
-                          ref.refresh(allProfilesProvider);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile reactivated')));
+                          ref.invalidate(allProfilesProvider);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.profileReactivated)));
                        }),
-                     _buildActionButton(context, Icons.vpn_key_outlined, 'Permissions', Colors.amber.shade700, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => AdminDetailScreen(admin: admin)),
-                    );
+                     _buildActionButton(context, Icons.vpn_key_outlined, l10n.accessPermissions, Colors.amber.shade700, () {
+                    context.push('/dashboard/admin-detail', extra: admin);
                   }),
                    ],
                 ),
@@ -1488,35 +1997,43 @@ class _AdminManagementTab extends ConsumerWidget {
   Widget _buildActionButton(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 5),
-          Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
-        ],
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 5),
+            Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
 
-  void _showAddAdminDialog(BuildContext context, WidgetRef ref, {bool forceStaff = false}) {
+  void _showAddAdminDialog(BuildContext context, WidgetRef ref, {bool forceStaff = false, bool isAgent = false}) {
+    final l10n = AppLocalizations.of(context)!;
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     final phoneController = TextEditingController();
-    String role = forceStaff ? 'staff' : 'admin';
+    String role = isAgent ? 'agent' : (forceStaff ? 'staff' : 'admin');
     String? selectedOfficeId;
-    bool _isLoading = false;
+    bool isLoading = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        builder: (context, setModalState) {
+          final sheetIsDark = Theme.of(context).brightness == Brightness.dark;
+          return Container(
+          decoration: BoxDecoration(
+            color: sheetIsDark ? AppTheme.darkSurface : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           ),
           padding: EdgeInsets.only(
             top: 30,
@@ -1543,11 +2060,11 @@ class _AdminManagementTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 25),
                   Text(
-                    forceStaff ? 'Register New Staff' : 'Register New Admin',
+                    isAgent ? 'Register New Agent' : (forceStaff ? l10n.registerNewStaff : l10n.registerNewAdmin),
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                   ),
                   Text(
-                    forceStaff ? 'Add a new member to your operational team' : 'Grant administrative access to this portal',
+                    isAgent ? 'Add an external agent to the system' : (forceStaff ? l10n.addTeamMemberDescription : l10n.grantAdminAccessDescription),
                     style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 25),
@@ -1555,63 +2072,66 @@ class _AdminManagementTab extends ConsumerWidget {
                   TextFormField(
                     controller: nameController,
                     decoration: InputDecoration(
-                      labelText: 'Full Name',
+                      labelText: l10n.fullName,
                       prefixIcon: const Icon(Icons.person_outline),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Name is required' : null,
+                    validator: (v) => v!.isEmpty ? l10n.nameRequired : null,
                   ),
                   const SizedBox(height: 15),
                   
                   TextFormField(
                     controller: emailController,
                     decoration: InputDecoration(
-                      labelText: 'Email Address',
+                      labelText: l10n.emailAddress,
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Email is required' : null,
+                    validator: (v) => v!.isEmpty ? l10n.emailRequired : null,
                   ),
+                  const SizedBox(height: 15),
                   const SizedBox(height: 15),
                   
-                  TextFormField(
-                    controller: passwordController,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: 'Initial Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
+                  if (!isAgent) ...[
+                    TextFormField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.initialPassword,
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                        filled: true,
+                        fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
+                      ),
+                      validator: (v) => v!.isEmpty ? l10n.passwordRequired : null,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Password is required' : null,
-                  ),
-                  const SizedBox(height: 15),
+                    const SizedBox(height: 15),
+                  ],
                   
                   TextFormField(
                     controller: phoneController,
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
-                      labelText: 'Phone Number',
+                      labelText: l10n.phoneNumber,
                       prefixIcon: const Icon(Icons.phone_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Phone number is required' : null,
+                    validator: (v) => v!.isEmpty ? l10n.phoneRequired : null,
                   ),
                   
-                  if (!forceStaff) ...[
+                  if (!forceStaff && !isAgent) ...[
                     const SizedBox(height: 15),
                     DropdownButtonFormField<String>(
                       value: role,
-                      items: const [
-                        DropdownMenuItem(value: 'admin', child: Text('Admin (Regional Central)')),
-                        DropdownMenuItem(value: 'super_admin', child: Text('Super Admin (Global Root)')),
+                      items: [
+                        DropdownMenuItem(value: 'admin', child: Text(l10n.adminRegionalCentral)),
+                        DropdownMenuItem(value: 'super_admin', child: Text(l10n.superAdminGlobalRoot)),
                       ],
                       onChanged: (v) => setModalState(() => role = v!),
                       decoration: InputDecoration(
@@ -1619,7 +2139,7 @@ class _AdminManagementTab extends ConsumerWidget {
                         prefixIcon: const Icon(Icons.security_outlined),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                       ),
                     ),
                   ],
@@ -1637,7 +2157,7 @@ class _AdminManagementTab extends ConsumerWidget {
                         prefixIcon: const Icon(Icons.business_outlined),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: sheetIsDark ? AppTheme.darkCardAlt : Colors.grey.shade50,
                       ),
                     ),
                     loading: () => const Center(child: LinearProgressIndicator()),
@@ -1648,54 +2168,203 @@ class _AdminManagementTab extends ConsumerWidget {
                     width: double.infinity,
                     height: 55,
                     child: ElevatedButton(
-                      onPressed: () async {
+                      onPressed: isLoading ? null : () async {
                         if (formKey.currentState!.validate()) {
                           try {
-                            setModalState(() => _isLoading = true);
-                            
-                            // Use RPC to create both Auth user and Profile in one controlled call
-                            // This replaces the old direct 'createProfile' call which failed due to FK constraints.
+                            setModalState(() => isLoading = true);
                             final client = ref.read(supabaseClientProvider);
+                            final agentPassword = isAgent ? _generateSecurePassword() : null;
                             await client.rpc('create_user_admin', params: {
                               'new_email': emailController.text.trim(),
-                              'new_password': passwordController.text.trim(),
+                              'new_password': agentPassword ?? passwordController.text.trim(),
                               'full_name': nameController.text.trim(),
                               'user_role': role,
                               'phone': phoneController.text.trim(),
                               'office': selectedOfficeId,
                             });
 
-                            ref.refresh(allProfilesProvider);
+                            ref.invalidate(allProfilesProvider);
                             if (context.mounted) Navigator.pop(context);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${role.toUpperCase()} registered successfully'),
-                                  backgroundColor: AppTheme.emeraldGreen,
-                                )
+                            if (context.mounted && isAgent && agentPassword != null) {
+                              await showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Agent Created', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Share this temporary password with the agent:'),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.ink900,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: SelectableText(
+                                          agentPassword,
+                                          style: const TextStyle(
+                                            fontFamily: 'monospace',
+                                            color: AppTheme.electricBlue,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text('The agent should change it after first login.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text('Close'),
+                                    ),
+                                    ElevatedButton.icon(
+                                      icon: const Icon(Icons.copy, size: 16),
+                                      label: const Text('Copy & Close'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: sheetIsDark ? AppTheme.primaryAccent(sheetIsDark) : AppTheme.emeraldGreen,
+                                        foregroundColor: sheetIsDark ? AppTheme.ink900 : Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        Clipboard.setData(ClipboardData(text: agentPassword));
+                                        Navigator.pop(ctx);
+                                      },
+                                    ),
+                                  ],
+                                ),
                               );
-                            }
+                            } else if (context.mounted) {
+                               ScaffoldMessenger.of(context).showSnackBar(
+                                 SnackBar(
+                                   content: Text(l10n.registeredSuccessfully(role.toUpperCase())),
+                                   backgroundColor: AppTheme.emeraldGreen,
+                                 )
+                               );
+                             }
                           } catch (e) {
                              if (context.mounted) {
                                String errorMsg = e.toString();
-                               // Friendly error if the RPC hasn't been created yet
                                if (errorMsg.contains('function public.create_user_admin') && errorMsg.contains('does not exist')) {
-                                  errorMsg = 'Database setup required: Please run the provided SQL script to enable admin user creation.';
+                                   errorMsg = l10n.dbSetupRequired;
                                }
-                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Registration Error: $errorMsg'), duration: const Duration(seconds: 5),));
+                               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l10n.registrationError}: $errorMsg'), duration: const Duration(seconds: 5),));
                              }
                           } finally {
-                            setModalState(() => _isLoading = false);
+                            setModalState(() => isLoading = false);
                           }
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.emeraldGreen,
+                        backgroundColor: sheetIsDark ? AppTheme.primaryAccent(sheetIsDark) : AppTheme.emeraldGreen,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         elevation: 0,
                       ),
-                      child: const Text('Confirm Registration', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      child: isLoading
+                          ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: sheetIsDark ? AppTheme.ink900 : Colors.white))
+                          : Text(l10n.confirmRegistration, style: TextStyle(color: sheetIsDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AgentManagementTab extends ConsumerWidget {
+  const _AgentManagementTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filteredAgentsAsync = ref.watch(filteredAgentsProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      children: [
+        _HeaderSection(
+          title: l10n.agents,
+          subtitle: l10n.allAgents.toUpperCase()
+        ),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: double.infinity,
+            padding: EdgeInsets.zero,
+            child: RefreshIndicator(
+              color: AppTheme.ink900,
+              onRefresh: () async {
+                 ref.invalidate(allProfilesProvider);
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+  
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.manageStaff.replaceAll('Staff', 'Agents'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        onPressed: () => const _AdminManagementTab()._showAddAdminDialog(context, ref, isAgent: true),
+                        icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                        label: Text(l10n.newLabel),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15),
+                  
+                  TextField(
+                    onChanged: (value) => ref.read(agentSearchQueryProvider.notifier).state = value,
+                    decoration: InputDecoration(
+                      hintText: l10n.searchAgents,
+                      prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
+                      filled: true,
+                      fillColor: isDark ? AppTheme.darkCard : Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  filteredAgentsAsync.when(
+                    data: (profiles) {
+                      if (profiles.isEmpty) return _buildEmptyAgentsState(context, ref, l10n);
+                      return Column(
+                        children: profiles.map((p) => const _AdminManagementTab()._buildLargeAdminCard(context, ref, p)).toList(),
+                      );
+                    },
+                    loading: () => const Padding(
+                      padding: EdgeInsets.only(top: 60),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (e, _) => Text('${l10n.errorLoading}: $e'),
                   ),
                 ],
               ),
@@ -1703,88 +2372,136 @@ class _AdminManagementTab extends ConsumerWidget {
           ),
         ),
       ),
+    ],
+  );
+}
+
+  Widget _buildEmptyAgentsState(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppTheme.emeraldGreen.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.support_agent_outlined, size: 40, color: AppTheme.emeraldGreen.withValues(alpha: 0.5)),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              l10n.noAgentsFound,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first agent to get started',
+              style: TextStyle(fontSize: 14, color: AppTheme.darkBlue.withValues(alpha: 0.45)),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => const _AdminManagementTab()._showAddAdminDialog(context, ref, isAgent: true),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+              label: Text(l10n.newLabel),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
+
 /// --- TAB 4: ACCESS CONTROL ---
 
 class _AccessControlTab extends ConsumerWidget {
-  const _AccessControlTab({super.key});
+  const _AccessControlTab();
 
-  @override
+   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final securityStats = ref.watch(securityStatsProvider);
     final financialStats = ref.watch(financialStatsProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          const _HeaderSection(title: 'Access & Security', subtitle: 'إدارة الوصول والأمان', showDate: false),
-          Expanded(
+    return Column(
+      children: [
+        _HeaderSection(title: l10n.accessSecurity, subtitle: l10n.accessPermissions.toUpperCase(), showDate: false),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: double.infinity,
+            padding: EdgeInsets.zero,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Security Executive Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(l10n.securityExecutiveSummary, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 15),
                   securityStats.when(
                     data: (stats) => Row(
                       children: [
-                        Expanded(child: _buildSecurityStat('Active Sessions', stats['activeSessions'].toString(), Icons.devices, Colors.blue)),
+                        Expanded(child: _buildSecurityStat(l10n.activeSessions, stats['activeSessions'].toString(), Icons.devices, Colors.blue, isDark)),
                         const SizedBox(width: 15),
-                        Expanded(child: _buildSecurityStat('Security Alerts', stats['securityAlerts'].toString(), Icons.warning_amber_rounded, Colors.orange)),
+                        Expanded(child: _buildSecurityStat(l10n.securityAlerts, stats['securityAlerts'].toString(), Icons.warning_amber_rounded, Colors.orange, isDark)),
                       ],
                     ),
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (e, _) => Row(
                       children: [
-                        Expanded(child: _buildSecurityStat('Active Sessions', '0', Icons.devices, Colors.blue)),
+                        Expanded(child: _buildSecurityStat(l10n.activeSessions, '0', Icons.devices, Colors.blue, isDark)),
                         const SizedBox(width: 15),
-                        Expanded(child: _buildSecurityStat('Security Alerts', '?', Icons.warning_amber_rounded, Colors.orange)),
+                        Expanded(child: _buildSecurityStat(l10n.securityAlerts, '?', Icons.warning_amber_rounded, Colors.orange, isDark)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 30),
-                  const Text('Role Hierarchy & Permissions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(l10n.roleHierarchyPermissions, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 15),
-                  _buildRoleCard(context, ref, 'Super Admin', 'Full system access, infrastructure control, global visibility.', Icons.auto_awesome, AppTheme.emeraldGreen, 'Super Admin'),
+                  _buildRoleCard(context, ref, l10n.superAdmin, l10n.superAdminAccessDesc, Icons.auto_awesome, AppTheme.emeraldGreen, 'Super Admin', isDark),
                   const SizedBox(height: 12),
-                  _buildRoleCard(context, ref, 'Office Admin', 'Branch management, staff oversight, regional reports.', Icons.admin_panel_settings, Colors.amber.shade700, 'Admin'),
+                  _buildRoleCard(context, ref, l10n.officeAdmin, l10n.officeAdminAccessDesc, Icons.admin_panel_settings, Colors.amber.shade700, 'Admin', isDark),
                   const SizedBox(height: 12),
-                  _buildRoleCard(context, ref, 'Operational Staff', 'Task execution, client interaction, status updates.', Icons.engineering, Colors.blueGrey, 'All'),
+                  _buildRoleCard(context, ref, l10n.operationalStaff, l10n.staffAccessDesc, Icons.engineering, Colors.blueGrey, 'All', isDark),
                   
                   const SizedBox(height: 30),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Audit Global Logs', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(l10n.auditGlobalLogs, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       TextButton(
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Exporting CSV...')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.exportingCsv)));
                         }, 
-                        child: const Text('Export CSV')),
+                        child: Text(l10n.exportCsv)),
                     ],
                   ),
                   financialStats.when(
                     data: (stats) {
                       final logs = stats['auditLogs'] as List;
                       if (logs.isEmpty) {
-                        return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No audit logs available', style: TextStyle(color: Colors.grey))));
+                        return Center(child: Padding(padding: const EdgeInsets.all(20), child: Text(l10n.noAuditLogs, style: const TextStyle(color: Colors.grey))));
                       }
                       return Column(
                         children: logs.take(5).map((log) => _buildAuditItem(
                           log['user'] ?? 'System', 
                           log['action'] ?? 'Unknown Action', 
-                          log['time'] != null ? _formatTime(log['time']) : 'Just now'
+                          log['time'] != null ? _formatTime(log['time'], l10n) : l10n.justNow
                         )).toList(),
                       );
                     },
                     loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => const Text('Error loading logs'),
+                    error: (e, _) => Text('${l10n.error}: $e'),
                   ),
                   
                   const SizedBox(height: 30),
@@ -1800,31 +2517,31 @@ class _AccessControlTab extends ConsumerWidget {
                       children: [
                         const Icon(Icons.gpp_maybe, color: Colors.red, size: 40),
                         const SizedBox(height: 10),
-                        const Text('Danger Zone', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red)),
-                        const Text('Actions here cannot be undone.', style: TextStyle(fontSize: 12, color: Colors.redAccent)),
+                        Text(l10n.dangerZone, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red)),
+                        Text(l10n.actionsUndoneDesc, style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
                         const SizedBox(height: 15),
                         ElevatedButton(
                           onPressed: () {
                             showDialog(
                               context: context,
                               builder: (context) => AlertDialog(
-                                title: const Text('Revoke All Tokens?'),
-                                content: const Text('This will sign out all users globally. Are you sure?'),
+                                title: Text(l10n.revokeTokensTitle),
+                                content: Text(l10n.revokeTokensConfirm),
                                 actions: [
-                                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                                  TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
                                   TextButton(onPressed: () async {
                                     Navigator.pop(context);
                                     await Supabase.instance.client.auth.signOut();
                                     if (context.mounted) {
                                       Navigator.of(context).pushReplacementNamed('/login');
                                     }
-                                  }, child: const Text('Revoke', style: TextStyle(color: Colors.red))),
+                                  }, child: Text(l10n.revoke, style: const TextStyle(color: Colors.red))),
                                 ],
                               ),
                             );
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                          child: const Text('Revoke All Active Tokens'),
+                           child: Text(l10n.revokeTokens),
                         ),
                       ],
                     ),
@@ -1833,31 +2550,31 @@ class _AccessControlTab extends ConsumerWidget {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  String _formatTime(String isoDate) {
+  String _formatTime(String isoDate, AppLocalizations l10n) {
     try {
       final date = DateTime.parse(isoDate);
       final diff = DateTime.now().difference(date);
-      if (diff.inSeconds < 60) return 'Just now';
-      if (diff.inMinutes < 60) return '${diff.inMinutes} mins ago';
-      if (diff.inHours < 24) return '${diff.inHours} hours ago';
+      if (diff.inSeconds < 60) return l10n.justNow;
+      if (diff.inMinutes < 60) return l10n.minsAgo(diff.inMinutes.toString());
+      if (diff.inHours < 24) return l10n.hoursAgo(diff.inHours.toString());
       return '${date.day}/${date.month}';
     } catch (e) {
-      return 'Recently';
+      return l10n.recently;
     }
   }
 
-  Widget _buildSecurityStat(String label, String value, IconData icon, Color color) {
+  Widget _buildSecurityStat(String label, String value, IconData icon, Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1871,7 +2588,7 @@ class _AccessControlTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildRoleCard(BuildContext context, WidgetRef ref, String title, String desc, IconData icon, Color color, String filterValue) {
+  Widget _buildRoleCard(BuildContext context, WidgetRef ref, String title, String desc, IconData icon, Color color, String filterValue, bool isDark) {
     return InkWell(
       onTap: () {
         ref.read(adminRoleFilterProvider.notifier).state = filterValue;
@@ -1883,15 +2600,15 @@ class _AccessControlTab extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppTheme.darkCard : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.1)),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(width: 15),
@@ -1946,7 +2663,7 @@ class _AccessControlTab extends ConsumerWidget {
 /// --- TAB 5: SYSTEM SETTINGS ---
 
 class _SystemSettingsTab extends StatefulWidget {
-  const _SystemSettingsTab({super.key});
+  const _SystemSettingsTab();
 
   @override
   State<_SystemSettingsTab> createState() => _SystemSettingsTabState();
@@ -1956,32 +2673,32 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  final List<Map<String, dynamic>> _allSettings = [
+  List<Map<String, dynamic>> _getSettings(AppLocalizations l10n) => [
     {
-      'category': 'GENERAL CONFIGURATION',
-      'arCategory': 'الإعدادات العامة',
+      'category': l10n.generalConfiguration,
       'items': [
-        {'icon': Icons.language_rounded, 'title': 'Regional Localization', 'subtitle': 'English, Arabic, Hijri Calendar', 'status': 'Active', 'isHealthy': true},
-        {'icon': Icons.business_center_rounded, 'title': 'Business Entities', 'subtitle': 'Manage registered Saudi companies', 'status': '3 Entities', 'isHealthy': true},
-        {'icon': Icons.currency_exchange_rounded, 'title': 'Financial Controls', 'subtitle': 'SAR Conversion, Tax (VAT) Config', 'status': 'Ready', 'isHealthy': true},
+        {'icon': Icons.language_rounded, 'title': l10n.regionalLocalization, 'subtitle': l10n.regionalLocalizationDesc, 'status': l10n.active, 'isHealthy': true},
+        {'icon': Icons.business_center_rounded, 'title': l10n.businessEntities, 'subtitle': l10n.businessEntitiesDesc, 'status': '3 Entities', 'isHealthy': true},
+        {'icon': Icons.currency_exchange_rounded, 'title': l10n.financialControls, 'subtitle': l10n.financialControlsDesc, 'status': 'Ready', 'isHealthy': true},
       ]
     },
     {
-      'category': 'NOTIFICATIONS & ALERTS',
-      'arCategory': 'التنبيهات والإشعارات',
+      'category': l10n.notificationsAlerts,
       'items': [
-        {'icon': Icons.sms_rounded, 'title': 'SMS Gateway', 'subtitle': 'STC, Mobily, Zain integration', 'status': 'Online', 'isHealthy': true},
-        {'icon': Icons.email_rounded, 'title': 'SMTP Server', 'subtitle': 'Office 365, SendGrid Config', 'status': 'Active', 'isHealthy': true},
-        {'icon': Icons.notifications_active_rounded, 'title': 'Push Notifications', 'subtitle': 'Firebase Management', 'status': 'Healthy', 'isHealthy': true},
+        // No SMS gateway or SMTP integration actually exists in this app —
+        // show that honestly instead of a fabricated "Online"/"Active" status.
+        {'icon': Icons.sms_rounded, 'title': l10n.smsGateway, 'subtitle': l10n.smsGatewayDesc, 'status': 'Not configured', 'isHealthy': false},
+        {'icon': Icons.email_rounded, 'title': l10n.smtpServer, 'subtitle': l10n.smtpServerDesc, 'status': 'Not configured', 'isHealthy': false},
+        {'icon': Icons.notifications_active_rounded, 'title': l10n.pushNotifications, 'subtitle': l10n.pushNotificationsDesc, 'status': 'Healthy', 'isHealthy': true},
       ]
     },
     {
-      'category': 'INFRASTRUCTURE',
-      'arCategory': 'البنية التحتية',
+      'category': l10n.infrastructure,
       'items': [
-        {'icon': Icons.cloud_sync_rounded, 'title': 'Backup & Sync', 'subtitle': 'Daily auto-backup to AWS/Cloud', 'status': 'Last: 2h ago', 'isHealthy': true},
-        {'icon': Icons.api_rounded, 'title': 'API Integration', 'subtitle': 'MOI, GOSI, Qiwa External APIs', 'status': '5 Linked', 'isHealthy': true},
-        {'icon': Icons.update_rounded, 'title': 'Version Control', 'subtitle': 'Current System v1.4.2 Build', 'status': 'Latest', 'isHealthy': true},
+        // No backup/sync job or external API integration exists either.
+        {'icon': Icons.cloud_sync_rounded, 'title': l10n.backupSync, 'subtitle': l10n.backupSyncDesc, 'status': 'Not configured', 'isHealthy': false},
+        {'icon': Icons.api_rounded, 'title': l10n.apiIntegration, 'subtitle': l10n.apiIntegrationDesc, 'status': 'Not configured', 'isHealthy': false},
+        {'icon': Icons.update_rounded, 'title': l10n.versionControl, 'subtitle': l10n.versionControlDesc, 'status': 'Latest', 'isHealthy': true},
       ]
     },
   ];
@@ -2002,15 +2719,17 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
     super.dispose();
   }
 
-  @override
+   @override
   Widget build(BuildContext context) {
-    return ResponsiveLayout(
-      maxWidth: 1000,
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          const _HeaderSection(title: 'System Engine', subtitle: 'محرك النظام الأساسي', showDate: false),
-          Expanded(
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      children: [
+        _HeaderSection(title: l10n.systemAuthority, subtitle: l10n.systemLogs.toUpperCase(), showDate: false),
+        Expanded(
+          child: ResponsiveLayout(
+            maxWidth: double.infinity,
+            padding: EdgeInsets.zero,
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               physics: const BouncingScrollPhysics(),
@@ -2019,13 +2738,13 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search system settings...',
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    suffixIcon: _searchQuery.isNotEmpty 
+                    hintText: l10n.searchSystemSettings,
+                    prefixIcon: Icon(Icons.search, color: isDark ? AppTheme.darkSubtext : Colors.grey),
+                    suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => _searchController.clear())
                         : null,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: isDark ? AppTheme.darkCard : Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                       borderSide: BorderSide.none,
@@ -2041,15 +2760,15 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
                   const SizedBox(height: 30),
                 ],
   
-                ..._buildFilteredSettings(),
+                ..._buildFilteredSettings(l10n),
                 
                 const SizedBox(height: 40),
-                const Center(
+                Center(
                   child: Column(
                     children: [
-                      Text('SAUDI SERVICE MANAGER PORTAL', style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                      SizedBox(height: 4),
-                      Text('Build 2024.1.42 • Enterprise Edition', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                      const Text('WORQLY PLATFORM', style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                      const SizedBox(height: 4),
+                      Text('Build 2024.1.42 • ${l10n.superAdminGlobalRoot}', style: const TextStyle(color: Colors.grey, fontSize: 10)),
                     ],
                   ),
                 ),
@@ -2057,26 +2776,25 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  List<Widget> _buildFilteredSettings() {
+  List<Widget> _buildFilteredSettings(AppLocalizations l10n) {
     List<Widget> groups = [];
+    final allSettings = _getSettings(l10n);
     
-    for (var group in _allSettings) {
+    for (var group in allSettings) {
       final items = (group['items'] as List).where((item) {
         final title = item['title'].toString().toLowerCase();
         final subtitle = item['subtitle'].toString().toLowerCase();
         return title.contains(_searchQuery) || subtitle.contains(_searchQuery);
       }).toList();
-
       if (items.isNotEmpty) {
         groups.add(
           _buildSettingGroup(
             group['category'], 
-            group['arCategory'], 
             items.map((item) => _buildSettingTile(
               item['icon'], 
               item['title'], 
@@ -2084,15 +2802,15 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
               status: item['status'], 
               isHealthy: item['isHealthy'],
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SystemDetailScreen(
+                context.push(
+                  '/dashboard/system-detail',
+                  extra: SystemDetailRouteArgs(
                     title: item['title'],
                     subtitle: item['subtitle'],
                     icon: item['icon'],
                     status: item['status'],
                     isHealthy: item['isHealthy'],
-                  )),
+                  ),
                 );
               }
             )).toList()
@@ -2104,10 +2822,10 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
 
     if (groups.isEmpty && _searchQuery.isNotEmpty) {
       return [
-        const Center(
+        Center(
           child: Padding(
-            padding: EdgeInsets.all(40.0),
-            child: Text('No results found for your search', style: TextStyle(color: Colors.grey)),
+            padding: const EdgeInsets.all(40.0),
+            child: Text(l10n.noResultsFoundSearch, style: const TextStyle(color: Colors.grey)),
           ),
         )
       ];
@@ -2117,17 +2835,18 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
   }
 
   Widget _buildSystemHealthOverview() {
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SystemDetailScreen(
-            title: 'System Health & Performance',
-            subtitle: 'Real-time monitoring of all global services',
+        context.push(
+          '/dashboard/system-detail',
+          extra: SystemDetailRouteArgs(
+            title: l10n.systemHealthPerformance,
+            subtitle: l10n.realTimeMonitoringGlobal,
             icon: Icons.monitor_heart_outlined,
-            status: '99.9% Optimal',
+            status: '99.9% ${l10n.optimal}',
             isHealthy: true,
-          )),
+          ),
         );
       },
       borderRadius: BorderRadius.circular(24),
@@ -2135,14 +2854,14 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppTheme.emeraldGreen, AppTheme.emeraldGreen.withOpacity(0.8)],
+            colors: [AppTheme.emeraldGreen, AppTheme.emeraldGreen.withValues(alpha: 0.8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.emeraldGreen.withOpacity(0.3),
+              color: AppTheme.emeraldGreen.withValues(alpha: 0.3),
               blurRadius: 15,
               offset: const Offset(0, 8),
             ),
@@ -2153,24 +2872,24 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('System Health', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text('All services operational', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text(l10n.systemHealth, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(l10n.allServicesOperational, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                   ],
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      CircleAvatar(radius: 4, backgroundColor: Colors.white),
-                      SizedBox(width: 8),
-                      Text('99.9% Up', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      const CircleAvatar(radius: 4, backgroundColor: Colors.white),
+                      const SizedBox(width: 8),
+                      Text('99.9% ${l10n.up}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -2182,9 +2901,9 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMiniHealthStat('Storage', '42%', Icons.storage_rounded),
-                _buildMiniHealthStat('CPU Load', '12%', Icons.memory_rounded),
-                _buildMiniHealthStat('API Latency', '45ms', Icons.speed_rounded),
+                _buildMiniHealthStat(l10n.storage, '42%', Icons.storage_rounded),
+                _buildMiniHealthStat(l10n.cpuLoad, '12%', Icons.memory_rounded),
+                _buildMiniHealthStat(l10n.apiLatency, '45ms', Icons.speed_rounded),
               ],
             ),
           ],
@@ -2204,28 +2923,23 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
     );
   }
 
-  Widget _buildSettingGroup(String title, String arTitle, List<Widget> children) {
+  Widget _buildSettingGroup(String title, List<Widget> children) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, right: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1.2)),
-              Text(arTitle, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-            ],
-          ),
+          child: Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueGrey, letterSpacing: 1.2)),
         ),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? AppTheme.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(24),
-            boxShadow: [
+            boxShadow: isDark ? [] : [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 20,
                 offset: const Offset(0, 4),
               ),
@@ -2243,7 +2957,7 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppTheme.emeraldLight.withOpacity(0.5),
+          color: AppTheme.emeraldLight.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: AppTheme.emeraldGreen, size: 22),
@@ -2273,4 +2987,304 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
   }
 }
 
+String _currentDateFormatted() {
+  final now = DateTime.now();
+  const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  return '${now.day} ${months[now.month - 1]} ${now.year}';
+}
+
+Future<void> _showDashboardDateFilter(BuildContext context, WidgetRef ref) async {
+  final current = ref.read(dashboardDateRangeProvider);
+  final now = DateTime.now();
+
+  // Quick presets bottom sheet
+  await showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Filter Dashboard', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+            const SizedBox(height: 16),
+            _datePreset(ctx, ref, 'This Week',
+                DateTimeRange(start: now.subtract(Duration(days: now.weekday - 1)), end: now)),
+            _datePreset(ctx, ref, 'This Month',
+                DateTimeRange(start: DateTime(now.year, now.month, 1), end: now)),
+            _datePreset(ctx, ref, 'Last Month',
+                DateTimeRange(start: DateTime(now.year, now.month - 1, 1), end: DateTime(now.year, now.month, 0))),
+            _datePreset(ctx, ref, 'This Year',
+                DateTimeRange(start: DateTime(now.year, 1, 1), end: now)),
+            ListTile(
+              leading: const Icon(Icons.date_range_outlined, color: AppTheme.emeraldGreen),
+              title: const Text('Custom Range'),
+              contentPadding: EdgeInsets.zero,
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await showDateRangePicker(
+                  context: context,
+                  firstDate: DateTime(2024),
+                  lastDate: now,
+                  initialDateRange: current,
+                  builder: (c, child) => Theme(
+                    data: Theme.of(c).copyWith(colorScheme: const ColorScheme.light(primary: AppTheme.emeraldGreen)),
+                    child: child!,
+                  ),
+                );
+                if (picked != null) {
+                  ref.read(dashboardDateRangeProvider.notifier).state = picked;
+                  ref.invalidate(financialStatsProvider);
+                }
+              },
+            ),
+            if (current != null)
+              ListTile(
+                leading: const Icon(Icons.clear, color: AppTheme.errorRed),
+                title: const Text('Clear Filter', style: TextStyle(color: AppTheme.errorRed)),
+                contentPadding: EdgeInsets.zero,
+                onTap: () {
+                  ref.read(dashboardDateRangeProvider.notifier).state = null;
+                  ref.invalidate(financialStatsProvider);
+                  Navigator.pop(ctx);
+                },
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _datePreset(BuildContext ctx, WidgetRef ref, String label, DateTimeRange range) {
+  return ListTile(
+    leading: const Icon(Icons.schedule_outlined, color: AppTheme.emeraldGreen),
+    title: Text(label),
+    contentPadding: EdgeInsets.zero,
+    onTap: () {
+      ref.read(dashboardDateRangeProvider.notifier).state = range;
+      ref.invalidate(financialStatsProvider);
+      Navigator.pop(ctx);
+    },
+  );
+}
+
+String _generateSecurePassword() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*';
+  final rng = Random.secure();
+  return List.generate(32, (_) => chars[rng.nextInt(chars.length)]).join();
+}
+
+// ── Settings Tab — combines Reports, Access Control, System Authority ──────
+
+class _SettingsTab extends ConsumerStatefulWidget {
+  final bool isSuperAdmin;
+  const _SettingsTab({required this.isSuperAdmin});
+
+  @override
+  ConsumerState<_SettingsTab> createState() => _SettingsTabState();
+}
+
+class _SettingsTabState extends ConsumerState<_SettingsTab> {
+  int _section = 0; // 0=Reports, 1=Access, 2=System, 3=Preferences
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sections = [
+      ('Reports', Icons.file_download_outlined),
+      if (widget.isSuperAdmin) ('Access', Icons.lock_person_outlined),
+      if (widget.isSuperAdmin) ('System', Icons.settings_outlined),
+      ('Prefs', Icons.tune_outlined),
+    ];
+
+    return Column(
+      children: [
+        // Sub-navigation
+        Container(
+          color: isDark ? AppTheme.darkSurface : AppTheme.surfaceWhite,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Row(
+            children: List.generate(sections.length, (i) {
+              final selected = _section == i;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _section = i),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: selected ? AppTheme.emeraldGreen : Colors.transparent,
+                          width: 2.5,
+                        ),
+                      ),
+                    ),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(sections[i].$2,
+                          size: 16,
+                          color: selected ? AppTheme.emeraldGreen : Colors.grey),
+                      const SizedBox(width: 6),
+                      Text(sections[i].$1,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                            color: selected ? AppTheme.emeraldGreen : Colors.grey,
+                          )),
+                    ]),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        Expanded(child: _buildSection()),
+      ],
+    );
+  }
+
+  Widget _buildSection() {
+    if (!widget.isSuperAdmin) {
+      return _section == 0 ? const ReportExportScreen() : _preferencesSection();
+    }
+    switch (_section) {
+      case 0: return const ReportExportScreen();
+      case 1: return const _AccessControlTab();
+      case 2: return const _SystemSettingsTab();
+      case 3: return _preferencesSection();
+      default: return const ReportExportScreen();
+    }
+  }
+
+  Widget _preferencesSection() {
+    final isDark = ref.watch(themeModeProvider) == ThemeMode.dark;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text('App Preferences', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.darkBlue)),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+          ),
+          child: Column(children: [
+            // Dark mode
+            SwitchListTile(
+              value: isDark,
+              onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
+              activeColor: AppTheme.emeraldGreen,
+              secondary: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
+                child: Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, color: AppTheme.emeraldGreen, size: 20),
+              ),
+              title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(isDark ? 'Dark theme active' : 'Light theme active', style: const TextStyle(fontSize: 12)),
+            ),
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            // Biometric
+            _BiometricToggle(),
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            // Sign out
+            ListTile(
+              onTap: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('Sign Out?'),
+                    content: const Text('You will be returned to the login screen.'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: TextButton.styleFrom(foregroundColor: AppTheme.errorRed),
+                        child: const Text('Sign Out'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm != true) return;
+                await Supabase.instance.client.auth.signOut();
+                if (context.mounted) context.go('/login');
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: AppTheme.errorRedLight, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 20),
+              ),
+              title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.errorRed)),
+              subtitle: const Text('End your current session', style: TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+class _BiometricToggle extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_BiometricToggle> createState() => _BiometricToggleState();
+}
+
+class _BiometricToggleState extends ConsumerState<_BiometricToggle> {
+  bool _available = false;
+  bool _enabled = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final available = await BiometricService.isAvailable();
+    final enabled = await BiometricService.isEnabled();
+    if (mounted) setState(() { _available = available; _enabled = enabled; _loading = false; });
+  }
+
+  Future<void> _toggle(bool value) async {
+    await BiometricService.setEnabled(value);
+    setState(() => _enabled = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (_loading) return const ListTile(title: Text('Loading...'));
+    if (!_available) {
+      return ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
+          child: const Icon(Icons.fingerprint_rounded, color: Colors.grey, size: 20),
+        ),
+        title: const Text('Biometric Login', style: TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: const Text('Not available on this device', style: TextStyle(fontSize: 12, color: Colors.grey)),
+        trailing: const Icon(Icons.info_outline, color: Colors.grey, size: 18),
+      );
+    }
+    return SwitchListTile(
+      value: _enabled,
+      onChanged: _toggle,
+      activeColor: AppTheme.emeraldGreen,
+      secondary: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
+        child: const Icon(Icons.fingerprint_rounded, color: AppTheme.emeraldGreen, size: 20),
+      ),
+      title: const Text('Biometric Login', style: TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: const Text('Use fingerprint / Face ID to unlock', style: TextStyle(fontSize: 12)),
+    );
+  }
+}
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import 'package:service_manager_app/l10n/generated/app_localizations.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class SystemDetailScreen extends StatelessWidget {
   final String title;
@@ -20,34 +22,28 @@ class SystemDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppTheme.darkBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
+      appBar: WorkqlyAppBar(title: title),
       body: SingleChildScrollView(
         child: ResponsiveLayout(
           maxWidth: 800,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeroCard(),
+              _buildHeroCard(l10n, isDark),
               const SizedBox(height: 25),
-              const Text('CONFIGURATION DETAILS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+              Text(l10n.configurationDetails, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? AppTheme.darkSubtext : Colors.grey, letterSpacing: 1.2)),
               const SizedBox(height: 12),
-              _buildDetailsCard(),
+              _buildDetailsCard(l10n, isDark),
               const SizedBox(height: 30),
-              const Text('OPERATIONAL LOGS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+              Text(l10n.operationalLogs, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? AppTheme.darkSubtext : Colors.grey, letterSpacing: 1.2)),
               const SizedBox(height: 12),
-              _buildLogsCard(),
+              _buildLogsCard(l10n, isDark),
               const SizedBox(height: 40),
-              _buildActionButton(context),
+              _buildActionButton(context, l10n),
             ],
           ),
         ),
@@ -55,20 +51,20 @@ class SystemDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroCard() {
+  Widget _buildHeroCard(AppLocalizations l10n, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.emeraldLight.withOpacity(0.5),
+              color: AppTheme.emeraldLight.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: AppTheme.emeraldGreen, size: 32),
@@ -106,23 +102,23 @@ class SystemDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailsCard() {
+  Widget _buildDetailsCard(AppLocalizations l10n, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
       ),
       child: Column(
         children: [
-          _buildDetailRow(Icons.info_outline, 'Service Name', title),
+          _buildDetailRow(Icons.info_outline, l10n.serviceName, title),
           const Divider(height: 30),
-          _buildDetailRow(Icons.description_outlined, 'Description', 'Standard configuration for $title across the Saudi branch network.'),
+          _buildDetailRow(Icons.description_outlined, l10n.description, l10n.standardConfigDesc(title)),
           const Divider(height: 30),
-          _buildDetailRow(Icons.update_rounded, 'Last Updated', 'Today, 10:45 AM'),
+          _buildDetailRow(Icons.update_rounded, l10n.lastUpdated, 'Today, 10:45 AM'),
           const Divider(height: 30),
-          _buildDetailRow(Icons.person_pin_circle_outlined, 'Modified By', 'Super Admin'),
+          _buildDetailRow(Icons.person_pin_circle_outlined, l10n.modifiedBy, l10n.superAdmin),
         ],
       ),
     );
@@ -148,19 +144,19 @@ class SystemDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLogsCard() {
+  Widget _buildLogsCard(AppLocalizations l10n, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)],
+        boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20)],
       ),
       child: Column(
         children: [
-          _buildLogItem('Configuration synced with master database', '2h ago'),
-          _buildLogItem('Manual check performed by System Engine', '5h ago'),
-          _buildLogItem('Security certificate auto-renewed', 'Yesterday'),
+          _buildLogItem(l10n.logConfigSynced, '2h ago'),
+          _buildLogItem(l10n.logManualCheck, '5h ago'),
+          _buildLogItem(l10n.logSecurityRenewed, l10n.yesterday),
         ],
       ),
     );
@@ -179,22 +175,24 @@ class SystemDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(BuildContext context) {
+  Widget _buildActionButton(BuildContext context, AppLocalizations l10n) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Configuration for $title updated across all nodes.')),
+            SnackBar(content: Text(l10n.configUpdatedNodes(title))),
           );
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.emeraldGreen,
+          backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+          foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           elevation: 0,
         ),
-        child: const Text('Save & Verify Configuration', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        child: Text(l10n.saveVerifyConfig, style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

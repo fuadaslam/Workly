@@ -1,26 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../features/auth/presentation/pages/login_screen.dart';
 import '../../../../features/auth/presentation/providers/profile_provider.dart';
-import '../../../../features/auth/presentation/pages/edit_profile_screen.dart';
-import '../../../../features/auth/presentation/pages/change_password_screen.dart';
 import '../../../../features/dashboard/presentation/pages/notifications_screen.dart';
 import '../../../../core/providers/locale_provider.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class ProfileView extends ConsumerWidget {
   const ProfileView({super.key});
 
   Future<void> _signOut(BuildContext context) async {
     await Supabase.instance.client.auth.signOut();
-    if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
+    if (context.mounted) context.go('/login');
   }
 
   void _showLanguagePicker(BuildContext context, WidgetRef ref) {
@@ -68,14 +62,11 @@ class ProfileView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('My Profile / ملفي الشخصي'),
-        backgroundColor: AppTheme.backgroundLight,
-        centerTitle: false,
-      ),
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
+      appBar: const WorkqlyAppBar(title: 'My Profile'),
       body: profileAsync.when(
         data: (profile) {
           if (profile == null) {
@@ -99,21 +90,26 @@ class ProfileView extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: isDark ? AppTheme.darkCard : Colors.white,
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppTheme.emeraldGreen, width: 2),
+                            border: Border.all(color: AppTheme.primaryAccent(isDark), width: 2),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          child: const CircleAvatar(
+                          child: CircleAvatar(
                             radius: 50,
                             backgroundColor: AppTheme.emeraldLight,
-                            child: Icon(Icons.person, size: 50, color: AppTheme.emeraldGreen),
+                            backgroundImage: (profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty)
+                                ? NetworkImage(profile.avatarUrl!)
+                                : null,
+                            child: (profile.avatarUrl == null || profile.avatarUrl!.isEmpty)
+                                ? const Icon(Icons.person, size: 50, color: AppTheme.emeraldGreen)
+                                : null,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -133,7 +129,7 @@ class ProfileView extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppTheme.emeraldGreen.withOpacity(0.1),
+                            color: AppTheme.emeraldGreen.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -154,25 +150,24 @@ class ProfileView extends ConsumerWidget {
                   _buildSectionHeader('Account Settings / إعدادات الحساب'),
                   const SizedBox(height: 16),
                   _buildSettingsTile(
+                    isDark: isDark,
                     icon: Icons.person_outline,
                     title: 'Edit Profile / تعديل الملف الشخصي',
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => EditProfileScreen(profile: profile)),
-                      );
+                      context.push('/dashboard/edit-profile', extra: profile);
                     },
                   ),
                   _buildSettingsTile(
+                    isDark: isDark,
                     icon: Icons.notifications_outlined,
                     title: 'Notifications / الإشعارات',
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                      );
+                      NotificationsScreen.showAsDrawer(context);
                     },
                     trailing: Switch(value: true, onChanged: (v) {}, activeColor: AppTheme.emeraldGreen),
                   ),
                   _buildSettingsTile(
+                    isDark: isDark,
                     icon: Icons.language,
                     title: 'Language / اللغة',
                     onTap: () => _showLanguagePicker(context, ref),
@@ -182,12 +177,11 @@ class ProfileView extends ConsumerWidget {
                     ),
                   ),
                   _buildSettingsTile(
+                    isDark: isDark,
                     icon: Icons.security,
                     title: 'Change Password / تغيير كلمة المرور',
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-                      );
+                      context.push('/dashboard/change-password');
                     },
                   ),
   
@@ -195,6 +189,7 @@ class ProfileView extends ConsumerWidget {
                   _buildSectionHeader('Support / الدعم'),
                   const SizedBox(height: 16),
                   _buildSettingsTile(
+                    isDark: isDark,
                     icon: Icons.help_outline,
                     title: 'Help Center / مركز المساعدة',
                     onTap: () {
@@ -204,16 +199,17 @@ class ProfileView extends ConsumerWidget {
                     },
                   ),
                   _buildSettingsTile(
+                    isDark: isDark,
                     icon: Icons.info_outline,
                     title: 'About App / عن التطبيق',
                     onTap: () {
                       showAboutDialog(
                         context: context,
-                        applicationName: 'Saudi Service Manager',
+                        applicationName: 'Workly',
                         applicationVersion: '1.0.0',
-                        applicationIcon: const Icon(Icons.settings, color: AppTheme.emeraldGreen, size: 40),
+                        applicationIcon: const Icon(Icons.work_rounded, color: AppTheme.emeraldGreen, size: 40),
                         children: [
-                          const Text('Dedicated to managing services efficiently in Saudi Arabia.'),
+                          const Text('Intelligent service management platform for modern teams, by xoviq Labs.'),
                         ],
                       );
                     },
@@ -237,6 +233,21 @@ class ProfileView extends ConsumerWidget {
                     'Version 1.0.0',
                     style: TextStyle(color: Colors.grey[400], fontSize: 12),
                   ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Powered by ',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                      Image.asset(
+                        'assets/images/Xoviq Logo.jpeg',
+                        height: 24,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -264,6 +275,7 @@ class ProfileView extends ConsumerWidget {
   }
 
   Widget _buildSettingsTile({
+    required bool isDark,
     required IconData icon,
     required String title,
     required VoidCallback onTap,
@@ -272,11 +284,11 @@ class ProfileView extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        boxShadow: isDark ? [] : [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -286,10 +298,10 @@ class ProfileView extends ConsumerWidget {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.backgroundLight,
+            color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: AppTheme.darkBlue, size: 20),
+          child: Icon(icon, color: isDark ? AppTheme.darkOnSurface : AppTheme.darkBlue, size: 20),
         ),
         title: Text(
           title,

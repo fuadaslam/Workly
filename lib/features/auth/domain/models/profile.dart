@@ -1,4 +1,5 @@
-enum AppRole { super_admin, admin, staff }
+// ignore: constant_identifier_names
+enum AppRole { super_admin, admin, staff, agent }
 
 class Profile {
   final String id;
@@ -9,7 +10,10 @@ class Profile {
   final String? phoneNumber;
   final String? officeId;
   final String? officeName;
+  final String? orgId;
+  final bool isPlatformAdmin;
   final DateTime? createdAt;
+  final String? avatarUrl;
 
   Profile({
     required this.id,
@@ -20,20 +24,26 @@ class Profile {
     this.phoneNumber,
     this.officeId,
     this.officeName,
+    this.orgId,
+    this.isPlatformAdmin = false,
     this.createdAt,
+    this.avatarUrl,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
       id: json['id'],
       email: json['email'],
-      name: json['name'], // matched to updated schema
+      name: json['name'],
       role: _parseRole(json['role']),
       whatsappNo: json['whatsapp_no'],
       phoneNumber: json['phone_number'],
       officeId: json['office_id'],
       officeName: json['offices']?['name'],
+      orgId: json['org_id'],
+      isPlatformAdmin: json['is_platform_admin'] == true,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      avatarUrl: json['avatar_url'],
     );
   }
 
@@ -47,6 +57,8 @@ class Profile {
       case 'admin':
       case 'administrator':
         return AppRole.admin;
+      case 'agent':
+        return AppRole.agent;
       default:
         return AppRole.staff;
     }
@@ -57,10 +69,11 @@ class Profile {
       'id': id,
       'email': email,
       'name': name,
-      'role': role.name, // enum to string
+      'role': role.name,
       'whatsapp_no': whatsappNo,
       'phone_number': phoneNumber,
       'office_id': officeId,
+      'org_id': orgId,
       'created_at': createdAt?.toIso8601String(),
     };
   }

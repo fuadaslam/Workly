@@ -1,11 +1,12 @@
--- Run this SQL in your Supabase SQL Editor to support soft deletes and cross-schema user creation
+-- Resolve PGRST203 ambiguity error by dropping the overloaded version of create_user_admin
+-- that uses TEXT for the office parameter.
 
--- 1. Add is_active column to profiles
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+-- 1. Drop the version with TEXT for office
+-- The signature has 6 text parameters (since Postgres treats UUID vs TEXT differently for overloading)
+DROP FUNCTION IF EXISTS public.create_user_admin(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
 
--- 2. Create an RPC to safely create an auth user from the admin dashboard
--- This requires the 'service_role' or high privileges, so we use 'SECURITY DEFINER'.
--- WARNING: Only expose this if you have proper RLS/checks!
+-- 2. Ensure the correct version with UUID for office is properly defined
+-- We use CREATE OR REPLACE to ensure it's up to date.
 CREATE OR REPLACE FUNCTION public.create_user_admin(
     new_email TEXT,
     new_password TEXT,
@@ -16,7 +17,7 @@ CREATE OR REPLACE FUNCTION public.create_user_admin(
 )
 RETURNS UUID
 LANGUAGE plpgsql
-SECURITY DEFINER -- Runs with privileges of the creator
+SECURITY DEFINER
 AS $$
 DECLARE
     new_user_id UUID;
@@ -37,7 +38,7 @@ BEGIN
         crypt(new_password, gen_salt('bf')),
         now(),
         '{"provider":"email","providers":["email"]}',
-        format('{"full_name":"%s"}', full_name)::jsonb,
+        jsonb_build_object('full_name', full_name),
         now(),
         now(),
         '',
@@ -47,13 +48,11 @@ BEGIN
     )
     RETURNING id INTO new_user_id;
 
-    -- The trigger 'on_auth_user_created' in supabase_schema.sql will automatically 
-    -- create the profile, but we need to update it with the specific role/office
-    -- because the trigger defaults to 'staff'.
-    
+    -- Update the profile with the specific role/office
+    -- This works because on_auth_user_created trigger already created the profile row
     UPDATE public.profiles
     SET 
-        role = user_role,
+        role = user_role::public.app_role, -- Cast to the custom enum type
         phone_number = phone,
         office_id = office,
         name = full_name

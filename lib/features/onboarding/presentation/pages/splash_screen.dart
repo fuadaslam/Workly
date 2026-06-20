@@ -1,11 +1,13 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
-import 'onboarding_screen.dart';
-import '../../../auth/presentation/pages/login_screen.dart';
-import '../../../dashboard/presentation/pages/dashboard_screen.dart';
 import '../providers/onboarding_provider.dart';
+import '../../../../core/services/biometric_service.dart';
+import 'biometric_lock_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -42,19 +44,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     }
 
     final session = Supabase.instance.client.auth.currentSession;
+    
+    if (!mounted) return;
 
     if (showOnboarding) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-      );
+      context.go('/onboarding');
     } else if (session != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardScreen()),
-      );
+      // Check if biometric is enabled — show lock screen before dashboard
+      final biometricEnabled = !kIsWeb && await BiometricService.isEnabled();
+      final biometricAvailable = !kIsWeb && await BiometricService.isAvailable();
+      if (!mounted) return;
+      if (biometricEnabled && biometricAvailable) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const BiometricLockScreen()),
+        );
+      } else {
+        context.go('/dashboard');
+      }
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      context.go('/login');
     }
   }
 
@@ -66,24 +74,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppTheme.darkBackground : Colors.white,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
+              SvgPicture.asset(
+                'assets/images/worqly_logo.svg',
                 width: 150,
                 height: 150,
-                child: Image.asset(
-                  'assets/images/new_app_logo.png',
-                ),
               ),
               const SizedBox(height: 24),
               const Text(
-                'Saudi Service Manager',
+                'Workly',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,

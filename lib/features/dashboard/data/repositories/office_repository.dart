@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/utils/supabase_org_utils.dart';
 
 class OfficeRepository {
   final SupabaseClient _client;
@@ -11,7 +12,8 @@ class OfficeRepository {
   }
 
   Future<void> addOffice(Map<String, dynamic> officeData) async {
-    await _client.from('offices').insert(officeData);
+    final orgId = await fetchCallerOrgId(_client);
+    await _client.from('offices').insert({...officeData, 'org_id': orgId});
   }
 
   Future<void> updateOffice(String id, Map<String, dynamic> updates) async {

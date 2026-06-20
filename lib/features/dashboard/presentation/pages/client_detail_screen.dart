@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/contact_utils.dart';
+import '../../../../core/router/app_router.dart';
 import '../providers/dashboard_provider.dart';
-import '../../domain/models/work_order.dart';
-import 'task_detail_screen.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import '../../../../core/widgets/premium_card.dart';
+import '../../../../core/widgets/app_section_header.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class ClientDetailScreen extends ConsumerStatefulWidget {
   final String clientName;
@@ -34,25 +37,21 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final workOrdersAsync = ref.watch(allWorkOrdersProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: AppTheme.darkBlue),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Client Details',
-          style: TextStyle(color: AppTheme.darkBlue, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: ResponsiveLayout(
-          maxWidth: 1000,
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
+      appBar: WorkqlyAppBar(title: l10n.clientDetails),
+      body: RefreshIndicator(
+        color: AppTheme.ink900,
+        onRefresh: () async {
+          ref.invalidate(allWorkOrdersProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ResponsiveLayout(
+          maxWidth: double.infinity,
           padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,52 +63,44 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('CONTACT INFO'),
-                    const SizedBox(height: 12),
-                    _buildInfoCard(),
+                    AppSectionHeader(title: l10n.contactInfo),
+                    const SizedBox(height: 8),
+                    _buildInfoCard(l10n),
                     const SizedBox(height: 24),
                     
-                    _buildSectionHeader('PROJECT HISTORY / سجل المشاريع'),
-                    const SizedBox(height: 12),
-                    workOrdersAsync.when(
-                      data: (orders) {
-                        final clientOrders = orders.where((o) => o.clientName == widget.clientName).toList();
-                        return _buildWorkHistoryList(clientOrders);
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Text('Error: $e'),
-                    ),
+                    AppSectionHeader(title: l10n.projectHistory),
+                    const SizedBox(height: 8),
+                    _buildPaginatedWorkHistory(context, l10n),
                   ],
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
+        ),
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
-    );
-  }
-
   Widget _buildHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(30),
-      color: Colors.white,
+      color: isDark ? AppTheme.darkCard : Colors.white,
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.emeraldLight.withOpacity(0.5),
-              shape: BoxShape.circle,
+          Hero(
+            tag: 'client_${widget.clientName}',
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.emeraldLight.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person, size: 40, color: AppTheme.emeraldGreen),
             ),
-            child: const Icon(Icons.person, size: 40, color: AppTheme.emeraldGreen),
           ),
           const SizedBox(height: 15),
           Text(
@@ -145,23 +136,18 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
     );
   }
 
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
+  Widget _buildInfoCard(AppLocalizations l10n) {
+    return PremiumCard(
       child: Column(
         children: [
-          _buildDetailRow(Icons.person_outline, 'Client Name', widget.clientName),
+          _buildDetailRow(Icons.person_outline, l10n.clientName, widget.clientName, l10n),
           if (widget.clientPhone != null) ...[
             const Divider(height: 30),
             _buildDetailRow(
               Icons.phone_outlined, 
-              'Phone Number', 
+              l10n.phoneNumber, 
               widget.clientPhone!, 
+              l10n,
               onCall: () => _callNumber(widget.clientPhone),
               onWhatsApp: () => _openWhatsApp(widget.clientPhone),
             ),
@@ -171,7 +157,7 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, {VoidCallback? onCall, VoidCallback? onWhatsApp}) {
+  Widget _buildDetailRow(IconData icon, String label, String value, AppLocalizations l10n, {VoidCallback? onCall, VoidCallback? onWhatsApp}) {
     return Row(
       children: [
         Container(
@@ -194,56 +180,99 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
            IconButton(
              onPressed: onWhatsApp,
              icon: const Icon(Icons.message, size: 18, color: Colors.green),
+             tooltip: l10n.whatsapp,
            ),
         if (onCall != null)
            IconButton(
              onPressed: onCall,
              icon: const Icon(Icons.phone_outlined, size: 18, color: AppTheme.emeraldGreen),
+             tooltip: l10n.call,
            ),
       ],
     );
   }
 
-  Widget _buildWorkHistoryList(List<WorkOrder> orders) {
-    if (orders.isEmpty) {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(paginatedClientWorkOrdersProvider(widget.clientName).notifier).fetchFirstPage();
+    });
+  }
+
+  Widget _buildPaginatedWorkHistory(BuildContext context, AppLocalizations l10n) {
+    final state = ref.watch(paginatedClientWorkOrdersProvider(widget.clientName));
+    
+    if (state.isLoading) {
       return const Center(child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Text('No work history found.', style: TextStyle(color: Colors.grey)),
+        padding: EdgeInsets.all(20.0),
+        child: CircularProgressIndicator(),
       ));
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
-      ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: orders.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final order = orders[index];
-          return ListTile(
-            onTap: () {
-               Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TaskDetailScreen(
-                    taskId: order.id,
-                    clientName: order.clientName ?? 'Unknown',
-                    clientPhone: order.clientPhoneNumber,
-                    priority: order.priority.name,
-                    initialStatus: order.status.name,
-                  )),
-                );
+    if (state.error != null && state.items.isEmpty) {
+      return Center(child: Text('${l10n.error}: ${state.error}'));
+    }
+
+    final orders = state.items;
+
+    if (orders.isEmpty) {
+      return PremiumCard(
+        child: Center(child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Text(l10n.noWorkHistory, style: const TextStyle(color: Colors.grey)),
+        )),
+      );
+    }
+
+    return Column(
+      children: [
+        PremiumCard(
+          padding: EdgeInsets.zero,
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: orders.length,
+            separatorBuilder: (context, index) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              return ListTile(
+                onTap: () {
+                   context.push(
+                      '/dashboard/task/${order.id}',
+                      extra: TaskRouteArgs(
+                        clientName: order.clientName ?? 'Unknown',
+                        clientPhone: order.clientPhoneNumber,
+                        priority: order.priority.name,
+                        initialStatus: order.status.name,
+                      ),
+                    );
+                },
+                shape: index == 0 
+                  ? const RoundedRectangleBorder(borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)))
+                  : index == orders.length - 1
+                    ? const RoundedRectangleBorder(borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)))
+                    : null,
+                title: Text(order.serviceType ?? l10n.generalService, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: Text('${l10n.status}: ${order.status.name.toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                trailing: const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+              );
             },
-            title: Text(order.serviceType ?? 'General Service', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            subtitle: Text('Status: ${order.status.name.toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-            trailing: const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
-          );
-        },
-      ),
+          ),
+        ),
+        if (state.hasMore)
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: state.isFetchingMore 
+              ? const CircularProgressIndicator()
+              : TextButton(
+                  onPressed: () {
+                    ref.read(paginatedClientWorkOrdersProvider(widget.clientName).notifier).fetchNextPage();
+                  },
+                  child: const Text('Load More'),
+                ),
+          ),
+      ],
     );
   }
 }

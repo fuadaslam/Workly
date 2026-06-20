@@ -14,6 +14,12 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+    configurations.configureEach {
+        resolutionStrategy {
+            force("androidx.core:core:1.15.0")
+            force("androidx.core:core-ktx:1.15.0")
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {

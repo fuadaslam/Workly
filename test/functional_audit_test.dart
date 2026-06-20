@@ -20,7 +20,7 @@ void main() {
     
     // Sign in to bypass RLS for testing
     await client.auth.signInWithPassword(
-      email: 'superadmin@example.com',
+      email: 'superadmin@system.com',
       password: '123456',
     );
     
@@ -107,8 +107,7 @@ void main() {
       await workRepo.updatePayment(myOrder.id, 1000.0, 400.0);
       print('✓ Successfully updated payment (1000 total, 400 paid)');
       
-      final updatedOrders = await workRepo.getAllWorkOrders();
-      final updatedOrder = updatedOrders.firstWhere((o) => o.id == myOrder.id);
+      await workRepo.getAllWorkOrders();
       // Logic check: 400 < 1000 and > 0, should be 'Advance'
       // We need to check the DB directly for payment since WorkOrder model might not have all fields in some lists
       final paymentData = await client.from('payments').select().eq('work_order_id', myOrder.id).single();

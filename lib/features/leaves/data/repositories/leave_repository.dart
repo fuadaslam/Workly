@@ -1,6 +1,7 @@
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/leave_request.dart';
+import '../../../../core/utils/supabase_org_utils.dart';
 
 class LeaveRepository {
   final SupabaseClient _client;
@@ -21,6 +22,7 @@ class LeaveRepository {
   }
 
   Future<void> submitLeave(LeaveRequest request) async {
+    final orgId = await fetchCallerOrgId(_client);
     await _client.from('leaves').insert({
       'user_id': _client.auth.currentUser?.id,
       'leave_type': request.type.name,
@@ -28,6 +30,7 @@ class LeaveRepository {
       'end_date': request.endDate.toIso8601String(),
       'reason': request.reason,
       'status': 'Pending',
+      'org_id': orgId,
     });
   }
 

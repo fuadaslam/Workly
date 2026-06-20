@@ -24,7 +24,7 @@ class TaskHistory {
       title: json['title'],
       description: json['description'],
       statusAtTime: json['status_at_time'] != null ? _parseStatus(json['status_at_time']) : null,
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now(),
     );
   }
 

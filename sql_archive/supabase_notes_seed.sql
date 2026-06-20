@@ -1,0 +1,3 @@
+-- This file is deprecated. 
+-- All seed data (including task history/notes) has been consolidated into supabase_seeds.sql
+-- for a cleaner "clear and refresh" process.

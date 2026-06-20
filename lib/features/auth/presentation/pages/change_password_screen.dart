@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/responsive_layout.dart';
+import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -64,13 +65,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: const Text('Change Password / تغيير كلمة المرور'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundLight,
+      appBar: const WorkqlyAppBar(title: 'Change Password'),
       body: ResponsiveLayout(
         maxWidth: 800,
         padding: EdgeInsets.zero,
@@ -103,13 +101,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _updatePassword,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.emeraldGreen,
+                    backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+                    foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Update Password / تحديث كلمة المرور', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: isDark ? AppTheme.ink900 : Colors.white, strokeWidth: 2))
+                      : Text('Update Password / تحديث كلمة المرور', style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -125,6 +124,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     required bool obscureText,
     required VoidCallback onToggleVisibility,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -143,7 +143,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               onPressed: onToggleVisibility,
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: isDark ? AppTheme.darkCard : Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -154,7 +154,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppTheme.emeraldGreen, width: 1),
+              borderSide: BorderSide(color: AppTheme.primaryAccent(isDark), width: 1),
             ),
           ),
         ),
