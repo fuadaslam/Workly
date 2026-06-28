@@ -7,7 +7,9 @@ import '../../../../core/services/notification_service.dart';
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
 import '../providers/enquiry_options_provider.dart';
+import '../providers/enquiry_fields_provider.dart';
 import '../../data/repositories/enquiry_options_repository.dart';
+import '../../data/repositories/enquiry_fields_repository.dart';
 import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 
@@ -35,6 +37,8 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   DateTime? _followUpDate;
   String? _responsibleStaffId;
   String? _assignedOfficeId;
+  // Values for admin-defined custom fields, keyed by field_key.
+  final Map<String, dynamic> _customValues = {};
 
   @override
   void dispose() {
@@ -72,6 +76,22 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
 
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
+
+    // Validate required custom fields.
+    final activeFields = ref.read(activeEnquiryFieldsProvider).valueOrNull ?? const [];
+    final cleanCustom = <String, dynamic>{};
+    for (final f in activeFields) {
+      final v = _customValues[f.fieldKey];
+      final isEmpty = v == null || (v is String && v.trim().isEmpty);
+      if (f.required && isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${f.label} is required'), backgroundColor: AppTheme.errorRed),
+        );
+        return;
+      }
+      if (!isEmpty) cleanCustom[f.fieldKey] = v;
+    }
+
     setState(() => _saving = true);
     try {
       final data = {
@@ -88,6 +108,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
         'assigned_office_id': _assignedOfficeId,
         'client_status': 'pending',
         'final_status': 'In Progress',
+        'custom_data': cleanCustom,
       };
       final created = await ref.read(enquiryRepositoryProvider).createEnquiry(data);
       // Schedule follow-up notification if date was set (native only)
@@ -207,12 +228,95 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
                   },
                 ),
               ]),
+              ..._buildCustomFieldsSection(),
               const SizedBox(height: 80),
             ],
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _buildCustomFieldsSection() {
+    final fields = ref.watch(activeEnquiryFieldsProvider).valueOrNull ?? const [];
+    if (fields.isEmpty) return const [];
+    return [
+      const SizedBox(height: 16),
+      _sectionTitle('Additional Details'),
+      _card(fields.map(_buildCustomField).toList()),
+    ];
+  }
+
+  Widget _buildCustomField(EnquiryField f) {
+    final label = f.required ? '${f.label} *' : f.label;
+    switch (f.fieldType) {
+      case EnquiryFieldType.dropdown:
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DropdownButtonFormField<String>(
+            initialValue: _customValues[f.fieldKey] as String?,
+            decoration: _inputDec(label),
+            isExpanded: true,
+            items: f.options
+                .map((o) => DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis)))
+                .toList(),
+            onChanged: (v) => setState(() => _customValues[f.fieldKey] = v),
+            hint: const Text('Select'),
+          ),
+        );
+      case EnquiryFieldType.date:
+        final raw = _customValues[f.fieldKey] as String?;
+        final shown = raw != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(raw)) : 'Tap to set';
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: InkWell(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: raw != null ? DateTime.parse(raw) : DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2035),
+              );
+              if (picked != null) {
+                setState(() => _customValues[f.fieldKey] = picked.toIso8601String());
+              }
+            },
+            child: InputDecorator(
+              decoration: _inputDec(label),
+              child: Text(shown),
+            ),
+          ),
+        );
+      case EnquiryFieldType.number:
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: TextFormField(
+            initialValue: _customValues[f.fieldKey]?.toString(),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: _inputDec(label),
+            onChanged: (v) => _customValues[f.fieldKey] = num.tryParse(v.trim()) ?? v.trim(),
+          ),
+        );
+      case EnquiryFieldType.textarea:
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: TextFormField(
+            initialValue: _customValues[f.fieldKey] as String?,
+            maxLines: 3,
+            decoration: _inputDec(label),
+            onChanged: (v) => _customValues[f.fieldKey] = v,
+          ),
+        );
+      default: // text
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: TextFormField(
+            initialValue: _customValues[f.fieldKey] as String?,
+            decoration: _inputDec(label),
+            onChanged: (v) => _customValues[f.fieldKey] = v,
+          ),
+        );
+    }
   }
 
   Widget _sectionTitle(String title) {

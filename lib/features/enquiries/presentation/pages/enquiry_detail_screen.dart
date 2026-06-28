@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/router/app_router.dart' show TaskRouteArgs;
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
 import '../providers/enquiry_options_provider.dart';
+import '../providers/enquiry_fields_provider.dart';
 import '../../data/repositories/enquiry_options_repository.dart';
+import '../../data/repositories/enquiry_fields_repository.dart';
 import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 import 'package:service_manager_app/core/widgets/responsive_layout.dart';
@@ -32,10 +36,14 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   late TextEditingController _agreedChargeCtrl;
   late TextEditingController _finalNotesCtrl;
 
+  // Working copy of custom field values, edited in-place while editing.
+  late Map<String, dynamic> _customValues;
+
   @override
   void initState() {
     super.initState();
     _enquiry = widget.enquiry;
+    _customValues = Map<String, dynamic>.from(_enquiry.customData);
     _initControllers();
   }
 
@@ -62,6 +70,27 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   }
 
   Future<void> _save() async {
+    // Validate + collect custom fields.
+    final activeFields = ref.read(activeEnquiryFieldsProvider).valueOrNull ?? const [];
+    final cleanCustom = <String, dynamic>{};
+    for (final f in activeFields) {
+      final v = _customValues[f.fieldKey];
+      final isEmpty = v == null || (v is String && v.trim().isEmpty);
+      if (f.required && isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${f.label} is required'), backgroundColor: AppTheme.errorRed),
+        );
+        return;
+      }
+      if (!isEmpty) cleanCustom[f.fieldKey] = v;
+    }
+    // Preserve values stored for fields that are no longer active.
+    final activeKeys = activeFields.map((f) => f.fieldKey).toSet();
+    _customValues.forEach((k, v) {
+      final isEmpty = v == null || (v is String && v.trim().isEmpty);
+      if (!activeKeys.contains(k) && !isEmpty) cleanCustom[k] = v;
+    });
+
     setState(() => _saving = true);
     try {
       final data = _enquiry.toJson()
@@ -71,11 +100,13 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
         ..['service_charge_offered'] = double.tryParse(_serviceChargeCtrl.text)
         ..['action_notes'] = _actionNotesCtrl.text.trim()
         ..['final_agreed_service_charge'] = double.tryParse(_agreedChargeCtrl.text)
-        ..['final_notes'] = _finalNotesCtrl.text.trim();
+        ..['final_notes'] = _finalNotesCtrl.text.trim()
+        ..['custom_data'] = cleanCustom;
 
       final updated = await ref.read(enquiryRepositoryProvider).updateEnquiry(_enquiry.id, data);
       setState(() {
         _enquiry = updated;
+        _customValues = Map<String, dynamic>.from(updated.customData);
         _editing = false;
       });
     } catch (e) {
@@ -87,6 +118,93 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _convertToWorkOrder() async {
+    setState(() => _saving = true);
+    try {
+      final woId = await ref.read(enquiryRepositoryProvider).convertToWorkOrder(_enquiry.id);
+      if (mounted) setState(() => _enquiry = _enquiry.copyWith(workOrderId: woId));
+      ref.read(paginatedEnquiriesProvider.notifier).refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Work order created from enquiry'), backgroundColor: AppTheme.statusCompleted),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: AppTheme.errorRed),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _openWorkOrder() {
+    final id = _enquiry.workOrderId;
+    if (id == null) return;
+    context.push('/dashboard/task/$id', extra: TaskRouteArgs(
+      clientName: _enquiry.clientName ?? '—',
+      clientPhone: _enquiry.contactNumber,
+      priority: 'Medium',
+      initialStatus: 'Pending',
+    ));
+  }
+
+  /// Call-to-action shown under the metrics header: convert an accepted
+  /// enquiry to a work order, or open the already-created one.
+  Widget _buildConversionCta() {
+    if (_enquiry.workOrderId != null) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.statusCompleted.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.statusCompleted.withValues(alpha: 0.3)),
+        ),
+        child: Row(children: [
+          const Icon(Icons.check_circle, color: AppTheme.statusCompleted, size: 20),
+          const SizedBox(width: 10),
+          const Expanded(child: Text('Converted to a work order', style: TextStyle(fontWeight: FontWeight.w600))),
+          TextButton(onPressed: _openWorkOrder, child: const Text('Open')),
+        ]),
+      );
+    }
+    if (_enquiry.clientStatus == ClientStatus.accepted) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: _saving ? null : _convertToWorkOrder,
+          icon: const Icon(Icons.assignment_turned_in_outlined),
+          label: const Text('Convert to Work Order'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.emeraldGreen,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.mutedAmber.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(children: [
+        Icon(Icons.info_outline, size: 18, color: AppTheme.mutedAmber),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text('Mark the client decision as Accepted to convert this enquiry into a work order.',
+              style: TextStyle(fontSize: 12)),
+        ),
+      ]),
+    );
   }
 
   Future<void> _updateStatus(EnquiryFinalStatus status) async {
@@ -348,7 +466,11 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
             children: [
               // Status + Metrics header
               _metricsBar(statusColor, perfColor, df),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+
+              // Convert-to-work-order call to action
+              _buildConversionCta(),
+              const SizedBox(height: 16),
 
               // Section 1: Client Info
               _sectionTitle('Enquiry Details'),
@@ -413,6 +535,9 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
               ]),
               const SizedBox(height: 24),
 
+              // Custom fields (admin-configured)
+              ..._buildCustomDetails(),
+
               // Section 4: Settlement
               _sectionTitle('Settlement & Metrics'),
               _card([
@@ -475,6 +600,117 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
         ),
       ),
     );
+  }
+
+  /// Renders the admin-configured custom fields. Editable in edit mode
+  /// (shows all active fields), read-only otherwise (shows stored values).
+  List<Widget> _buildCustomDetails() {
+    final allFields = ref.watch(enquiryFieldRowsProvider).valueOrNull ?? const [];
+    final activeFields = allFields.where((f) => f.isActive).toList();
+
+    if (_editing) {
+      if (activeFields.isEmpty) return const [];
+      return [
+        _sectionTitle('Additional Details'),
+        _card(activeFields.map(_buildCustomFieldEditor).toList()),
+        const SizedBox(height: 24),
+      ];
+    }
+
+    final labelByKey = {for (final f in allFields) f.fieldKey: f.label};
+    final typeByKey = {for (final f in allFields) f.fieldKey: f.fieldType};
+    final entries = _customValues.entries
+        .where((e) => e.value != null && e.value.toString().trim().isNotEmpty)
+        .toList();
+    if (entries.isEmpty) return const [];
+    return [
+      _sectionTitle('Additional Details'),
+      _card(entries.map((e) {
+        final label = labelByKey[e.key] ?? e.key.replaceAll('_', ' ');
+        return _detailRow(label, Text(_formatCustomValue(typeByKey[e.key], e.value),
+            style: const TextStyle(fontSize: 15)));
+      }).toList()),
+      const SizedBox(height: 24),
+    ];
+  }
+
+  Widget _buildCustomFieldEditor(EnquiryField f) {
+    final dec = InputDecoration(
+      labelText: f.required ? '${f.label} *' : f.label,
+      isDense: true,
+    );
+    switch (f.fieldType) {
+      case EnquiryFieldType.dropdown:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: DropdownButtonFormField<String>(
+            initialValue: _customValues[f.fieldKey] as String?,
+            decoration: dec,
+            isExpanded: true,
+            items: f.options
+                .map((o) => DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis)))
+                .toList(),
+            onChanged: (v) => setState(() => _customValues[f.fieldKey] = v),
+          ),
+        );
+      case EnquiryFieldType.date:
+        final raw = _customValues[f.fieldKey] as String?;
+        final shown = raw != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(raw)) : 'Tap to set';
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: InkWell(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: raw != null ? DateTime.parse(raw) : DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2035),
+              );
+              if (picked != null) {
+                setState(() => _customValues[f.fieldKey] = picked.toIso8601String());
+              }
+            },
+            child: InputDecorator(decoration: dec, child: Text(shown)),
+          ),
+        );
+      case EnquiryFieldType.number:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: TextFormField(
+            initialValue: _customValues[f.fieldKey]?.toString(),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: dec,
+            onChanged: (v) => _customValues[f.fieldKey] = num.tryParse(v.trim()) ?? v.trim(),
+          ),
+        );
+      case EnquiryFieldType.textarea:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: TextFormField(
+            initialValue: _customValues[f.fieldKey] as String?,
+            maxLines: 3,
+            decoration: dec,
+            onChanged: (v) => _customValues[f.fieldKey] = v,
+          ),
+        );
+      default:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: TextFormField(
+            initialValue: _customValues[f.fieldKey] as String?,
+            decoration: dec,
+            onChanged: (v) => _customValues[f.fieldKey] = v,
+          ),
+        );
+    }
+  }
+
+  String _formatCustomValue(String? type, dynamic value) {
+    if (type == 'date' && value is String) {
+      final d = DateTime.tryParse(value);
+      if (d != null) return DateFormat('dd MMM yyyy').format(d);
+    }
+    return value.toString();
   }
 
   Widget _metricsBar(Color statusColor, Color perfColor, DateFormat df) {

@@ -21,8 +21,9 @@ class EnquiryFilter {
   final String? staffId;
   final String? service;
   final String searchQuery;
+  final bool? converted; // null = all, true = converted, false = not converted
 
-  const EnquiryFilter({this.status, this.staffId, this.service, this.searchQuery = ''});
+  const EnquiryFilter({this.status, this.staffId, this.service, this.searchQuery = '', this.converted});
 
   EnquiryFilter copyWith({String? status, String? staffId, String? service, String? searchQuery}) {
     return EnquiryFilter(
@@ -30,6 +31,7 @@ class EnquiryFilter {
       staffId: staffId ?? this.staffId,
       service: service ?? this.service,
       searchQuery: searchQuery ?? this.searchQuery,
+      converted: converted,
     );
   }
 
@@ -40,10 +42,11 @@ class EnquiryFilter {
           status == other.status &&
           staffId == other.staffId &&
           service == other.service &&
-          searchQuery == other.searchQuery;
+          searchQuery == other.searchQuery &&
+          converted == other.converted;
 
   @override
-  int get hashCode => Object.hash(status, staffId, service, searchQuery);
+  int get hashCode => Object.hash(status, staffId, service, searchQuery, converted);
 }
 
 final enquiryFilterProvider = StateProvider<EnquiryFilter>((ref) => const EnquiryFilter());
@@ -60,6 +63,7 @@ final paginatedEnquiriesProvider = StateNotifierProvider<PaginationNotifier<Enqu
         status: filter.status,
         service: filter.service,
         searchQuery: filter.searchQuery,
+        converted: filter.converted,
       );
     },
     limit: 20,

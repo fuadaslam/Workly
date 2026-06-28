@@ -81,6 +81,8 @@ class Enquiry {
   final DateTime? settlementDate;
   final String? finalNotes;
   final DateTime? createdAt;
+  final Map<String, dynamic> customData;
+  final String? workOrderId; // set once converted to a work order
 
   Enquiry({
     required this.id,
@@ -105,6 +107,8 @@ class Enquiry {
     this.settlementDate,
     this.finalNotes,
     this.createdAt,
+    this.customData = const {},
+    this.workOrderId,
   });
 
   double get totalOffered => (officialFee ?? 0) + (serviceChargeOffered ?? 0);
@@ -154,6 +158,10 @@ class Enquiry {
       settlementDate: json['settlement_date'] != null ? DateTime.parse(json['settlement_date']) : null,
       finalNotes: json['final_notes'],
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      customData: json['custom_data'] is Map
+          ? Map<String, dynamic>.from(json['custom_data'] as Map)
+          : const {},
+      workOrderId: json['work_order_id'],
     );
   }
 
@@ -229,6 +237,7 @@ class Enquiry {
     EnquiryFinalStatus? finalStatus,
     DateTime? settlementDate,
     String? finalNotes,
+    String? workOrderId,
   }) {
     return Enquiry(
       id: id,
@@ -253,6 +262,8 @@ class Enquiry {
       settlementDate: settlementDate ?? this.settlementDate,
       finalNotes: finalNotes ?? this.finalNotes,
       createdAt: createdAt,
+      customData: customData,
+      workOrderId: workOrderId ?? this.workOrderId,
     );
   }
 }

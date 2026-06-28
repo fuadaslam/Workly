@@ -22,6 +22,7 @@ class EnquiryRepository {
     String? status,
     String? service,
     String searchQuery = '',
+    bool? converted,
   }) async {
     var query = _client.from('enquiries').select('*, profiles:responsible_staff_id(name), offices:assigned_office_id(name)');
 
@@ -30,6 +31,11 @@ class EnquiryRepository {
     }
     if (service != null && service.isNotEmpty) {
       query = query.eq('nature_of_enquiry', service);
+    }
+    if (converted == true) {
+      query = query.not('work_order_id', 'is', null);
+    } else if (converted == false) {
+      query = query.isFilter('work_order_id', null);
     }
     if (searchQuery.isNotEmpty) {
       // ',' and '(' / ')' are structural in PostgREST's or() filter grammar —
@@ -79,6 +85,16 @@ class EnquiryRepository {
 
   Future<void> deleteEnquiry(String id) async {
     await _client.from('enquiries').delete().eq('id', id);
+  }
+
+  /// Converts an accepted enquiry into a work order (server-enforced) and
+  /// returns the new work order's id. Carries over client/service/office/staff
+  /// and the agreed amount, and links both records.
+  Future<String> convertToWorkOrder(String enquiryId) async {
+    final res = await _client.rpc('convert_enquiry_to_work_order', params: {
+      'p_enquiry_id': enquiryId,
+    });
+    return res as String;
   }
 
   /// Assignment / transfer update that intentionally does NOT read the row

@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../data/report_repository.dart';
 import '../services/excel_export_service.dart';
 import '../../dashboard/presentation/providers/dashboard_provider.dart';
+import '../../enquiries/presentation/providers/enquiry_fields_provider.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 
 enum _ReportRange { thisWeek, lastWeek, thisMonth, lastMonth, custom }
@@ -161,6 +162,14 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
             ? repo.getAttendanceInRange(range.start, range.end)
             : Future.value(<Map<String, dynamic>>[]),
       ]);
+      // Active custom enquiry fields → appended as extra columns in the export.
+      final customFields = _includeEnquiries
+          ? (await ref.read(enquiryFieldsRepositoryProvider).getFields())
+              .where((f) => f.isActive)
+              .map((f) => {'key': f.fieldKey, 'label': f.label, 'type': f.fieldType})
+              .toList()
+          : <Map<String, String>>[];
+
       await ExcelExportService.exportAndShare(
         reportTitle: _reportTitle(),
         from: range.start,
@@ -169,6 +178,7 @@ class _ReportExportScreenState extends ConsumerState<ReportExportScreen>
         enquiries: results[1],
         attendance: results[2],
         filters: _filters,
+        customFields: customFields,
       );
     } catch (e) {
       if (mounted) {

@@ -30,13 +30,14 @@ class ExcelExportService {
     required List<Map<String, dynamic>> enquiries,
     required List<Map<String, dynamic>> attendance,
     ReportFilters filters = const ReportFilters(),
+    List<Map<String, String>> customFields = const [],
   }) async {
     final excel = Excel.createExcel();
     excel.delete('Sheet1');
 
     _buildCoverSheet(excel, reportTitle, from, to, workOrders, enquiries, filters);
     _buildWorkOrdersSheet(excel, workOrders);
-    _buildEnquiriesSheet(excel, enquiries);
+    _buildEnquiriesSheet(excel, enquiries, customFields);
     _buildEnquirySummarySheet(excel, enquiries, from, to);
     if (attendance.isNotEmpty) _buildAttendanceSheet(excel, attendance);
 
@@ -256,7 +257,8 @@ class ExcelExportService {
   }
 
   static void _buildEnquiriesSheet(
-      Excel excel, List<Map<String, dynamic>> enquiries) {
+      Excel excel, List<Map<String, dynamic>> enquiries,
+      [List<Map<String, String>> customFields = const []]) {
     final sheet = excel['Enquiries'];
 
     final headers = [
@@ -266,12 +268,15 @@ class ExcelExportService {
       'Responsible Staff', 'Client Decision', 'Rejection Reason',
       'Final Status', 'Agreed Charge (SAR)', 'Settlement Date',
       'Days Open', 'Performance', 'Follow-up Date', 'Final Notes',
+      // admin-defined custom fields appended after the standard columns
+      ...customFields.map((f) => f['label'] ?? f['key'] ?? ''),
     ];
 
     _tableHeader(sheet, 0, headers);
 
     final colWidths = [12.0, 20.0, 16.0, 20.0, 14.0, 16.0, 14.0, 16.0,
-        16.0, 18.0, 14.0, 22.0, 18.0, 16.0, 16.0, 11.0, 14.0, 16.0, 24.0];
+        16.0, 18.0, 14.0, 22.0, 18.0, 16.0, 16.0, 11.0, 14.0, 16.0, 24.0,
+        ...customFields.map((_) => 18.0)];
     for (int i = 0; i < colWidths.length; i++) {
       sheet.setColumnWidth(i, colWidths[i]);
     }
@@ -333,6 +338,22 @@ class ExcelExportService {
         followUpDate != null ? _df.format(followUpDate) : '—',
         e['final_notes'] ?? '—',
       ];
+
+      // Append custom field values (in the same order as the headers).
+      final customData = e['custom_data'] is Map ? e['custom_data'] as Map : const {};
+      for (final cf in customFields) {
+        final v = customData[cf['key']];
+        if (v == null || (v is String && v.trim().isEmpty)) {
+          row.add('—');
+        } else if (cf['type'] == 'date' && v is String) {
+          final d = DateTime.tryParse(v);
+          row.add(d != null ? _df.format(d) : v);
+        } else if (v is num) {
+          row.add(v.toDouble());
+        } else {
+          row.add(v.toString());
+        }
+      }
 
       for (int c = 0; c < row.length; c++) {
         final cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: rowIdx));

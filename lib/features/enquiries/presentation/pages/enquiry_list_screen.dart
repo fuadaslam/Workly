@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/workly_primitives.dart';
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
+import '../providers/enquiry_fields_provider.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 import 'package:service_manager_app/core/widgets/infinite_scroll_list.dart';
 
@@ -19,6 +20,9 @@ class EnquiryListScreen extends ConsumerStatefulWidget {
 
 class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
   final _searchCtrl = TextEditingController();
+  // Populated each build from the org's custom field definitions.
+  Map<String, String> _customLabels = {};
+  Map<String, String> _customTypes = {};
 
   @override
   void dispose() {
@@ -91,6 +95,9 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
     final filter = ref.watch(enquiryFilterProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scaffoldBg = isDark ? AppTheme.darkBackground : AppTheme.backgroundLight;
+    final fieldDefs = ref.watch(enquiryFieldRowsProvider).valueOrNull ?? const [];
+    _customLabels = {for (final f in fieldDefs) f.fieldKey: f.label};
+    _customTypes = {for (final f in fieldDefs) f.fieldKey: f.fieldType};
 
     return Scaffold(
       backgroundColor: scaffoldBg,
@@ -215,6 +222,32 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
                   onTap: () => ref.read(enquiryFilterProvider.notifier).state =
                       filter.copyWith(status: 'Cancelled'),
                 ),
+                const SizedBox(width: 8),
+                WorklyFilterChip(
+                  label: 'Converted',
+                  selected: filter.converted == true,
+                  icon: Icons.assignment_turned_in_outlined,
+                  onTap: () => ref.read(enquiryFilterProvider.notifier).state = EnquiryFilter(
+                    status: filter.status,
+                    staffId: filter.staffId,
+                    service: filter.service,
+                    searchQuery: filter.searchQuery,
+                    converted: filter.converted == true ? null : true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                WorklyFilterChip(
+                  label: 'Not Converted',
+                  selected: filter.converted == false,
+                  icon: Icons.pending_actions_outlined,
+                  onTap: () => ref.read(enquiryFilterProvider.notifier).state = EnquiryFilter(
+                    status: filter.status,
+                    staffId: filter.staffId,
+                    service: filter.service,
+                    searchQuery: filter.searchQuery,
+                    converted: filter.converted == false ? null : false,
+                  ),
+                ),
               ],
             ),
           ),
@@ -297,6 +330,22 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
                       )
                     else
                       const Spacer(),
+                    if (e.workOrderId != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.mintGreen.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.assignment_turned_in, size: 11, color: AppTheme.mintGreen),
+                          SizedBox(width: 3),
+                          Text('Converted',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.mintGreen)),
+                        ]),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     WorklyStatusBadge(
                       label: _statusLabel(e.finalStatus),
                       color: statusColor,
@@ -378,6 +427,7 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
                             icon: Icons.flag_outlined,
                             label: e.nationality!,
                           ),
+                        ..._customChips(e),
                       ],
                     ),
 
@@ -497,6 +547,25 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
         ),
       ),
     );
+  }
+
+  /// Up to 3 custom-field values as chips, labelled from the org's field defs.
+  List<Widget> _customChips(Enquiry e) {
+    if (e.customData.isEmpty) return const [];
+    final entries = e.customData.entries
+        .where((en) => en.value != null && en.value.toString().trim().isNotEmpty)
+        .take(3)
+        .toList();
+    final df = DateFormat('dd MMM yyyy');
+    return entries.map((en) {
+      final label = _customLabels[en.key] ?? en.key.replaceAll('_', ' ');
+      var value = en.value.toString();
+      if (_customTypes[en.key] == 'date') {
+        final d = DateTime.tryParse(value);
+        if (d != null) value = df.format(d);
+      }
+      return WorklyInfoChip(icon: Icons.label_outline, label: '$label: $value');
+    }).toList();
   }
 
   // ── Empty state ─────────────────────────────────────────────────────────────
