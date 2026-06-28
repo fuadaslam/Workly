@@ -26,6 +26,7 @@ class EnquiryField {
   final String id;
   final String fieldKey;
   final String label;
+  final String? helpText;
   final String fieldType;
   final bool required;
   final List<String> options;
@@ -36,6 +37,7 @@ class EnquiryField {
     required this.id,
     required this.fieldKey,
     required this.label,
+    this.helpText,
     required this.fieldType,
     required this.required,
     required this.options,
@@ -47,6 +49,7 @@ class EnquiryField {
         id: j['id'] as String,
         fieldKey: j['field_key'] as String,
         label: j['label'] as String,
+        helpText: j['help_text'] as String?,
         fieldType: j['field_type'] as String,
         required: j['required'] as bool? ?? false,
         options: (j['options'] as List?)?.map((e) => e.toString()).toList() ?? const [],
@@ -90,6 +93,7 @@ class EnquiryFieldsRepository {
     required String label,
     required String fieldType,
     required bool required,
+    String? helpText,
     List<String> options = const [],
   }) async {
     final orgId = await fetchCallerOrgId(_client);
@@ -100,6 +104,7 @@ class EnquiryFieldsRepository {
       'org_id': orgId,
       'field_key': key,
       'label': label.trim(),
+      'help_text': (helpText == null || helpText.trim().isEmpty) ? null : helpText.trim(),
       'field_type': fieldType,
       'required': required,
       'options': options,
@@ -111,6 +116,8 @@ class EnquiryFieldsRepository {
   Future<void> updateField(
     String id, {
     String? label,
+    String? helpText,
+    bool clearHelpText = false,
     String? fieldType,
     bool? required,
     List<String>? options,
@@ -118,6 +125,9 @@ class EnquiryFieldsRepository {
   }) async {
     final data = <String, dynamic>{};
     if (label != null) data['label'] = label.trim();
+    if (clearHelpText) {
+      data['help_text'] = (helpText == null || helpText.trim().isEmpty) ? null : helpText.trim();
+    }
     if (fieldType != null) data['field_type'] = fieldType;
     if (required != null) data['required'] = required;
     if (options != null) data['options'] = options;

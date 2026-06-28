@@ -23,6 +23,11 @@ class WorkOrder {
   final String? rejectionReason;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  // Payment summary (from the linked payments row, when fetched).
+  final double? totalAmount;
+  final double? paidAmount;
+  final String? paymentStatus;
+  final String? enquiryId; // source enquiry, if this order was converted from one
 
   WorkOrder({
     required this.id,
@@ -45,6 +50,10 @@ class WorkOrder {
     this.rejectionReason,
     this.createdAt,
     this.updatedAt,
+    this.totalAmount,
+    this.paidAmount,
+    this.paymentStatus,
+    this.enquiryId,
   });
 
   factory WorkOrder.fromJson(Map<String, dynamic> json) {
@@ -69,7 +78,26 @@ class WorkOrder {
       rejectionReason: json['rejection_reason'],
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      totalAmount: _firstPayment(json['payments'], 'total_amount'),
+      paidAmount: _firstPayment(json['payments'], 'paid_amount'),
+      paymentStatus: _firstPaymentStatus(json['payments']),
+      enquiryId: json['enquiry_id'],
     );
+  }
+
+  static double? _firstPayment(dynamic payments, String key) {
+    if (payments is List && payments.isNotEmpty && payments.first is Map) {
+      final v = (payments.first as Map)[key];
+      return v != null ? (v as num).toDouble() : null;
+    }
+    return null;
+  }
+
+  static String? _firstPaymentStatus(dynamic payments) {
+    if (payments is List && payments.isNotEmpty && payments.first is Map) {
+      return (payments.first as Map)['status'] as String?;
+    }
+    return null;
   }
 
   static PriorityLevel _parsePriority(String? priority) {

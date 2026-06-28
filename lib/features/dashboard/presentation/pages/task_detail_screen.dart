@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../enquiries/presentation/providers/enquiry_provider.dart';
 import '../../../../core/utils/contact_utils.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
@@ -548,6 +550,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _metricsBar(statusColor, priorityColor, l10n, isDark),
+                  if (_fetchedOrder?.enquiryId != null) ...[
+                    const SizedBox(height: 16),
+                    _buildSourceEnquiry(_fetchedOrder!.enquiryId!),
+                  ],
                   const SizedBox(height: 32),
 
                   _sectionTitle(l10n.generalInfo),
@@ -651,6 +657,35 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
   }
 
   // ── Documents grid ─────────────────────────────────────────────────────────
+
+  /// Chip linking back to the enquiry this work order was converted from.
+  Widget _buildSourceEnquiry(String enquiryId) {
+    final enquiry = ref.watch(enquiryByIdProvider(enquiryId)).valueOrNull;
+    final code = enquiry?.enquiryCode ?? 'Enquiry';
+    return Material(
+      color: AppTheme.electricBlue.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: enquiry == null
+            ? null
+            : () => context.push('/dashboard/enquiries/detail', extra: enquiry),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(children: [
+            const Icon(Icons.link_rounded, size: 18, color: AppTheme.electricBlue),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('From Enquiry $code',
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.electricBlue)),
+            ),
+            if (enquiry != null)
+              const Icon(Icons.chevron_right, size: 18, color: AppTheme.electricBlue),
+          ]),
+        ),
+      ),
+    );
+  }
 
   Widget _buildDocumentsSection(bool isDark) {
     final docsAsync = ref.watch(taskDocumentsProvider(widget.taskId));

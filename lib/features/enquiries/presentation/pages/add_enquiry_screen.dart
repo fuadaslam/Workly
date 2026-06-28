@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/notification_service.dart';
-import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
 import '../providers/enquiry_options_provider.dart';
 import '../providers/enquiry_fields_provider.dart';
@@ -136,9 +135,11 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   Widget build(BuildContext context) {
     final staffAsync = ref.watch(staffProfilesProvider);
     final df = DateFormat('dd MMM yyyy');
-    // Org-configured dropdown options (fall back to built-in defaults).
-    final natureOptions = ref.watch(enquiryOptionValuesProvider(EnquiryOptionCategory.nature)).valueOrNull ?? kNatureOfEnquiry;
-    final nationalityOptions = ref.watch(enquiryOptionValuesProvider(EnquiryOptionCategory.nationality)).valueOrNull ?? kNationalities;
+    // Org-configured dropdown options (value + subtitle) and required flags.
+    final natureOptions = ref.watch(activeEnquiryOptionsProvider(EnquiryOptionCategory.nature)).valueOrNull ?? const <EnquiryOption>[];
+    final nationalityOptions = ref.watch(activeEnquiryOptionsProvider(EnquiryOptionCategory.nationality)).valueOrNull ?? const <EnquiryOption>[];
+    final natureRequired = ref.watch(enquiryFieldRequiredProvider(EnquiryOptionCategory.nature)).valueOrNull ?? true;
+    final nationalityRequired = ref.watch(enquiryFieldRequiredProvider(EnquiryOptionCategory.nationality)).valueOrNull ?? false;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
@@ -165,8 +166,8 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
               _card([
                 _field('Client Name *', _clientNameCtrl, required: true),
                 _field('Contact Number', _contactCtrl, keyboardType: TextInputType.phone),
-                _dropdown('Nature of Enquiry *', _natureOfEnquiry, natureOptions, (v) => setState(() => _natureOfEnquiry = v), required: true),
-                _dropdown('Nationality', _nationality, nationalityOptions, (v) => setState(() => _nationality = v)),
+                _optionDropdown('Nature of Enquiry${natureRequired ? ' *' : ''}', _natureOfEnquiry, natureOptions, (v) => setState(() => _natureOfEnquiry = v), required: natureRequired),
+                _optionDropdown('Nationality${nationalityRequired ? ' *' : ''}', _nationality, nationalityOptions, (v) => setState(() => _nationality = v), required: nationalityRequired),
                 _dateTile('Date of Enquiry', _dateOfEnquiry, df, () => _pickDate(false)),
               ]),
               const SizedBox(height: 16),
@@ -249,13 +250,16 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
 
   Widget _buildCustomField(EnquiryField f) {
     final label = f.required ? '${f.label} *' : f.label;
+    final dec = _inputDec(label).copyWith(
+      helperText: (f.helpText != null && f.helpText!.isNotEmpty) ? f.helpText : null,
+    );
     switch (f.fieldType) {
       case EnquiryFieldType.dropdown:
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: DropdownButtonFormField<String>(
             initialValue: _customValues[f.fieldKey] as String?,
-            decoration: _inputDec(label),
+            decoration: dec,
             isExpanded: true,
             items: f.options
                 .map((o) => DropdownMenuItem(value: o, child: Text(o, overflow: TextOverflow.ellipsis)))
@@ -282,7 +286,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
               }
             },
             child: InputDecorator(
-              decoration: _inputDec(label),
+              decoration: dec,
               child: Text(shown),
             ),
           ),
@@ -293,7 +297,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
           child: TextFormField(
             initialValue: _customValues[f.fieldKey]?.toString(),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: _inputDec(label),
+            decoration: dec,
             onChanged: (v) => _customValues[f.fieldKey] = num.tryParse(v.trim()) ?? v.trim(),
           ),
         );
@@ -303,7 +307,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
           child: TextFormField(
             initialValue: _customValues[f.fieldKey] as String?,
             maxLines: 3,
-            decoration: _inputDec(label),
+            decoration: dec,
             onChanged: (v) => _customValues[f.fieldKey] = v,
           ),
         );
@@ -312,7 +316,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
           padding: const EdgeInsets.only(bottom: 12),
           child: TextFormField(
             initialValue: _customValues[f.fieldKey] as String?,
-            decoration: _inputDec(label),
+            decoration: dec,
             onChanged: (v) => _customValues[f.fieldKey] = v,
           ),
         );
@@ -379,16 +383,40 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
     );
   }
 
-  Widget _dropdown(String label, String? value, List<String> items, ValueChanged<String?> onChanged,
-      {bool required = false}) {
+  /// Dropdown that renders each option's optional subtitle under its label.
+  Widget _optionDropdown(String label, String? value, List<EnquiryOption> options,
+      ValueChanged<String?> onChanged, {bool required = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: DropdownButtonFormField<String>(
         value: value,
         decoration: _inputDec(label),
-        items: items.map((i) => DropdownMenuItem(value: i, child: Text(i, overflow: TextOverflow.ellipsis))).toList(),
-        onChanged: onChanged,
         isExpanded: true,
+        itemHeight: 60,
+        selectedItemBuilder: (context) => options
+            .map((o) => Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(o.value, overflow: TextOverflow.ellipsis),
+                ))
+            .toList(),
+        items: options
+            .map((o) => DropdownMenuItem(
+                  value: o.value,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(o.value, overflow: TextOverflow.ellipsis),
+                      if (o.subtitle != null && o.subtitle!.isNotEmpty)
+                        Text(o.subtitle!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    ],
+                  ),
+                ))
+            .toList(),
+        onChanged: onChanged,
         validator: required ? (v) => (v == null || v.isEmpty) ? 'Required' : null : null,
         hint: Text('Select $label'.replaceAll(' *', '')),
       ),

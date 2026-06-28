@@ -12,7 +12,10 @@ import 'package:service_manager_app/core/widgets/app_bar.dart';
 import 'package:service_manager_app/core/widgets/infinite_scroll_list.dart';
 
 class EnquiryListScreen extends ConsumerStatefulWidget {
-  const EnquiryListScreen({super.key});
+  /// When true (pushed as its own route, e.g. from the staff view) the app bar
+  /// shows a back button. When used as an admin dashboard tab it stays false.
+  final bool showBack;
+  const EnquiryListScreen({super.key, this.showBack = false});
 
   @override
   ConsumerState<EnquiryListScreen> createState() => _EnquiryListScreenState();
@@ -103,7 +106,7 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
       backgroundColor: scaffoldBg,
       appBar: WorkqlyAppBar(
         title: 'Enquiry Tracker',
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: widget.showBack,
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart_rounded),

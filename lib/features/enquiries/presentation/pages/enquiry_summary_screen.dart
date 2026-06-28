@@ -44,6 +44,7 @@ class EnquirySummaryScreen extends ConsumerWidget {
     final rejected = stats['rejected'] as int;
     final settled = stats['settled'] as int;
     final inProgress = stats['inProgress'] as int;
+    final converted = stats['converted'] as int? ?? 0;
     final convRate = stats['conversionRate'] as double;
     final avgDays = stats['avgDaysToSettle'] as double;
     final revenue = stats['totalRevenue'] as double;
@@ -74,6 +75,14 @@ class EnquirySummaryScreen extends ConsumerWidget {
               Expanded(child: _kpiTile('Avg. Days to Settle', '${avgDays.toStringAsFixed(1)} days', AppTheme.statusCompleted, Icons.schedule_outlined, isDark)),
               const SizedBox(width: 12),
               Expanded(child: _kpiTile('Total Revenue', 'SAR ${_fmt(revenue)}', AppTheme.emeraldGreen, Icons.payments_outlined, isDark)),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: _kpiTile('Converted to Orders', '$converted', AppTheme.mintGreen, Icons.assignment_turned_in_outlined, isDark)),
+              const SizedBox(width: 12),
+              Expanded(child: _kpiTile('Order Conv. Rate',
+                  accepted > 0 ? '${(converted / accepted * 100).toStringAsFixed(0)}%' : '—',
+                  AppTheme.electricBlue, Icons.percent_rounded, isDark)),
             ]),
             const SizedBox(height: 20),
 

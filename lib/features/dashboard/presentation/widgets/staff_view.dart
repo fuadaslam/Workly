@@ -9,6 +9,7 @@ import '../../../../features/dashboard/presentation/providers/dashboard_provider
 import '../../../../features/dashboard/domain/models/work_order.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../features/enquiries/domain/models/enquiry.dart';
+import '../../../../features/enquiries/presentation/pages/enquiry_list_screen.dart';
 import '../../../../features/enquiries/presentation/providers/enquiry_options_provider.dart';
 import '../../../../features/enquiries/data/repositories/enquiry_options_repository.dart';
 
@@ -35,7 +36,7 @@ class StaffView extends StatefulWidget {
 class _StaffViewState extends State<StaffView> {
   int _tabIndex = 0;
   final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
-    5,
+    6,
     (_) => GlobalKey<NavigatorState>(),
   );
 
@@ -58,8 +59,9 @@ class _StaffViewState extends State<StaffView> {
         final sidebarItems = [
           SidebarItem(icon: Icons.home_outlined, label: l10n.home),
           SidebarItem(icon: Icons.calendar_month_outlined, label: l10n.leaves),
-          SidebarItem(icon: Icons.assignment_outlined, label: l10n.tasks),
+          const SidebarItem(icon: Icons.assignment_outlined, label: 'Works'),
           SidebarItem(icon: Icons.person_outline, label: l10n.profile),
+          const SidebarItem(icon: Icons.track_changes_outlined, label: 'Enquiries'),
         ];
 
         return LayoutBuilder(
@@ -92,7 +94,9 @@ class _StaffViewState extends State<StaffView> {
                     ),
                   ],
                 ),
-                floatingActionButton: FloatingActionButton.extended(
+                floatingActionButton: _tabIndex == 5
+                    ? null // Enquiries tab has its own FAB
+                    : FloatingActionButton.extended(
                   onPressed: () => _showAddTaskModal(context),
                   backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
                   elevation: 6,
@@ -109,7 +113,9 @@ class _StaffViewState extends State<StaffView> {
               return Scaffold(
                 backgroundColor: scaffoldBg,
                 body: _buildBody(),
-                floatingActionButton: Container(
+                floatingActionButton: _tabIndex == 5
+                    ? null // Enquiries tab has its own FAB
+                    : Container(
                    height: 64,
                    width: 64,
                    margin: const EdgeInsets.only(top: 30),
@@ -148,8 +154,9 @@ class _StaffViewState extends State<StaffView> {
                       _buildNavItem(Icons.home_outlined, Icons.home, l10n.home, 0),
                       _buildNavItem(Icons.calendar_month_outlined, Icons.calendar_month, l10n.leaves, 1),
                       const SizedBox(width: 48), // Spacer for FAB
-                      _buildNavItem(Icons.assignment_outlined, Icons.assignment, l10n.tasks, 3),
+                      _buildNavItem(Icons.assignment_outlined, Icons.assignment, 'Works', 3),
                       _buildNavItem(Icons.person_outline, Icons.person, l10n.profile, 4),
+                      _buildNavItem(Icons.track_changes_outlined, Icons.track_changes, 'Enquiries', 5),
                     ],
                   ),
                 ),
@@ -172,7 +179,7 @@ class _StaffViewState extends State<StaffView> {
   Widget _buildBody() {
     return IndexedStack(
       index: _tabIndex,
-      children: List.generate(5, (index) {
+      children: List.generate(6, (index) {
         return Navigator(
           key: _navKeys[index],
           onGenerateRoute: (settings) {
@@ -195,9 +202,11 @@ class _StaffViewState extends State<StaffView> {
       case 1:
          return const _LeavesView();
       case 3:
-         return const _TasksView(); 
+         return const _TasksView();
       case 4:
          return const ProfileView();
+      case 5:
+         return const EnquiryListScreen();
       default:
         return _HomeTab(
           onProfileTap: () => setState(() => _tabIndex = 4),

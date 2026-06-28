@@ -11,6 +11,10 @@ final allEnquiriesProvider = FutureProvider<List<Enquiry>>((ref) async {
   return ref.watch(enquiryRepositoryProvider).getAllEnquiries();
 });
 
+final enquiryByIdProvider = FutureProvider.family.autoDispose<Enquiry?, String>((ref, id) async {
+  return ref.watch(enquiryRepositoryProvider).getEnquiryById(id);
+});
+
 final enquirySummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   return ref.watch(enquiryRepositoryProvider).getSummaryStats();
 });

@@ -22,6 +22,7 @@ import '../../../attendance/presentation/widgets/attendance_monitor.dart';
 
 import 'assignment_sheet.dart';
 import '../../../enquiries/presentation/pages/enquiry_list_screen.dart';
+import '../pages/works_management_screen.dart';
 import '../../../reports/presentation/report_export_screen.dart';
 import '../../../search/presentation/global_search_bar.dart';
 import '../../../../core/providers/theme_provider.dart';
@@ -41,7 +42,7 @@ class SuperAdminView extends ConsumerStatefulWidget {
 
 class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
   final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
-    8,
+    9,
     (_) => GlobalKey<NavigatorState>(),
   );
 
@@ -67,6 +68,7 @@ class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
        BottomNavigationBarItem(icon: const Icon(Icons.people_outline), label: l10n.staff),
        BottomNavigationBarItem(icon: const Icon(Icons.support_agent_outlined), label: l10n.agents),
        const BottomNavigationBarItem(icon: Icon(Icons.track_changes_outlined), label: 'Enquiries'),
+       const BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Works'),
        const BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
     ];
 
@@ -78,6 +80,7 @@ class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
       SidebarItem(icon: Icons.people_outline, label: l10n.staff),
       SidebarItem(icon: Icons.support_agent_outlined, label: l10n.agents),
       const SidebarItem(icon: Icons.track_changes_outlined, label: 'Enquiries'),
+      const SidebarItem(icon: Icons.assignment_outlined, label: 'Works'),
       const SidebarItem(icon: Icons.settings_outlined, label: 'Settings'),
     ];
 
@@ -117,7 +120,7 @@ class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
                 Expanded(
                   child: IndexedStack(
                     index: currentIndex < sidebarItems.length ? currentIndex : 0,
-                    children: List.generate(8, (index) {
+                    children: List.generate(9, (index) {
                       return Navigator(
                         key: _navKeys[index],
                         onGenerateRoute: (settings) {
@@ -160,7 +163,7 @@ class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
             endDrawer: const Drawer(width: 350, child: ProfileView()),
             body: IndexedStack(
               index: currentIndex < tabs.length ? currentIndex : 0,
-              children: List.generate(8, (index) {
+              children: List.generate(9, (index) {
                 return Navigator(
                   key: _navKeys[index],
                   onGenerateRoute: (settings) {
@@ -228,7 +231,8 @@ class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
       case 4: return _AdminManagementTab(isStaffView: !isSuperAdmin);
       case 5: return const _AgentManagementTab();
       case 6: return const EnquiryListScreen();
-      case 7: return _SettingsTab(isSuperAdmin: isSuperAdmin);
+      case 7: return const WorksManagementTab();
+      case 8: return _SettingsTab(isSuperAdmin: isSuperAdmin);
       default: return const _ExecutiveDashboardTab();
     }
   }

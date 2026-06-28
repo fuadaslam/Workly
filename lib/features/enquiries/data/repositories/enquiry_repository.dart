@@ -63,6 +63,15 @@ class EnquiryRepository {
     return (response as List).map((j) => Enquiry.fromJson(j)).toList();
   }
 
+  Future<Enquiry?> getEnquiryById(String id) async {
+    final res = await _client
+        .from('enquiries')
+        .select('*, profiles:responsible_staff_id(name), offices:assigned_office_id(name)')
+        .eq('id', id)
+        .maybeSingle();
+    return res == null ? null : Enquiry.fromJson(res);
+  }
+
   Future<Enquiry> createEnquiry(Map<String, dynamic> data) async {
     final orgId = await fetchCallerOrgId(_client);
     final response = await _client
@@ -136,6 +145,7 @@ class EnquiryRepository {
         e.finalStatus == EnquiryFinalStatus.settled ||
         e.finalStatus == EnquiryFinalStatus.executed).length;
     final inProgress = all.where((e) => e.finalStatus == EnquiryFinalStatus.inProgress).length;
+    final converted = all.where((e) => e.workOrderId != null).length;
 
     final settledEnquiries = all.where((e) =>
         e.finalStatus == EnquiryFinalStatus.settled ||
@@ -175,6 +185,7 @@ class EnquiryRepository {
       'rejected': rejected,
       'settled': settled,
       'inProgress': inProgress,
+      'converted': converted,
       'conversionRate': total > 0 ? accepted / total : 0.0,
       'avgDaysToSettle': avgDays,
       'totalRevenue': totalRevenue,

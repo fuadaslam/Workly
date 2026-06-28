@@ -19,6 +19,7 @@ import '../../features/auth/presentation/pages/edit_profile_screen.dart';
 import '../../features/auth/presentation/pages/change_password_screen.dart';
 import '../../features/auth/domain/models/profile.dart' as model;
 import '../../features/enquiries/presentation/pages/enquiry_summary_screen.dart';
+import '../../features/enquiries/presentation/pages/enquiry_list_screen.dart';
 import '../../features/enquiries/presentation/pages/add_enquiry_screen.dart';
 import '../../features/enquiries/presentation/pages/enquiry_detail_screen.dart';
 import '../../features/enquiries/domain/models/enquiry.dart';
@@ -155,6 +156,7 @@ final appRouter = GoRouter(
             );
           },
         ),
+        GoRoute(path: 'enquiries', builder: (context, state) => const EnquiryListScreen(showBack: true)),
         GoRoute(path: 'enquiries/summary', builder: (context, state) => const EnquirySummaryScreen()),
         GoRoute(path: 'enquiries/add', builder: (context, state) => const AddEnquiryScreen()),
         GoRoute(

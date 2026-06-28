@@ -16,7 +16,7 @@ class WorkOrderRepository {
     // Scalability Fix: Limit to last 50 by default to prevent massive initial load
     final response = await _client
         .from('work_orders')
-        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name)')
+        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name), payments(total_amount, paid_amount, status)')
         .eq('assigned_staff_id', userId)
         .order('created_at', ascending: false)
         .limit(50);
@@ -33,7 +33,7 @@ class WorkOrderRepository {
   }) async {
     var query = _client
         .from('work_orders')
-        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name)');
+        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name), payments(total_amount, paid_amount, status)');
 
     if (staffId != null) {
       query = query.eq('assigned_staff_id', staffId);
@@ -92,7 +92,7 @@ class WorkOrderRepository {
     // Scalability Fix: Limit to last 50
     final response = await _client
         .from('work_orders')
-        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name)')
+        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name), payments(total_amount, paid_amount, status)')
         .eq('assigned_staff_id', staffId)
         .order('created_at', ascending: false)
         .limit(50);
@@ -104,7 +104,7 @@ class WorkOrderRepository {
     // Scalability Fix: Limit to last 100
     final response = await _client
         .from('work_orders')
-        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name)')
+        .select('*, offices(name), profiles:assigned_staff_id(name, offices(name)), agent_profiles:agent_id(name), payments(total_amount, paid_amount, status)')
         .order('created_at', ascending: false)
         .limit(100);
     

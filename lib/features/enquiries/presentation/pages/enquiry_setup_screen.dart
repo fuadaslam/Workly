@@ -53,29 +53,45 @@ class _EnquirySetupScreenState extends ConsumerState<EnquirySetupScreen> {
 
   // ── Option list actions ──────────────────────────────────────────────────
   Future<void> _addOrRenameOption({EnquiryOption? existing}) async {
-    final ctrl = TextEditingController(text: existing?.value ?? '');
-    final result = await showDialog<String>(
+    final valueCtrl = TextEditingController(text: existing?.value ?? '');
+    final subtitleCtrl = TextEditingController(text: existing?.subtitle ?? '');
+    final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? 'Add option' : 'Rename option'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Enter value'),
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        title: Text(existing == null ? 'Add option' : 'Edit option'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: valueCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Label'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: subtitleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Subtitle (optional)',
+                hintText: 'Shown under the option',
+              ),
+            ),
+          ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Save')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
         ],
       ),
     );
-    if (result == null || result.isEmpty) return;
+    if (saved != true) return;
+    final value = valueCtrl.text.trim();
+    final subtitle = subtitleCtrl.text.trim();
+    if (value.isEmpty) return;
     try {
       if (existing == null) {
-        await _optRepo.addOption(_tab, result);
+        await _optRepo.addOption(_tab, value, subtitle: subtitle);
       } else {
-        await _optRepo.renameOption(existing.id, result);
+        await _optRepo.updateOption(existing.id, value: value, subtitle: subtitle);
       }
       _refreshOptions();
     } catch (e) {
@@ -107,6 +123,7 @@ class _EnquirySetupScreenState extends ConsumerState<EnquirySetupScreen> {
           label: result.label,
           fieldType: result.type,
           required: result.required,
+          helpText: result.helpText,
           options: result.options,
         );
       } else {
@@ -115,6 +132,8 @@ class _EnquirySetupScreenState extends ConsumerState<EnquirySetupScreen> {
           label: result.label,
           fieldType: result.type,
           required: result.required,
+          helpText: result.helpText,
+          clearHelpText: true,
           options: result.options,
         );
       }
@@ -212,8 +231,37 @@ class _EnquirySetupScreenState extends ConsumerState<EnquirySetupScreen> {
               ),
             ),
           ),
+          if (!_isFieldsTab &&
+              (_tab == EnquiryOptionCategory.nature || _tab == EnquiryOptionCategory.nationality))
+            _buildRequiredToggle(isDark),
           Expanded(child: _isFieldsTab ? _buildFieldsList(isDark) : _buildOptionsList(isDark)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRequiredToggle(bool isDark) {
+    final isRequired = ref.watch(enquiryFieldRequiredProvider(_tab)).valueOrNull ?? false;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: _card(
+        isDark,
+        SwitchListTile(
+          value: isRequired,
+          activeThumbColor: AppTheme.emeraldGreen,
+          title: const Text('Required in New Enquiry form',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          subtitle: const Text('Staff must pick a value when creating an enquiry',
+              style: TextStyle(fontSize: 12)),
+          onChanged: (v) async {
+            try {
+              await _optRepo.setFieldRequired(_tab, v);
+              ref.invalidate(enquiryFieldRequiredProvider(_tab));
+            } catch (e) {
+              _showError(e);
+            }
+          },
+        ),
       ),
     );
   }
@@ -240,6 +288,9 @@ class _EnquirySetupScreenState extends ConsumerState<EnquirySetupScreen> {
                     color: o.isActive ? (isDark ? Colors.white : AppTheme.darkBlue) : Colors.grey,
                     decoration: o.isActive ? null : TextDecoration.lineThrough,
                   )),
+              subtitle: (o.subtitle != null && o.subtitle!.isNotEmpty)
+                  ? Text(o.subtitle!, style: const TextStyle(fontSize: 12, color: Colors.grey))
+                  : null,
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                 Switch(
                   value: o.isActive,
@@ -279,7 +330,8 @@ class _EnquirySetupScreenState extends ConsumerState<EnquirySetupScreen> {
           itemBuilder: (_, i) {
             final f = fields[i];
             final meta = '${EnquiryFieldType.label(f.fieldType)}${f.required ? ' · required' : ''}'
-                '${f.fieldType == EnquiryFieldType.dropdown ? ' · ${f.options.length} options' : ''}';
+                '${f.fieldType == EnquiryFieldType.dropdown ? ' · ${f.options.length} options' : ''}'
+                '${(f.helpText != null && f.helpText!.isNotEmpty) ? '\n${f.helpText}' : ''}';
             return _card(isDark, ListTile(
               title: Text(f.label,
                   style: TextStyle(
@@ -314,10 +366,11 @@ class _EnquirySetupScreenState extends ConsumerState<EnquirySetupScreen> {
 
 class _FieldDraft {
   final String label;
+  final String? helpText;
   final String type;
   final bool required;
   final List<String> options;
-  _FieldDraft(this.label, this.type, this.required, this.options);
+  _FieldDraft(this.label, this.helpText, this.type, this.required, this.options);
 }
 
 class _FieldDialog extends StatefulWidget {
@@ -330,6 +383,7 @@ class _FieldDialog extends StatefulWidget {
 
 class _FieldDialogState extends State<_FieldDialog> {
   late final TextEditingController _label;
+  late final TextEditingController _helpText;
   late final TextEditingController _options;
   late String _type;
   late bool _required;
@@ -339,6 +393,7 @@ class _FieldDialogState extends State<_FieldDialog> {
     super.initState();
     final e = widget.existing;
     _label = TextEditingController(text: e?.label ?? '');
+    _helpText = TextEditingController(text: e?.helpText ?? '');
     _options = TextEditingController(text: e?.options.join(', ') ?? '');
     _type = e?.fieldType ?? EnquiryFieldType.text;
     _required = e?.required ?? false;
@@ -347,6 +402,7 @@ class _FieldDialogState extends State<_FieldDialog> {
   @override
   void dispose() {
     _label.dispose();
+    _helpText.dispose();
     _options.dispose();
     super.dispose();
   }
@@ -361,6 +417,14 @@ class _FieldDialogState extends State<_FieldDialog> {
             controller: _label,
             autofocus: true,
             decoration: const InputDecoration(labelText: 'Field label'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _helpText,
+            decoration: const InputDecoration(
+              labelText: 'Help text (optional)',
+              hintText: 'Shown under the field',
+            ),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
@@ -400,7 +464,7 @@ class _FieldDialogState extends State<_FieldDialog> {
             final opts = _type == EnquiryFieldType.dropdown
                 ? _options.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList()
                 : <String>[];
-            Navigator.pop(context, _FieldDraft(label, _type, _required, opts));
+            Navigator.pop(context, _FieldDraft(label, _helpText.text.trim(), _type, _required, opts));
           },
           child: const Text('Save'),
         ),

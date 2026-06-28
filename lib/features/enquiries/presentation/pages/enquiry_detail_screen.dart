@@ -637,6 +637,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   Widget _buildCustomFieldEditor(EnquiryField f) {
     final dec = InputDecoration(
       labelText: f.required ? '${f.label} *' : f.label,
+      helperText: (f.helpText != null && f.helpText!.isNotEmpty) ? f.helpText : null,
       isDense: true,
     );
     switch (f.fieldType) {
