@@ -10,7 +10,7 @@ class EnquiryRepository {
   Future<List<Enquiry>> getAllEnquiries() async {
     final response = await _client
         .from('enquiries')
-        .select('*, profiles:responsible_staff_id(name)')
+        .select('*, profiles:responsible_staff_id(name), offices:assigned_office_id(name)')
         .order('created_at', ascending: false)
         .limit(200);
     return (response as List).map((j) => Enquiry.fromJson(j)).toList();
@@ -23,7 +23,7 @@ class EnquiryRepository {
     String? service,
     String searchQuery = '',
   }) async {
-    var query = _client.from('enquiries').select('*, profiles:responsible_staff_id(name)');
+    var query = _client.from('enquiries').select('*, profiles:responsible_staff_id(name), offices:assigned_office_id(name)');
 
     if (status != null && status.isNotEmpty) {
       query = query.eq('final_status', status);
@@ -51,7 +51,7 @@ class EnquiryRepository {
   Future<List<Enquiry>> getEnquiriesByStaff(String staffId) async {
     final response = await _client
         .from('enquiries')
-        .select('*, profiles:responsible_staff_id(name)')
+        .select('*, profiles:responsible_staff_id(name), offices:assigned_office_id(name)')
         .eq('responsible_staff_id', staffId)
         .order('created_at', ascending: false);
     return (response as List).map((j) => Enquiry.fromJson(j)).toList();
@@ -62,7 +62,7 @@ class EnquiryRepository {
     final response = await _client
         .from('enquiries')
         .insert({...data, 'org_id': orgId})
-        .select('*, profiles:responsible_staff_id(name)')
+        .select('*, profiles:responsible_staff_id(name), offices:assigned_office_id(name)')
         .single();
     return Enquiry.fromJson(response);
   }
@@ -72,13 +72,21 @@ class EnquiryRepository {
         .from('enquiries')
         .update(data)
         .eq('id', id)
-        .select('*, profiles:responsible_staff_id(name)')
+        .select('*, profiles:responsible_staff_id(name), offices:assigned_office_id(name)')
         .single();
     return Enquiry.fromJson(response);
   }
 
   Future<void> deleteEnquiry(String id) async {
     await _client.from('enquiries').delete().eq('id', id);
+  }
+
+  /// Assignment / transfer update that intentionally does NOT read the row
+  /// back. When a staff member transfers an enquiry away from themselves they
+  /// can no longer SELECT it (RLS), so a `.select().single()` would throw even
+  /// though the write committed. The caller updates local state optimistically.
+  Future<void> assignEnquiry(String id, Map<String, dynamic> data) async {
+    await _client.from('enquiries').update(data).eq('id', id);
   }
 
   /// Fetches every enquiry in batches, for stats aggregation. Unlike
@@ -92,7 +100,7 @@ class EnquiryRepository {
     while (true) {
       final response = await _client
           .from('enquiries')
-          .select('*, profiles:responsible_staff_id(name)')
+          .select('*, profiles:responsible_staff_id(name), offices:assigned_office_id(name)')
           .order('created_at', ascending: false)
           .range(offset, offset + batchSize - 1);
       final batch = (response as List).map((j) => Enquiry.fromJson(j)).toList();

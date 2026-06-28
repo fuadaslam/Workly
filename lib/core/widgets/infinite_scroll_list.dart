@@ -30,14 +30,24 @@ class _InfiniteScrollListState<T> extends ConsumerState<InfiniteScrollList<T>> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Initial fetch is usually done when the provider is initialized,
-    // but we can ensure it is loaded by checking state.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = ref.read(widget.provider);
-      if (state.items.isEmpty && !state.isLoading && state.error == null) {
-        ref.read(widget.provider.notifier).fetchFirstPage();
-      }
-    });
+  }
+
+  /// Loads the first page when the notifier is in a "fresh" state — both on
+  /// initial mount AND whenever the provider is recreated (e.g. a filter
+  /// change rebuilds the StateNotifier to an empty state). `hasMore`
+  /// distinguishes a brand-new notifier (true) from one that already fetched
+  /// and legitimately returned zero rows (false), so this never loops on a
+  /// genuinely empty result.
+  void _ensureLoaded(PaginationState<T> state) {
+    if (state.items.isEmpty && !state.isLoading && state.error == null && state.hasMore) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final s = ref.read(widget.provider);
+        if (s.items.isEmpty && !s.isLoading && s.error == null && s.hasMore) {
+          ref.read(widget.provider.notifier).fetchFirstPage();
+        }
+      });
+    }
   }
 
   @override
@@ -56,6 +66,7 @@ class _InfiniteScrollListState<T> extends ConsumerState<InfiniteScrollList<T>> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(widget.provider);
+    _ensureLoaded(state);
 
     return Column(
       children: [
@@ -68,7 +79,12 @@ class _InfiniteScrollListState<T> extends ConsumerState<InfiniteScrollList<T>> {
   }
 
   Widget _buildContent(PaginationState<T> state) {
-    if (state.isLoading) {
+    // Show the spinner while loading, and also during the brief "fresh"
+    // window after a (re)created notifier before its scheduled first fetch
+    // runs — otherwise the empty state would flash for one frame.
+    final pendingFirstLoad =
+        state.items.isEmpty && state.hasMore && state.error == null;
+    if (state.isLoading || pendingFirstLoad) {
       return const Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen));
     }
 

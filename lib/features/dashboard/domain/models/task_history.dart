@@ -7,6 +7,7 @@ class TaskHistory {
   final String? description;
   final WorkStatus? statusAtTime;
   final DateTime createdAt;
+  final String? actorName; // who performed the action (from profiles via created_by)
 
   TaskHistory({
     required this.id,
@@ -15,6 +16,7 @@ class TaskHistory {
     this.description,
     this.statusAtTime,
     required this.createdAt,
+    this.actorName,
   });
 
   factory TaskHistory.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,7 @@ class TaskHistory {
       description: json['description'],
       statusAtTime: json['status_at_time'] != null ? _parseStatus(json['status_at_time']) : null,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now(),
+      actorName: json['profiles']?['name'] as String?,
     );
   }
 

@@ -224,7 +224,7 @@ class WorkOrderRepository {
   Future<List<TaskHistory>> getTaskHistory(String workOrderId) async {
     final response = await _client
         .from('task_history')
-        .select()
+        .select('*, profiles:created_by(name)')
         .eq('work_order_id', workOrderId)
         .order('created_at', ascending: false);
     

@@ -32,6 +32,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   DateTime? _dateOfEnquiry;
   DateTime? _followUpDate;
   String? _responsibleStaffId;
+  String? _assignedOfficeId;
 
   @override
   void dispose() {
@@ -82,6 +83,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
         'action_notes': _actionNotesCtrl.text.trim().isEmpty ? null : _actionNotesCtrl.text.trim(),
         'follow_up_date': _followUpDate?.toIso8601String(),
         'responsible_staff_id': _responsibleStaffId,
+        'assigned_office_id': _assignedOfficeId,
         'client_status': 'pending',
         'final_status': 'In Progress',
       };
@@ -173,6 +175,27 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
                           });
                         },
                         hint: const Text('Select staff member'),
+                        isExpanded: true,
+                      ),
+                    );
+                  },
+                ),
+                ref.watch(officesProvider).when(
+                  loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
+                  error: (_, __) => const SizedBox(),
+                  data: (offices) {
+                    final items = offices.map((o) => DropdownMenuItem<String>(
+                      value: o['id'] as String,
+                      child: Text(o['name'] ?? o['id']),
+                    )).toList();
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: DropdownButtonFormField<String>(
+                        value: _assignedOfficeId,
+                        decoration: _inputDec('Office / Location'),
+                        items: items,
+                        onChanged: (v) => setState(() => _assignedOfficeId = v),
+                        hint: const Text('Select office'),
                         isExpanded: true,
                       ),
                     );

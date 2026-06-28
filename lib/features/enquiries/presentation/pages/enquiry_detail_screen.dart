@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
+import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 import 'package:service_manager_app/core/widgets/responsive_layout.dart';
 
@@ -113,6 +114,135 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<String?> _showPicker(
+    String title,
+    List<MapEntry<String, String>> options,
+    String? currentId,
+  ) {
+    return showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+              if (options.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('No options available', style: TextStyle(color: Colors.grey)),
+                ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: options.map((o) {
+                    final selected = o.key == currentId;
+                    return ListTile(
+                      title: Text(o.value),
+                      trailing: selected
+                          ? const Icon(Icons.check, color: AppTheme.emeraldGreen)
+                          : null,
+                      onTap: () => Navigator.pop(ctx, o.key),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Applies an assignment/transfer without reading the row back (see
+  /// [EnquiryRepository.assignEnquiry]), updating local state optimistically
+  /// and refreshing the list so the change is reflected on return.
+  Future<void> _applyAssignment(Map<String, dynamic> data, Enquiry optimistic) async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(enquiryRepositoryProvider).assignEnquiry(_enquiry.id, data);
+      if (mounted) setState(() => _enquiry = optimistic);
+      ref.read(paginatedEnquiriesProvider.notifier).refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _assignResponsibleStaff() async {
+    final staff = await ref.read(staffProfilesProvider.future);
+    if (!mounted) return;
+    final options = staff
+        .map((p) => MapEntry(p['id'] as String, (p['name'] ?? p['id']) as String))
+        .toList();
+    final selected = await _showPicker(
+      'Assign / Transfer to Staff',
+      options,
+      _enquiry.responsibleStaffId,
+    );
+    if (selected == null || selected == _enquiry.responsibleStaffId) return;
+    final name = options.firstWhere((o) => o.key == selected).value;
+    await _applyAssignment(
+      {'responsible_staff_id': selected},
+      _enquiry.copyWith(responsibleStaffId: selected, responsibleStaffName: name),
+    );
+  }
+
+  Future<void> _assignOffice() async {
+    final offices = await ref.read(officesProvider.future);
+    if (!mounted) return;
+    final options = offices
+        .map((o) => MapEntry(o['id'] as String, (o['name'] ?? o['id']) as String))
+        .toList();
+    final selected = await _showPicker(
+      'Assign to Office / Location',
+      options,
+      _enquiry.assignedOfficeId,
+    );
+    if (selected == null || selected == _enquiry.assignedOfficeId) return;
+    final name = options.firstWhere((o) => o.key == selected).value;
+    await _applyAssignment(
+      {'assigned_office_id': selected},
+      _enquiry.copyWith(assignedOfficeId: selected, assignedOfficeName: name),
+    );
+  }
+
+  Widget _assignRow(String text, bool isSet, VoidCallback onTap) {
+    return InkWell(
+      onTap: _saving ? null : onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 15,
+                color: isSet ? null : Colors.grey,
+                fontStyle: isSet ? FontStyle.normal : FontStyle.italic,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.swap_horiz_rounded, size: 18, color: AppTheme.electricBlue),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickDate(bool isFollowUp) async {
@@ -263,7 +393,16 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
                 _detailRow('Follow-up Date', _dateTapRow(
                     _enquiry.followUpDate != null ? df.format(_enquiry.followUpDate!) : 'Tap to set',
                     () => _pickDate(true))),
-                _detailRow('Responsible', Text(_enquiry.responsibleStaffName ?? '—', style: const TextStyle(fontSize: 15))),
+                _detailRow('Responsible', _assignRow(
+                  _enquiry.responsibleStaffName ?? 'Tap to assign / transfer',
+                  _enquiry.responsibleStaffName != null,
+                  _assignResponsibleStaff,
+                )),
+                _detailRow('Office / Location', _assignRow(
+                  _enquiry.assignedOfficeName ?? 'Tap to assign',
+                  _enquiry.assignedOfficeName != null,
+                  _assignOffice,
+                )),
                 // Client Accept/Reject
                 _detailRow('Client Decision', _clientStatusWidget()),
                 if (_enquiry.clientStatus == ClientStatus.rejected && _enquiry.rejectionReason != null)

@@ -73,6 +73,8 @@ class Enquiry {
   final double? finalAgreedServiceCharge;
   final String? responsibleStaffId;
   final String? responsibleStaffName;
+  final String? assignedOfficeId;
+  final String? assignedOfficeName;
   final ClientStatus clientStatus;
   final String? rejectionReason;
   final EnquiryFinalStatus finalStatus;
@@ -95,6 +97,8 @@ class Enquiry {
     this.finalAgreedServiceCharge,
     this.responsibleStaffId,
     this.responsibleStaffName,
+    this.assignedOfficeId,
+    this.assignedOfficeName,
     this.clientStatus = ClientStatus.pending,
     this.rejectionReason,
     this.finalStatus = EnquiryFinalStatus.inProgress,
@@ -142,6 +146,8 @@ class Enquiry {
       finalAgreedServiceCharge: json['final_agreed_service_charge'] != null ? (json['final_agreed_service_charge'] as num).toDouble() : null,
       responsibleStaffId: json['responsible_staff_id'],
       responsibleStaffName: json['profiles']?['name'],
+      assignedOfficeId: json['assigned_office_id'],
+      assignedOfficeName: json['offices']?['name'],
       clientStatus: _parseClientStatus(json['client_status']),
       rejectionReason: json['rejection_reason'],
       finalStatus: _parseFinalStatus(json['final_status']),
@@ -164,6 +170,7 @@ class Enquiry {
       'follow_up_date': followUpDate?.toIso8601String(),
       'final_agreed_service_charge': finalAgreedServiceCharge,
       'responsible_staff_id': responsibleStaffId,
+      'assigned_office_id': assignedOfficeId,
       'client_status': clientStatus.name,
       'rejection_reason': rejectionReason,
       'final_status': _finalStatusToString(finalStatus),
@@ -215,6 +222,8 @@ class Enquiry {
     double? finalAgreedServiceCharge,
     String? responsibleStaffId,
     String? responsibleStaffName,
+    String? assignedOfficeId,
+    String? assignedOfficeName,
     ClientStatus? clientStatus,
     String? rejectionReason,
     EnquiryFinalStatus? finalStatus,
@@ -236,6 +245,8 @@ class Enquiry {
       finalAgreedServiceCharge: finalAgreedServiceCharge ?? this.finalAgreedServiceCharge,
       responsibleStaffId: responsibleStaffId ?? this.responsibleStaffId,
       responsibleStaffName: responsibleStaffName ?? this.responsibleStaffName,
+      assignedOfficeId: assignedOfficeId ?? this.assignedOfficeId,
+      assignedOfficeName: assignedOfficeName ?? this.assignedOfficeName,
       clientStatus: clientStatus ?? this.clientStatus,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       finalStatus: finalStatus ?? this.finalStatus,

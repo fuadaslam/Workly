@@ -107,17 +107,14 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
         await repo.updateWorkOrderAgent(widget.taskId, agentId: _selectedAgentId, agentFee: fee);
       }
 
+      // Status changes are recorded automatically (with the acting user)
+      // by the `trg_work_order_status_history` DB trigger, so we only add a
+      // timeline entry here for the manual note the user typed.
       if (_notesController.text.isNotEmpty) {
         await repo.addTaskHistory(
           widget.taskId,
           'Manual Update',
           description: _notesController.text,
-          status: apiStatus,
-        );
-      } else {
-        await repo.addTaskHistory(
-          widget.taskId,
-          'Status Changed to $_status',
           status: apiStatus,
         );
       }
@@ -1071,7 +1068,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
             } else {
               dateStr = DateFormat('MMM dd, yyyy').format(item.createdAt);
             }
-            return _buildTimelineItem(title: item.title, subtitle: item.description ?? '', date: dateStr, isActive: isFirst, isLast: isLast);
+            return _buildTimelineItem(title: item.title, subtitle: item.description ?? '', date: dateStr, actor: item.actorName, isActive: isFirst, isLast: isLast);
           }).toList(),
         );
       },
@@ -1080,7 +1077,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
     );
   }
 
-  Widget _buildTimelineItem({required String title, required String subtitle, required String date, bool isActive = false, bool isLast = false}) {
+  Widget _buildTimelineItem({required String title, required String subtitle, required String date, String? actor, bool isActive = false, bool isLast = false}) {
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1113,6 +1110,14 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                     ],
                   ),
                   if (subtitle.isNotEmpty) ...[const SizedBox(height: 4), Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 12))],
+                  if (actor != null && actor.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      Icon(Icons.person_outline, size: 12, color: Colors.grey[400]),
+                      const SizedBox(width: 4),
+                      Text(actor, style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w600)),
+                    ]),
+                  ],
                 ],
               ),
             ),

@@ -226,7 +226,7 @@ class _SuperAdminViewState extends ConsumerState<SuperAdminView> {
       case 2: return const _AttendanceTab();
       case 3: return const _LeaveManagementTab();
       case 4: return _AdminManagementTab(isStaffView: !isSuperAdmin);
-      case 5: return isSuperAdmin ? const _AgentManagementTab() : const SizedBox.shrink();
+      case 5: return const _AgentManagementTab();
       case 6: return const EnquiryListScreen();
       case 7: return _SettingsTab(isSuperAdmin: isSuperAdmin);
       default: return const _ExecutiveDashboardTab();
@@ -2755,6 +2755,9 @@ class _SystemSettingsTabState extends State<_SystemSettingsTab> {
                 const SizedBox(height: 25),
   
                 if (_searchQuery.isEmpty) ...[
+                  // Activity / audit log entry point
+                  _ActivityLogEntryCard(isDark: isDark),
+                  const SizedBox(height: 20),
                   // System Status Card
                   _buildSystemHealthOverview(),
                   const SizedBox(height: 30),
@@ -3284,6 +3287,60 @@ class _BiometricToggleState extends ConsumerState<_BiometricToggle> {
       ),
       title: const Text('Biometric Login', style: TextStyle(fontWeight: FontWeight.w600)),
       subtitle: const Text('Use fingerprint / Face ID to unlock', style: TextStyle(fontSize: 12)),
+    );
+  }
+}
+
+/// Tappable card that opens the org-wide audit trail (who did what, when).
+class _ActivityLogEntryCard extends StatelessWidget {
+  final bool isDark;
+  const _ActivityLogEntryCard({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: isDark ? AppTheme.darkCard : AppTheme.surfaceWhite,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push('/dashboard/activity-log'),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8)],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.electricBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.history_rounded, color: AppTheme.electricBlue, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Activity Log',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: isDark ? Colors.white : AppTheme.darkBlue)),
+                    const SizedBox(height: 2),
+                    Text('Audit trail — who created or changed what',
+                        style: TextStyle(fontSize: 12, color: isDark ? AppTheme.darkSubtext : Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
