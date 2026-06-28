@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
+import '../providers/enquiry_options_provider.dart';
+import '../../data/repositories/enquiry_options_repository.dart';
 import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 import 'package:service_manager_app/core/widgets/responsive_layout.dart';
@@ -730,13 +732,15 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   void _showRejectionDialog() {
     String? reason;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reasons = ref.read(enquiryOptionValuesProvider(EnquiryOptionCategory.rejectionReason)).valueOrNull
+        ?? kRejectionReasons;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Reason for Rejection'),
         content: DropdownButtonFormField<String>(
           decoration: const InputDecoration(hintText: 'Select reason'),
-          items: kRejectionReasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+          items: reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
           onChanged: (v) => reason = v,
         ),
         actions: [

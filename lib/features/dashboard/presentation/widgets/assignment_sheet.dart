@@ -4,6 +4,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../providers/dashboard_provider.dart';
 import 'package:service_manager_app/l10n/generated/app_localizations.dart';
 import 'package:service_manager_app/features/enquiries/domain/models/enquiry.dart';
+import 'package:service_manager_app/features/enquiries/presentation/providers/enquiry_options_provider.dart';
+import 'package:service_manager_app/features/enquiries/data/repositories/enquiry_options_repository.dart';
 
 class AssignmentSheet extends ConsumerStatefulWidget {
   const AssignmentSheet({super.key});
@@ -98,7 +100,7 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.work_outline),
                       ),
-                      items: kNatureOfEnquiry
+                      items: (ref.watch(enquiryOptionValuesProvider(EnquiryOptionCategory.nature)).valueOrNull ?? kNatureOfEnquiry)
                           .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis)))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedServiceType = v),
@@ -114,7 +116,7 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.flag_outlined),
                       ),
-                      items: kNationalities
+                      items: (ref.watch(enquiryOptionValuesProvider(EnquiryOptionCategory.nationality)).valueOrNull ?? kNationalities)
                           .map((n) => DropdownMenuItem(value: n, child: Text(n)))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedNationality = v),

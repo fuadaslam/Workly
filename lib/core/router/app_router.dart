@@ -27,6 +27,7 @@ import '../../features/saas/presentation/pages/organization_detail_screen.dart';
 import '../../features/saas/domain/models/organization.dart';
 import '../../features/search/presentation/global_search_screen.dart';
 import '../../features/activity/presentation/pages/activity_log_screen.dart';
+import '../../features/enquiries/presentation/pages/enquiry_setup_screen.dart';
 
 /// Lets every screen in the app — including ones nested deep inside the
 /// dashboard — drive navigation through go_router instead of raw
@@ -167,6 +168,7 @@ final appRouter = GoRouter(
         ),
         GoRoute(path: 'search', builder: (context, state) => const GlobalSearchScreen()),
         GoRoute(path: 'activity-log', builder: (context, state) => const ActivityLogScreen()),
+        GoRoute(path: 'enquiry-setup', builder: (context, state) => const EnquirySetupScreen()),
       ],
     ),
   ],

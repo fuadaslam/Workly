@@ -463,8 +463,52 @@ class _MemberTile extends StatelessWidget {
             ),
           ),
         ]),
+        if (member.role != 'super_admin')
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, size: 18, color: Colors.grey),
+            onSelected: (v) {
+              if (v == 'owner') _confirmSetOwner(context);
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'owner', child: Text('Set as Owner')),
+            ],
+          ),
       ]),
     );
+  }
+
+  Future<void> _confirmSetOwner(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Set as Owner?'),
+        content: Text(
+          '${member.name ?? member.email ?? 'This member'} will become the owner (super admin) of ${org.name}. '
+          'The current owner will be changed to admin.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(saasRepositoryProvider).setOrgOwner(org.id, member.id);
+      ref.invalidate(orgMembersProvider(org.id));
+      ref.invalidate(allOrganizationsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Owner updated'), backgroundColor: AppTheme.statusCompleted),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+        );
+      }
+    }
   }
 }
 

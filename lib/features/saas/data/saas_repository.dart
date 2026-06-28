@@ -142,6 +142,16 @@ class SaasRepository {
     await _client.from('profiles').update({'role': role}).eq('id', profileId);
   }
 
+  /// Defines the org owner (single super_admin per org). Demotes the previous
+  /// owner to admin, promotes this member, and syncs organizations.owner_id.
+  /// Server-enforced: only the platform admin or current owner may call it.
+  Future<void> setOrgOwner(String orgId, String profileId) async {
+    await _client.rpc('set_org_owner', params: {
+      'p_org_id': orgId,
+      'p_new_owner': profileId,
+    });
+  }
+
   // ─── Invitations ──────────────────────────────────────────────────────────
 
   Future<List<OrgInvitation>> getInvitations(String orgId) async {

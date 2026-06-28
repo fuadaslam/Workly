@@ -731,7 +731,7 @@ class _ExecutiveDashboardTab extends ConsumerWidget {
     final gridColor = isDark ? AppTheme.darkBorder.withValues(alpha: 0.5) : Colors.grey.withValues(alpha: 0.08);
     final accent = AppTheme.primaryAccent(isDark);
 
-    final trendAsync = ref.watch(monthlyWorkOrderTrendProvider);
+    final trendAsync = ref.watch(monthlyEnquiryTrendProvider);
     final now = DateTime.now();
     final months = List.generate(6, (i) => DateFormat('MMM').format(DateTime(now.year, now.month - 5 + i)));
 
@@ -3194,6 +3194,19 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
             const Divider(height: 1, indent: 16, endIndent: 16),
             // Biometric
             _BiometricToggle(),
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            // Enquiry setup (org-level dropdown options)
+            ListTile(
+              onTap: () => context.push('/dashboard/enquiry-setup'),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: isDark ? AppTheme.darkCardAlt : AppTheme.backgroundLight, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.tune_rounded, color: AppTheme.electricBlue, size: 20),
+              ),
+              title: const Text('Enquiry Setup', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text('Manage enquiry dropdown options', style: TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            ),
             const Divider(height: 1, indent: 16, endIndent: 16),
             // Sign out
             ListTile(

@@ -365,6 +365,27 @@ final monthlyWorkOrderTrendProvider = FutureProvider<List<double>>((ref) async {
   return counts;
 });
 
+/// Enquiry counts per month for the last 6 months (index 0 = oldest, 5 = current).
+/// Buckets by date_of_enquiry (falling back to created_at).
+final monthlyEnquiryTrendProvider = FutureProvider<List<double>>((ref) async {
+  final client = Supabase.instance.client;
+  final now = DateTime.now();
+  final sixMonthsAgo = DateTime(now.year, now.month - 5, 1);
+  final response = await client
+      .from('enquiries')
+      .select('date_of_enquiry, created_at')
+      .gte('created_at', sixMonthsAgo.toIso8601String());
+  final counts = List.filled(6, 0.0);
+  for (final e in response) {
+    final raw = (e['date_of_enquiry'] as String?) ?? (e['created_at'] as String?);
+    final d = DateTime.tryParse(raw ?? '');
+    if (d == null) continue;
+    final monthsAgo = (now.year - d.year) * 12 + (now.month - d.month);
+    if (monthsAgo >= 0 && monthsAgo < 6) counts[5 - monthsAgo]++;
+  }
+  return counts;
+});
+
 /// Completion rate per service type (top 4 by volume).
 final serviceTypeKpiProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final client = Supabase.instance.client;

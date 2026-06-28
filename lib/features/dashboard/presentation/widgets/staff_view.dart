@@ -9,6 +9,8 @@ import '../../../../features/dashboard/presentation/providers/dashboard_provider
 import '../../../../features/dashboard/domain/models/work_order.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../features/enquiries/domain/models/enquiry.dart';
+import '../../../../features/enquiries/presentation/providers/enquiry_options_provider.dart';
+import '../../../../features/enquiries/data/repositories/enquiry_options_repository.dart';
 
 import '../../../../core/theme/pattern_painter.dart';
 import 'profile_view.dart';
@@ -294,7 +296,7 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
                   labelText: 'Nature of Enquiry',
                   prefixIcon: Icon(Icons.work),
                 ),
-                items: kNatureOfEnquiry
+                items: (ref.watch(enquiryOptionValuesProvider(EnquiryOptionCategory.nature)).valueOrNull ?? kNatureOfEnquiry)
                     .map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis)))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedServiceType = v),
@@ -308,7 +310,7 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
                   labelText: 'Nationality',
                   prefixIcon: Icon(Icons.flag_outlined),
                 ),
-                items: kNationalities
+                items: (ref.watch(enquiryOptionValuesProvider(EnquiryOptionCategory.nationality)).valueOrNull ?? kNationalities)
                     .map((n) => DropdownMenuItem(value: n, child: Text(n)))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedNationality = v),

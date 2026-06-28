@@ -464,16 +464,30 @@ class _EnquiryListScreenState extends ConsumerState<EnquiryListScreen> {
                       ),
                     ),
 
-                    if (e.responsibleStaffName != null) ...[
+                    if (e.responsibleStaffName != null || e.assignedOfficeName != null) ...[
                       const SizedBox(height: 10),
-                      Row(children: [
-                        Icon(Icons.badge_outlined, size: 13, color: metaColor),
-                        const SizedBox(width: 5),
-                        Text(
-                          e.responsibleStaffName!,
-                          style: TextStyle(fontSize: 12, color: metaColor),
-                        ),
-                      ]),
+                      Wrap(
+                        spacing: 14,
+                        runSpacing: 6,
+                        children: [
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.badge_outlined, size: 13, color: metaColor),
+                            const SizedBox(width: 5),
+                            Text(
+                              e.responsibleStaffName ?? 'Unassigned',
+                              style: TextStyle(fontSize: 12, color: metaColor),
+                            ),
+                          ]),
+                          Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.business_outlined, size: 13, color: metaColor),
+                            const SizedBox(width: 5),
+                            Text(
+                              e.assignedOfficeName ?? 'No office',
+                              style: TextStyle(fontSize: 12, color: metaColor),
+                            ),
+                          ]),
+                        ],
+                      ),
                     ],
                   ],
                 ),

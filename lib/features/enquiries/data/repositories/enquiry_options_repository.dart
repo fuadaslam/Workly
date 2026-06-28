@@ -1,0 +1,78 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/utils/supabase_org_utils.dart';
+
+/// Categories of configurable enquiry dropdowns.
+class EnquiryOptionCategory {
+  static const nature = 'nature';
+  static const nationality = 'nationality';
+  static const rejectionReason = 'rejection_reason';
+}
+
+class EnquiryOption {
+  final String id;
+  final String value;
+  final bool isActive;
+  final int sortOrder;
+
+  EnquiryOption({
+    required this.id,
+    required this.value,
+    required this.isActive,
+    required this.sortOrder,
+  });
+
+  factory EnquiryOption.fromJson(Map<String, dynamic> j) => EnquiryOption(
+        id: j['id'] as String,
+        value: j['value'] as String,
+        isActive: j['is_active'] as bool? ?? true,
+        sortOrder: j['sort_order'] as int? ?? 0,
+      );
+}
+
+class EnquiryOptionsRepository {
+  final SupabaseClient _client;
+  EnquiryOptionsRepository(this._client);
+
+  Future<List<EnquiryOption>> getOptions(String category) async {
+    final res = await _client
+        .from('enquiry_options')
+        .select()
+        .eq('category', category)
+        .order('sort_order')
+        .order('value');
+    return (res as List)
+        .map((j) => EnquiryOption.fromJson(j as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> addOption(String category, String value) async {
+    final orgId = await fetchCallerOrgId(_client);
+    final last = await _client
+        .from('enquiry_options')
+        .select('sort_order')
+        .eq('category', category)
+        .order('sort_order', ascending: false)
+        .limit(1);
+    final nextOrder =
+        last.isNotEmpty ? ((last.first['sort_order'] as int? ?? 0) + 1) : 0;
+    await _client.from('enquiry_options').insert({
+      'org_id': orgId,
+      'category': category,
+      'value': value.trim(),
+      'sort_order': nextOrder,
+      'is_active': true,
+    });
+  }
+
+  Future<void> renameOption(String id, String value) async {
+    await _client.from('enquiry_options').update({'value': value.trim()}).eq('id', id);
+  }
+
+  Future<void> setActive(String id, bool active) async {
+    await _client.from('enquiry_options').update({'is_active': active}).eq('id', id);
+  }
+
+  Future<void> deleteOption(String id) async {
+    await _client.from('enquiry_options').delete().eq('id', id);
+  }
+}

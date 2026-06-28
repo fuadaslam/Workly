@@ -6,6 +6,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../domain/models/enquiry.dart';
 import '../providers/enquiry_provider.dart';
+import '../providers/enquiry_options_provider.dart';
+import '../../data/repositories/enquiry_options_repository.dart';
 import '../../../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'package:service_manager_app/core/widgets/app_bar.dart';
 
@@ -113,6 +115,9 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   Widget build(BuildContext context) {
     final staffAsync = ref.watch(staffProfilesProvider);
     final df = DateFormat('dd MMM yyyy');
+    // Org-configured dropdown options (fall back to built-in defaults).
+    final natureOptions = ref.watch(enquiryOptionValuesProvider(EnquiryOptionCategory.nature)).valueOrNull ?? kNatureOfEnquiry;
+    final nationalityOptions = ref.watch(enquiryOptionValuesProvider(EnquiryOptionCategory.nationality)).valueOrNull ?? kNationalities;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
@@ -139,8 +144,8 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
               _card([
                 _field('Client Name *', _clientNameCtrl, required: true),
                 _field('Contact Number', _contactCtrl, keyboardType: TextInputType.phone),
-                _dropdown('Nature of Enquiry *', _natureOfEnquiry, kNatureOfEnquiry, (v) => setState(() => _natureOfEnquiry = v), required: true),
-                _dropdown('Nationality', _nationality, kNationalities, (v) => setState(() => _nationality = v)),
+                _dropdown('Nature of Enquiry *', _natureOfEnquiry, natureOptions, (v) => setState(() => _natureOfEnquiry = v), required: true),
+                _dropdown('Nationality', _nationality, nationalityOptions, (v) => setState(() => _nationality = v)),
                 _dateTile('Date of Enquiry', _dateOfEnquiry, df, () => _pickDate(false)),
               ]),
               const SizedBox(height: 16),
