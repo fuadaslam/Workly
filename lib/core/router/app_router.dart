@@ -29,6 +29,7 @@ import '../../features/saas/domain/models/organization.dart';
 import '../../features/search/presentation/global_search_screen.dart';
 import '../../features/activity/presentation/pages/activity_log_screen.dart';
 import '../../features/enquiries/presentation/pages/enquiry_setup_screen.dart';
+import '../widgets/dashboard_sidebar_shell.dart';
 
 /// Lets every screen in the app — including ones nested deep inside the
 /// dashboard — drive navigation through go_router instead of raw
@@ -111,12 +112,14 @@ final appRouter = GoRouter(
           builder: (context, state) {
             final taskId = state.pathParameters['taskId']!;
             final extra = state.extra as TaskRouteArgs?;
-            return TaskDetailScreen(
-              taskId: taskId,
-              clientName: extra?.clientName ?? '—',
-              clientPhone: extra?.clientPhone,
-              priority: extra?.priority ?? 'Medium',
-              initialStatus: extra?.initialStatus ?? 'Pending',
+            return DashboardSidebarShell(
+              child: TaskDetailScreen(
+                taskId: taskId,
+                clientName: extra?.clientName ?? '—',
+                clientPhone: extra?.clientPhone,
+                priority: extra?.priority ?? 'Medium',
+                initialStatus: extra?.initialStatus ?? 'Pending',
+              ),
             );
           },
         ),
@@ -161,7 +164,9 @@ final appRouter = GoRouter(
         GoRoute(path: 'enquiries/add', builder: (context, state) => const AddEnquiryScreen()),
         GoRoute(
           path: 'enquiries/detail',
-          builder: (context, state) => EnquiryDetailScreen(enquiry: state.extra as Enquiry),
+          builder: (context, state) => DashboardSidebarShell(
+            child: EnquiryDetailScreen(enquiry: state.extra as Enquiry),
+          ),
         ),
         GoRoute(path: 'reports/export', builder: (context, state) => const ReportExportScreen()),
         GoRoute(

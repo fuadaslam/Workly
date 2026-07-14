@@ -30,6 +30,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   // Edit controllers
   late TextEditingController _clientNameCtrl;
   late TextEditingController _contactCtrl;
+  late TextEditingController _iqamaCtrl;
   late TextEditingController _officialFeeCtrl;
   late TextEditingController _serviceChargeCtrl;
   late TextEditingController _actionNotesCtrl;
@@ -50,6 +51,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   void _initControllers() {
     _clientNameCtrl = TextEditingController(text: _enquiry.clientName ?? '');
     _contactCtrl = TextEditingController(text: _enquiry.contactNumber ?? '');
+    _iqamaCtrl = TextEditingController(text: _enquiry.iqamaNumber ?? '');
     _officialFeeCtrl = TextEditingController(text: _enquiry.officialFee?.toStringAsFixed(0) ?? '');
     _serviceChargeCtrl = TextEditingController(text: _enquiry.serviceChargeOffered?.toStringAsFixed(0) ?? '');
     _actionNotesCtrl = TextEditingController(text: _enquiry.actionNotes ?? '');
@@ -61,6 +63,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
   void dispose() {
     _clientNameCtrl.dispose();
     _contactCtrl.dispose();
+    _iqamaCtrl.dispose();
     _officialFeeCtrl.dispose();
     _serviceChargeCtrl.dispose();
     _actionNotesCtrl.dispose();
@@ -96,6 +99,7 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
       final data = _enquiry.toJson()
         ..['client_name'] = _clientNameCtrl.text.trim()
         ..['contact_number'] = _contactCtrl.text.trim()
+        ..['iqama_number'] = _iqamaCtrl.text.trim().isEmpty ? null : _iqamaCtrl.text.trim()
         ..['official_fee'] = double.tryParse(_officialFeeCtrl.text)
         ..['service_charge_offered'] = double.tryParse(_serviceChargeCtrl.text)
         ..['action_notes'] = _actionNotesCtrl.text.trim()
@@ -481,6 +485,9 @@ class _EnquiryDetailScreenState extends ConsumerState<EnquiryDetailScreen> {
                 _detailRow('Contact', _editing
                     ? _editField(_contactCtrl, keyboardType: TextInputType.phone)
                     : Text(_enquiry.contactNumber ?? '—', style: const TextStyle(fontSize: 15))),
+                _detailRow('Iqama Number', _editing
+                    ? _editField(_iqamaCtrl)
+                    : Text(_enquiry.iqamaNumber ?? '—', style: const TextStyle(fontSize: 15))),
                 _detailRow('Service Type', Text(_enquiry.natureOfEnquiry ?? '—', style: const TextStyle(fontSize: 15))),
                 _detailRow('Nationality', Text(_enquiry.nationality ?? '—', style: const TextStyle(fontSize: 15))),
                 _detailRow('Date of Enquiry', _dateTapRow(

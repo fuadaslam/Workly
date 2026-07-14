@@ -48,7 +48,7 @@ class AttendanceCard extends ConsumerWidget {
             ),
             
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -58,14 +58,14 @@ class AttendanceCard extends ConsumerWidget {
                       Row(
                         children: [
                              Container(
-                               padding: const EdgeInsets.all(8),
+                               padding: const EdgeInsets.all(7),
                                decoration: BoxDecoration(
                                  color: AppTheme.emeraldLight,
                                  borderRadius: BorderRadius.circular(10),
                                ),
-                               child: const Icon(Icons.watch_later_outlined, color: AppTheme.emeraldGreen, size: 20),
+                               child: const Icon(Icons.watch_later_outlined, color: AppTheme.emeraldGreen, size: 18),
                              ),
-                           const SizedBox(width: 12),
+                           const SizedBox(width: 10),
                            Column(
                              crossAxisAlignment: CrossAxisAlignment.start,
                              children: [
@@ -96,8 +96,8 @@ class AttendanceCard extends ConsumerWidget {
                       )
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  
+                  const SizedBox(height: 16),
+
                   attendanceAsync.when(
                     data: (session) {
                       final isCheckedIn = session != null;
@@ -106,10 +106,10 @@ class AttendanceCard extends ConsumerWidget {
                           // Status Display
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
                             decoration: BoxDecoration(
                               color: isCheckedIn ? AppTheme.emeraldGreen.withValues(alpha: 0.05) : const Color(0xFFFFF7ED), // Orange tint for warning
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: isCheckedIn ? AppTheme.emeraldGreen.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
                               ),
@@ -118,9 +118,10 @@ class AttendanceCard extends ConsumerWidget {
                               children: [
                                 Icon(
                                   isCheckedIn ? Icons.check_circle_outline : Icons.info_outline,
+                                  size: 18,
                                   color: isCheckedIn ? AppTheme.emeraldGreen : Colors.orange,
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,6 +130,7 @@ class AttendanceCard extends ConsumerWidget {
                                         isCheckedIn ? 'Currently on Duty' : 'Not Checked In',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
+                                          fontSize: 14,
                                           color: isCheckedIn ? AppTheme.emeraldGreen : Colors.orange.shade800,
                                         ),
                                       ),
@@ -148,12 +150,12 @@ class AttendanceCard extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          
+                          const SizedBox(height: 16),
+
                           // Action Button
                           SizedBox(
                             width: double.infinity,
-                            height: 56,
+                            height: 48,
                             child: ElevatedButton(
                               onPressed: controllerState.isLoading 
                                 ? null 
@@ -168,18 +170,18 @@ class AttendanceCard extends ConsumerWidget {
                                 backgroundColor: isCheckedIn ? AppTheme.errorRed : AppTheme.emeraldGreen,
                                 elevation: isCheckedIn ? 0 : 4,
                                 shadowColor: AppTheme.emeraldGreen.withValues(alpha: 0.4),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
-                              child: controllerState.isLoading 
-                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              child: controllerState.isLoading
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(isCheckedIn ? Icons.logout : Icons.login),
+                                      Icon(isCheckedIn ? Icons.logout : Icons.login, size: 18),
                                       const SizedBox(width: 8),
                                       Text(
                                         isCheckedIn ? 'CHECK OUT / انصراف' : 'CHECK IN / حضور',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5),
                                       ),
                                     ],
                                   ),

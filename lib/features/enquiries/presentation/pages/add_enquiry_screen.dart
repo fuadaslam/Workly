@@ -26,6 +26,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   // Fields
   final _clientNameCtrl = TextEditingController();
   final _contactCtrl = TextEditingController();
+  final _iqamaCtrl = TextEditingController();
   final _officialFeeCtrl = TextEditingController();
   final _serviceChargeCtrl = TextEditingController();
   final _actionNotesCtrl = TextEditingController();
@@ -43,6 +44,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
   void dispose() {
     _clientNameCtrl.dispose();
     _contactCtrl.dispose();
+    _iqamaCtrl.dispose();
     _officialFeeCtrl.dispose();
     _serviceChargeCtrl.dispose();
     _actionNotesCtrl.dispose();
@@ -96,6 +98,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
       final data = {
         'client_name': _clientNameCtrl.text.trim(),
         'contact_number': _contactCtrl.text.trim().isEmpty ? null : _contactCtrl.text.trim(),
+        'iqama_number': _iqamaCtrl.text.trim().isEmpty ? null : _iqamaCtrl.text.trim(),
         'nature_of_enquiry': _natureOfEnquiry,
         'date_of_enquiry': (_dateOfEnquiry ?? DateTime.now()).toIso8601String(),
         'nationality': _nationality,
@@ -166,6 +169,7 @@ class _AddEnquiryScreenState extends ConsumerState<AddEnquiryScreen> {
               _card([
                 _field('Client Name *', _clientNameCtrl, required: true),
                 _field('Contact Number', _contactCtrl, keyboardType: TextInputType.phone),
+                _field('Iqama Number', _iqamaCtrl),
                 _optionDropdown('Nature of Enquiry${natureRequired ? ' *' : ''}', _natureOfEnquiry, natureOptions, (v) => setState(() => _natureOfEnquiry = v), required: natureRequired),
                 _optionDropdown('Nationality${nationalityRequired ? ' *' : ''}', _nationality, nationalityOptions, (v) => setState(() => _nationality = v), required: nationalityRequired),
                 _dateTile('Date of Enquiry', _dateOfEnquiry, df, () => _pickDate(false)),

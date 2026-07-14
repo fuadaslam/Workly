@@ -8,8 +8,11 @@ class WorkOrder {
   final String? clientName;
   final String? clientPhoneNumber;
   final String? nationality;
+  final String? iqamaNumber;
   final String? serviceId;
   final String? serviceType;
+  final String? detailsOfWorks;
+  final double? defaultChargingAmount;
   final String? assignedStaffId;
   final String? assignedStaffName;
   final String? assignedOfficeId;
@@ -35,8 +38,11 @@ class WorkOrder {
     this.clientName,
     this.clientPhoneNumber,
     this.nationality,
+    this.iqamaNumber,
     this.serviceId,
     this.serviceType,
+    this.detailsOfWorks,
+    this.defaultChargingAmount,
     this.assignedStaffId,
     this.assignedStaffName,
     this.assignedOfficeId,
@@ -63,8 +69,13 @@ class WorkOrder {
       clientName: json['client_name'],
       clientPhoneNumber: json['client_phone_number'] ?? json['client_phone'],
       nationality: json['nationality'],
+      iqamaNumber: json['iqama_number'],
       serviceId: json['service_id'],
       serviceType: json['service_type'],
+      detailsOfWorks: json['details_of_works'],
+      defaultChargingAmount: json['default_charging_amount'] != null
+          ? (json['default_charging_amount'] as num).toDouble()
+          : null,
       assignedStaffId: json['assigned_staff_id'],
       assignedStaffName: json['profiles']?['name'],
       assignedOfficeId: json['assigned_office_id'],
@@ -129,8 +140,11 @@ class WorkOrder {
       'client_name': clientName,
       'client_phone_number': clientPhoneNumber,
       'nationality': nationality,
+      'iqama_number': iqamaNumber,
       'service_id': serviceId,
       'service_type': serviceType,
+      'details_of_works': detailsOfWorks,
+      'default_charging_amount': defaultChargingAmount,
       'assigned_staff_id': assignedStaffId,
       'assigned_office_id': assignedOfficeId,
       'agent_id': agentId,

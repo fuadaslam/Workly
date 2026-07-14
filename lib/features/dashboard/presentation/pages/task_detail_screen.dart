@@ -560,6 +560,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen> {
                   _card([
                     _detailRow(l10n.caseId, Text('#${widget.taskId}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.darkBlue))),
                     _detailRow(l10n.clientName, Text(_effectiveClientName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppTheme.darkBlue))),
+                    if (_fetchedOrder?.iqamaNumber != null && _fetchedOrder!.iqamaNumber!.isNotEmpty)
+                      _detailRow('Iqama Number', Text(_fetchedOrder!.iqamaNumber!, style: const TextStyle(fontSize: 15))),
+                    if (_fetchedOrder?.detailsOfWorks != null && _fetchedOrder!.detailsOfWorks!.isNotEmpty)
+                      _detailRow('Details of Works', Text(_fetchedOrder!.detailsOfWorks!, style: const TextStyle(fontSize: 15, height: 1.4))),
+                    if (_fetchedOrder?.defaultChargingAmount != null)
+                      _detailRow('Default Charging Amount', Text('SAR ${_fetchedOrder!.defaultChargingAmount!.toStringAsFixed(0)}', style: const TextStyle(fontSize: 15))),
                     _detailRow(l10n.priority, _buildPriorityBadge(_effectivePriority, l10n)),
                     _detailRow(l10n.status, _buildStatusDropdown(l10n)),
                     Padding(

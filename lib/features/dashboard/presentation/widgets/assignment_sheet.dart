@@ -18,6 +18,9 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
   final _formKey = GlobalKey<FormState>();
   final _clientController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _iqamaController = TextEditingController();
+  final _detailsController = TextEditingController();
+  final _chargeController = TextEditingController();
 
   String? _selectedStaffId;
   String? _selectedServiceType;
@@ -29,6 +32,9 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
   void dispose() {
     _clientController.dispose();
     _phoneController.dispose();
+    _iqamaController.dispose();
+    _detailsController.dispose();
+    _chargeController.dispose();
     super.dispose();
   }
 
@@ -87,6 +93,15 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
                       ),
                       validator: (v) => v == null || v.isEmpty ? l10n.required : null,
                     ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _iqamaController,
+                      decoration: const InputDecoration(
+                        labelText: 'Iqama Number',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.badge_outlined),
+                      ),
+                    ),
                     const SizedBox(height: 24),
 
                     // Task Info Section
@@ -121,6 +136,26 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
                           .toList(),
                       onChanged: (v) => setState(() => _selectedNationality = v),
                       hint: const Text('Select nationality'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _detailsController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Details of Works',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.description_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _chargeController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Default Charging Amount (SAR)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.payments_outlined),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -218,6 +253,9 @@ class _AssignmentSheetState extends ConsumerState<AssignmentSheet> {
         priority: _priority,
         assignedStaffId: _selectedStaffId,
         assignedOfficeId: null,
+        iqamaNumber: _iqamaController.text.trim().isEmpty ? null : _iqamaController.text.trim(),
+        detailsOfWorks: _detailsController.text.trim().isEmpty ? null : _detailsController.text.trim(),
+        defaultChargingAmount: double.tryParse(_chargeController.text.trim()),
       );
       
         if (mounted) {

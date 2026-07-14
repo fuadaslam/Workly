@@ -10,7 +10,9 @@ import 'platform_admin_screen.dart';
 import 'platform_plans_screen.dart';
 import 'platform_settings_screen.dart';
 
-final _platformTabProvider = StateProvider<int>((_) => 0);
+/// Public so [DashboardSidebarShell] can read/set it from detail screens
+/// pushed on top of the platform admin shell.
+final platformAdminTabIndexProvider = StateProvider<int>((_) => 0);
 
 class PlatformAdminShell extends ConsumerWidget {
   const PlatformAdminShell({super.key});
@@ -22,7 +24,7 @@ class PlatformAdminShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentTab = ref.watch(_platformTabProvider);
+    final currentTab = ref.watch(platformAdminTabIndexProvider);
     final profileAsync = ref.watch(profileProvider);
     final themeMode = ref.watch(themeModeProvider);
 
@@ -70,7 +72,7 @@ class PlatformAdminShell extends ConsumerWidget {
             CollapsibleSidebar(
               selectedIndex: currentTab,
               items: sidebarItems,
-              onDestinationSelected: (idx) => ref.read(_platformTabProvider.notifier).state = idx,
+              onDestinationSelected: (idx) => ref.read(platformAdminTabIndexProvider.notifier).state = idx,
               onSignOut: () => _signOut(context),
               userName: userName,
               userRole: userRole,
@@ -88,7 +90,7 @@ class PlatformAdminShell extends ConsumerWidget {
       body: IndexedStack(index: currentTab, children: tabs),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentTab,
-        onDestinationSelected: (idx) => ref.read(_platformTabProvider.notifier).state = idx,
+        onDestinationSelected: (idx) => ref.read(platformAdminTabIndexProvider.notifier).state = idx,
         backgroundColor: AppTheme.surfaceWhite,
         indicatorColor: AppTheme.emeraldGreen.withValues(alpha: 0.12),
         height: 68,

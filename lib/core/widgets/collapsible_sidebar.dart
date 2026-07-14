@@ -97,7 +97,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeInOutQuart,
-      width: _isExpanded ? 220 : 64,
+      width: _isExpanded ? 248 : 72,
       height: double.infinity,
       decoration: BoxDecoration(
         color: _bg,
@@ -118,7 +118,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
 
   Widget _buildHeader() {
     return Container(
-      height: 56,
+      height: 62,
       padding: EdgeInsets.symmetric(horizontal: _isExpanded ? 16 : 12),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: _divider, width: 1)),
@@ -130,20 +130,20 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
           if (_isExpanded)
             Row(children: [
               Container(
-                width: 26,
-                height: 26,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: AppTheme.brand500,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(7),
                 ),
-                child: const Icon(Icons.bolt_rounded, color: AppTheme.ink900, size: 16),
+                child: const Icon(Icons.bolt_rounded, color: AppTheme.ink900, size: 18),
               ),
               const SizedBox(width: 10),
               Text(
                 'Worqly',
                 style: TextStyle(
                   color: _logoText,
-                  fontSize: 15,
+                  fontSize: 16.5,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.3,
                 ),
@@ -173,7 +173,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
 
   Widget _buildNavItems() {
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       itemCount: widget.items.length,
       itemBuilder: (context, index) {
         final item = widget.items[index];
@@ -181,7 +181,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
         final isHovered = _hoveredIndex == index;
 
         return Padding(
-          padding: const EdgeInsets.only(bottom: 2),
+          padding: const EdgeInsets.only(bottom: 4),
           child: MouseRegion(
             onEnter: (_) => setState(() => _hoveredIndex = index),
             onExit:  (_) => setState(() => _hoveredIndex = null),
@@ -190,7 +190,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
               onTap: () => widget.onDestinationSelected(index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
-                height: 36,
+                height: 46,
                 decoration: BoxDecoration(
                   color: isSelected
                       ? _activeBg
@@ -205,8 +205,8 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       width: 3,
-                      height: isSelected ? 20 : 0,
-                      margin: const EdgeInsets.only(right: 9),
+                      height: isSelected ? 24 : 0,
+                      margin: const EdgeInsets.only(right: 10),
                       decoration: BoxDecoration(
                         color: _activeBlue,
                         borderRadius: BorderRadius.circular(2),
@@ -214,13 +214,13 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
                     ),
                     // Icon with optional badge
                     SizedBox(
-                      width: 20,
+                      width: 24,
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
                           Icon(
                             item.icon,
-                            size: 18,
+                            size: 21,
                             color: isSelected
                                 ? _activeBlue
                                 : isHovered
@@ -253,7 +253,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
                       ),
                     ),
                     if (_isExpanded) ...[
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           item.label,
@@ -264,7 +264,7 @@ class _CollapsibleSidebarState extends State<CollapsibleSidebar> {
                                     ? _mutedIcon
                                     : _mutedText,
                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            fontSize: 13,
+                            fontSize: 14.5,
                             letterSpacing: -0.1,
                           ),
                           overflow: TextOverflow.ellipsis,

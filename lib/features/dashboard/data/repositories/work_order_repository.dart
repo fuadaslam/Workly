@@ -117,16 +117,20 @@ class WorkOrderRepository {
     required String? serviceType,
     required String priority,
     String? nationality,
+    String? iqamaNumber,
     String? clientId,
     String? serviceId,
     String? assignedStaffId,
     String? assignedOfficeId,
+    String? detailsOfWorks,
+    double? defaultChargingAmount,
   }) async {
     final orgId = await fetchCallerOrgId(_client);
     final response = await _client.from('work_orders').insert({
       'client_name': clientName,
       'client_phone_number': clientPhoneNumber,
       'nationality': nationality,
+      'iqama_number': iqamaNumber,
       'service_type': serviceType,
       'priority': priority,
       'client_id': clientId,
@@ -135,6 +139,8 @@ class WorkOrderRepository {
       'assigned_office_id': assignedOfficeId,
       'status': 'Pending',
       'org_id': orgId,
+      'details_of_works': detailsOfWorks,
+      'default_charging_amount': defaultChargingAmount,
     }).select().single();
 
     final orderId = response['id'];

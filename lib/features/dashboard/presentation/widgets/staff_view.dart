@@ -26,17 +26,22 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/widgets/collapsible_sidebar.dart';
 
-class StaffView extends StatefulWidget {
+/// Shared across app restarts of the widget tree, not per-instance — lets the
+/// selected tab survive being obscured (not disposed) while a detail route
+/// like Task/Enquiry Details is pushed on top, so [DashboardSidebarShell] can
+/// read/set it from outside StaffView entirely.
+final staffTabIndexProvider = StateProvider<int>((ref) => 0);
+
+class StaffView extends ConsumerStatefulWidget {
   const StaffView({super.key});
 
   @override
-  State<StaffView> createState() => _StaffViewState();
+  ConsumerState<StaffView> createState() => _StaffViewState();
 }
 
-class _StaffViewState extends State<StaffView> {
-  int _tabIndex = 0;
+class _StaffViewState extends ConsumerState<StaffView> {
   final List<GlobalKey<NavigatorState>> _navKeys = List.generate(
-    6,
+    5,
     (_) => GlobalKey<NavigatorState>(),
   );
 
@@ -49,121 +54,99 @@ class _StaffViewState extends State<StaffView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer(
-      builder: (context, ref, child) {
-        final profileAsync = ref.watch(profileProvider);
-        final profile = profileAsync.value;
-        final userName = profile?.name ?? 'Staff Member';
-        final userRole = profile?.role.name.toUpperCase().replaceAll('_', ' ') ?? 'FIELD OPERATIONS SPECIALIST';
+    final profileAsync = ref.watch(profileProvider);
+    final profile = profileAsync.value;
+    final userName = profile?.name ?? 'Staff Member';
+    final userRole = profile?.role.name.toUpperCase().replaceAll('_', ' ') ?? 'FIELD OPERATIONS SPECIALIST';
+    final tabIndex = ref.watch(staffTabIndexProvider);
 
-        final sidebarItems = [
-          SidebarItem(icon: Icons.home_outlined, label: l10n.home),
-          SidebarItem(icon: Icons.calendar_month_outlined, label: l10n.leaves),
-          const SidebarItem(icon: Icons.assignment_outlined, label: 'Works'),
-          SidebarItem(icon: Icons.person_outline, label: l10n.profile),
-          const SidebarItem(icon: Icons.track_changes_outlined, label: 'Enquiries'),
-        ];
+    final sidebarItems = [
+      SidebarItem(icon: Icons.home_outlined, label: l10n.home),
+      SidebarItem(icon: Icons.calendar_month_outlined, label: l10n.leaves),
+      const SidebarItem(icon: Icons.assignment_outlined, label: 'Works'),
+      SidebarItem(icon: Icons.person_outline, label: l10n.profile),
+      const SidebarItem(icon: Icons.track_changes_outlined, label: 'Enquiries'),
+    ];
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            final scaffoldBg = isDark ? AppTheme.darkBackground : AppTheme.backgroundLight;
-            if (constraints.maxWidth >= 800) {
-              // Desktop Layout with CollapsibleSidebar
-              // Map _tabIndex (0, 1, 3, 4) to Sidebar Index (0, 1, 2, 3)
-              final sidebarIndex = _tabIndex > 2 ? _tabIndex - 1 : _tabIndex;
-
-              return Scaffold(
-                backgroundColor: scaffoldBg,
-                body: Row(
-                  children: [
-                    CollapsibleSidebar(
-                      selectedIndex: sidebarIndex,
-                      items: sidebarItems,
-                      onDestinationSelected: (idx) {
-                        // Map Sidebar Index (0, 1, 2, 3) back to _tabIndex (0, 1, 3, 4)
-                        final newIndex = idx > 1 ? idx + 1 : idx;
-                        setState(() => _tabIndex = newIndex);
-                      },
-                      onSignOut: () => _signOut(context),
-                      userName: userName,
-                      userRole: userRole,
-                    ),
-                    Expanded(
-                      child: _buildBody(),
-                    ),
-                  ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final scaffoldBg = isDark ? AppTheme.darkBackground : AppTheme.backgroundLight;
+        if (constraints.maxWidth >= 800) {
+          // Desktop Layout with CollapsibleSidebar (1:1 with tabIndex)
+          return Scaffold(
+            backgroundColor: scaffoldBg,
+            body: Row(
+              children: [
+                CollapsibleSidebar(
+                  selectedIndex: tabIndex,
+                  items: sidebarItems,
+                  onDestinationSelected: (idx) => ref.read(staffTabIndexProvider.notifier).state = idx,
+                  onSignOut: () => _signOut(context),
+                  userName: userName,
+                  userRole: userRole,
                 ),
-                floatingActionButton: _tabIndex == 5
-                    ? null // Enquiries tab has its own FAB
-                    : FloatingActionButton.extended(
-                  onPressed: () => _showAddTaskModal(context),
-                  backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  icon: Icon(Icons.add, color: isDark ? AppTheme.ink900 : Colors.white, size: 24),
-                  label: Text(
-                    l10n.createNewTask,
-                    style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                  ),
+                Expanded(
+                  child: _buildBody(),
                 ),
-              );
-            } else {
-              // Mobile Layout
-              return Scaffold(
-                backgroundColor: scaffoldBg,
-                body: _buildBody(),
-                floatingActionButton: _tabIndex == 5
-                    ? null // Enquiries tab has its own FAB
-                    : Container(
-                   height: 64,
-                   width: 64,
-                   margin: const EdgeInsets.only(top: 30),
-                   child: FloatingActionButton(
-                    onPressed: () {
-                       _showAddTaskModal(context);
-                    },
+              ],
+            ),
+            floatingActionButton: tabIndex == 4
+                ? null // Enquiries tab has its own FAB
+                : FloatingActionButton.extended(
+              onPressed: () => _showAddTaskModal(context),
+              backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
+              elevation: 6,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              icon: Icon(Icons.add, color: isDark ? AppTheme.ink900 : Colors.white, size: 24),
+              label: Text(
+                l10n.createNewTask,
+                style: TextStyle(color: isDark ? AppTheme.ink900 : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              ),
+            ),
+          );
+        } else {
+          // Mobile Layout
+          return Scaffold(
+            backgroundColor: scaffoldBg,
+            body: _buildBody(),
+            floatingActionButton: tabIndex == 4
+                ? null // Enquiries tab has its own FAB
+                : FloatingActionButton(
+                    onPressed: () => _showAddTaskModal(context),
                     backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
                     elevation: 4,
                     shape: const CircleBorder(),
-                    child: Icon(Icons.add, color: isDark ? AppTheme.ink900 : Colors.white, size: 32),
+                    child: Icon(Icons.add, color: isDark ? AppTheme.ink900 : Colors.white, size: 30),
+                  ),
+            floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+            bottomNavigationBar: Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                   BoxShadow(
+                     color: Colors.black.withValues(alpha: 0.05),
+                     blurRadius: 10,
+                     offset: const Offset(0, -5),
                    ),
-                ),
-                floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-                bottomNavigationBar: Container(
-                  decoration: BoxDecoration(
-                    boxShadow: [
-                       BoxShadow(
-                         color: Colors.black.withValues(alpha: 0.05),
-                         blurRadius: 10,
-                         offset: const Offset(0, -5),
-                       ),
-                    ],
-                  ),
-                  child: NavigationBar(
-                    backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
-                    elevation: 0,
-                    indicatorColor: Colors.transparent, // Disable pill indicator for custom look
-                    selectedIndex: _tabIndex,
-                    onDestinationSelected: (idx) {
-                      // If tapping the Spacer (index 2), ignore or handle if possible
-                      if (idx == 2) return; 
-                      setState(() => _tabIndex = idx);
-                    },
-                    destinations: [
-                      _buildNavItem(Icons.home_outlined, Icons.home, l10n.home, 0),
-                      _buildNavItem(Icons.calendar_month_outlined, Icons.calendar_month, l10n.leaves, 1),
-                      const SizedBox(width: 48), // Spacer for FAB
-                      _buildNavItem(Icons.assignment_outlined, Icons.assignment, 'Works', 3),
-                      _buildNavItem(Icons.person_outline, Icons.person, l10n.profile, 4),
-                      _buildNavItem(Icons.track_changes_outlined, Icons.track_changes, 'Enquiries', 5),
-                    ],
-                  ),
-                ),
-              );
-            }
-          },
-        );
+                ],
+              ),
+              child: NavigationBar(
+                backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
+                elevation: 0,
+                indicatorColor: Colors.transparent, // Disable pill indicator for custom look
+                selectedIndex: tabIndex,
+                onDestinationSelected: (idx) => ref.read(staffTabIndexProvider.notifier).state = idx,
+                destinations: [
+                  _buildNavItem(Icons.home_outlined, Icons.home, l10n.home, 0),
+                  _buildNavItem(Icons.calendar_month_outlined, Icons.calendar_month, l10n.leaves, 1),
+                  _buildNavItem(Icons.assignment_outlined, Icons.assignment, 'Works', 2),
+                  _buildNavItem(Icons.person_outline, Icons.person, l10n.profile, 3),
+                  _buildNavItem(Icons.track_changes_outlined, Icons.track_changes, 'Enquiries', 4),
+                ],
+              ),
+            ),
+          );
+        }
       },
     );
   }
@@ -178,8 +161,8 @@ class _StaffViewState extends State<StaffView> {
 
   Widget _buildBody() {
     return IndexedStack(
-      index: _tabIndex,
-      children: List.generate(6, (index) {
+      index: ref.watch(staffTabIndexProvider),
+      children: List.generate(5, (index) {
         return Navigator(
           key: _navKeys[index],
           onGenerateRoute: (settings) {
@@ -196,21 +179,21 @@ class _StaffViewState extends State<StaffView> {
     switch (index) {
       case 0:
         return _HomeTab(
-          onProfileTap: () => setState(() => _tabIndex = 4),
-          onSwitchToTasks: () => setState(() => _tabIndex = 3),
+          onProfileTap: () => ref.read(staffTabIndexProvider.notifier).state = 3,
+          onSwitchToTasks: () => ref.read(staffTabIndexProvider.notifier).state = 2,
         );
       case 1:
          return const _LeavesView();
-      case 3:
+      case 2:
          return const _TasksView();
-      case 4:
+      case 3:
          return const ProfileView();
-      case 5:
+      case 4:
          return const EnquiryListScreen();
       default:
         return _HomeTab(
-          onProfileTap: () => setState(() => _tabIndex = 4),
-          onSwitchToTasks: () => setState(() => _tabIndex = 3),
+          onProfileTap: () => ref.read(staffTabIndexProvider.notifier).state = 3,
+          onSwitchToTasks: () => ref.read(staffTabIndexProvider.notifier).state = 2,
         );
     }
   }
@@ -232,8 +215,21 @@ class CreateTaskSheet extends StatefulWidget {
 }
 
 class _CreateTaskSheetState extends State<CreateTaskSheet> {
+  @override
+  void dispose() {
+    _clientController.dispose();
+    _phoneController.dispose();
+    _iqamaController.dispose();
+    _detailsController.dispose();
+    _chargeController.dispose();
+    super.dispose();
+  }
+
   final _clientController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _iqamaController = TextEditingController();
+  final _detailsController = TextEditingController();
+  final _chargeController = TextEditingController();
   String? _selectedServiceType;
   String? _selectedNationality;
   String _priority = 'Medium';
@@ -256,6 +252,9 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
         serviceType: _selectedServiceType,
         nationality: _selectedNationality,
         priority: _priority,
+        iqamaNumber: _iqamaController.text.trim().isEmpty ? null : _iqamaController.text.trim(),
+        detailsOfWorks: _detailsController.text.trim().isEmpty ? null : _detailsController.text.trim(),
+        defaultChargingAmount: double.tryParse(_chargeController.text.trim()),
       );
       
       ref.invalidate(myWorkOrdersProvider);
@@ -324,6 +323,23 @@ class _CreateTaskSheetState extends State<CreateTaskSheet> {
                     .toList(),
                 onChanged: (v) => setState(() => _selectedNationality = v),
                 hint: const Text('Select nationality'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _iqamaController,
+                decoration: const InputDecoration(labelText: 'Iqama Number', prefixIcon: Icon(Icons.badge_outlined)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _detailsController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Details of Works', prefixIcon: Icon(Icons.description_outlined)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _chargeController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Default Charging Amount (SAR)', prefixIcon: Icon(Icons.payments_outlined)),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -406,12 +422,12 @@ class _HomeTab extends ConsumerWidget {
                    GestureDetector(
                      onTap: onProfileTap,
                      child: const CircleAvatar(
-                       radius: 26,
+                       radius: 22,
                        backgroundColor: Colors.white24,
-                       child: Icon(Icons.person, color: Colors.white, size: 30),
+                       child: Icon(Icons.person, color: Colors.white, size: 26),
                      ),
                    ),
-                   const SizedBox(width: 16),
+                   const SizedBox(width: 14),
                    Expanded(
                      child: Column(
                        crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,7 +436,7 @@ class _HomeTab extends ConsumerWidget {
                            userName,
                            style: const TextStyle(
                              color: Colors.white,
-                             fontSize: 18,
+                             fontSize: 16,
                              fontWeight: FontWeight.bold,
                            ),
                          ),
@@ -591,42 +607,42 @@ class _HomeTab extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.work_outline, color: AppTheme.emeraldGreen),
-                  const SizedBox(width: 8),
-                  Text(l10n.myWorks.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen, fontSize: 12)),
+                  const Icon(Icons.work_outline, color: AppTheme.emeraldGreen, size: 16),
+                  const SizedBox(width: 6),
+                  Text(l10n.myWorks.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen, fontSize: 11)),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: AppTheme.emeraldLight, borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: AppTheme.emeraldLight, borderRadius: BorderRadius.circular(10)),
                 child: const Text('Active', style: TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold))
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             width: double.infinity,
             decoration: BoxDecoration(
               color: AppTheme.emeraldLight.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
-              border: const Border(left: BorderSide(color: AppTheme.emeraldGreen, width: 4)),
+              border: const Border(left: BorderSide(color: AppTheme.emeraldGreen, width: 3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle)),
-                  const SizedBox(width: 8),
-                  Text(l10n.assignedTasks.toUpperCase(), style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                  Container(padding: const EdgeInsets.all(3), decoration: const BoxDecoration(color: AppTheme.emeraldGreen, shape: BoxShape.circle)),
+                  const SizedBox(width: 6),
+                  Text(l10n.assignedTasks.toUpperCase(), style: const TextStyle(color: AppTheme.emeraldGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
                 ]),
-                const SizedBox(height: 8),
-                Text('$pendingCount ${l10n.tasksPending}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-                Text(l10n.checkTaskList, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 6),
+                Text('$pendingCount ${l10n.tasksPending}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                Text(l10n.checkTaskList, style: const TextStyle(color: Colors.grey, fontSize: 11)),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -640,10 +656,10 @@ class _HomeTab extends ConsumerWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: isDark ? AppTheme.primaryAccent(isDark) : AppTheme.emeraldGreen,
                 foregroundColor: isDark ? AppTheme.ink900 : Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: Text(l10n.viewAllWorks),
+              child: Text(l10n.viewAllWorks, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -661,22 +677,22 @@ class _HomeTab extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.calendar_today, color: AppTheme.accentGold),
-                  const SizedBox(width: 8),
-                  Text(l10n.leaves.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentGold, fontSize: 12)),
+                  const Icon(Icons.calendar_today, color: AppTheme.accentGold, size: 16),
+                  const SizedBox(width: 6),
+                  Text(l10n.leaves.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentGold, fontSize: 11)),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                     Text('${ref.watch(leaveBalanceProvider)} ${l10n.days}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
-                     Text(l10n.annualLeaveBalance, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                     Text('${ref.watch(leaveBalanceProvider)} ${l10n.days}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                     Text(l10n.annualLeaveBalance, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                   ],
                 ),
               ),
@@ -692,10 +708,11 @@ class _HomeTab extends ConsumerWidget {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentGold,
-                  foregroundColor: Colors.white, 
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: Text(l10n.apply),
+                child: Text(l10n.apply, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               )
             ],
           ),
@@ -714,7 +731,7 @@ class _HomeTab extends ConsumerWidget {
     bool isGold = false,
   }) {
     return PremiumCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -722,15 +739,15 @@ class _HomeTab extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
                   color: isGold ? AppTheme.accentGoldLight : AppTheme.emeraldLight,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: isGold ? AppTheme.accentGold : AppTheme.emeraldGreen, size: 20),
+                child: Icon(icon, color: isGold ? AppTheme.accentGold : AppTheme.emeraldGreen, size: 18),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: badgeColor,
                   borderRadius: BorderRadius.circular(20),
@@ -739,8 +756,8 @@ class _HomeTab extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+          const SizedBox(height: 10),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
           Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ],
       ),
@@ -762,22 +779,22 @@ class _HomeTab extends ConsumerWidget {
         },
         child: PremiumCard(
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           child: Column(
             children: [
               Container(
-                 padding: const EdgeInsets.all(12),
+                 padding: const EdgeInsets.all(9),
                  decoration: BoxDecoration(
                    color: color,
                    shape: BoxShape.circle,
                    boxShadow: [
-                     BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                     BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
                    ],
                  ),
-                 child: Icon(icon, color: Colors.white, size: 24),
+                 child: Icon(icon, color: Colors.white, size: 20),
               ),
-              const SizedBox(height: 12),
-              Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.darkBlue), overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 8),
+              Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.darkBlue), overflow: TextOverflow.ellipsis),
             ],
           ),
         ),

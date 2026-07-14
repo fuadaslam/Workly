@@ -23,6 +23,8 @@ const List<String> kNatureOfEnquiry = [
   'Budget Preparation',
   'Cash Flow',
   'Cost Control',
+  'Spl',
+  'Ticket',
 ];
 
 const List<String> kNationalities = [
@@ -63,6 +65,7 @@ class Enquiry {
   final String enquiryCode;
   final String? clientName;
   final String? contactNumber;
+  final String? iqamaNumber;
   final String? natureOfEnquiry;
   final DateTime? dateOfEnquiry;
   final String? nationality;
@@ -89,6 +92,7 @@ class Enquiry {
     required this.enquiryCode,
     this.clientName,
     this.contactNumber,
+    this.iqamaNumber,
     this.natureOfEnquiry,
     this.dateOfEnquiry,
     this.nationality,
@@ -140,6 +144,7 @@ class Enquiry {
       enquiryCode: json['enquiry_code'] ?? '',
       clientName: json['client_name'],
       contactNumber: json['contact_number'],
+      iqamaNumber: json['iqama_number'],
       natureOfEnquiry: json['nature_of_enquiry'],
       dateOfEnquiry: json['date_of_enquiry'] != null ? DateTime.parse(json['date_of_enquiry']) : null,
       nationality: json['nationality'],
@@ -169,6 +174,7 @@ class Enquiry {
     return {
       'client_name': clientName,
       'contact_number': contactNumber,
+      'iqama_number': iqamaNumber,
       'nature_of_enquiry': natureOfEnquiry,
       'date_of_enquiry': dateOfEnquiry?.toIso8601String(),
       'nationality': nationality,
@@ -220,6 +226,7 @@ class Enquiry {
   Enquiry copyWith({
     String? clientName,
     String? contactNumber,
+    String? iqamaNumber,
     String? natureOfEnquiry,
     DateTime? dateOfEnquiry,
     String? nationality,
@@ -244,6 +251,7 @@ class Enquiry {
       enquiryCode: enquiryCode,
       clientName: clientName ?? this.clientName,
       contactNumber: contactNumber ?? this.contactNumber,
+      iqamaNumber: iqamaNumber ?? this.iqamaNumber,
       natureOfEnquiry: natureOfEnquiry ?? this.natureOfEnquiry,
       dateOfEnquiry: dateOfEnquiry ?? this.dateOfEnquiry,
       nationality: nationality ?? this.nationality,
