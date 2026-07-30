@@ -18,11 +18,15 @@ void main() {
       SupabaseEnv.anonKey,
     );
     
-    // Sign in to bypass RLS for testing
+    // Sign in to bypass RLS for testing using configurable environment variables
+    const testEmail = String.fromEnvironment('TEST_ADMIN_EMAIL', defaultValue: 'superadmin@system.com');
+    const testPassword = String.fromEnvironment('TEST_ADMIN_PASSWORD', defaultValue: '123456');
+
     await client.auth.signInWithPassword(
-      email: 'superadmin@system.com',
-      password: '123456',
+      email: testEmail,
+      password: testPassword,
     );
+
     
     officeRepo = OfficeRepository(client);
     profileRepo = ProfileRepository(client);

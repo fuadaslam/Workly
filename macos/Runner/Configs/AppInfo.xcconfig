@@ -8,7 +8,7 @@
 PRODUCT_NAME = service_manager_app
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = sa.services.serviceManagerApp
+PRODUCT_BUNDLE_IDENTIFIER = com.xoviqlabs.workly
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 sa.services. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.xoviqlabs. All rights reserved.

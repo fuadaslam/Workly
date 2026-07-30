@@ -39,3 +39,11 @@ Future<String> fetchCallerOrgId(SupabaseClient client) async {
   _cachedOrgId = orgId;
   return orgId;
 }
+
+/// Clears the cached caller organization ID.
+/// Call this when a user updates their profile or switches workspace context.
+void clearCallerOrgIdCache() {
+  _cachedUserId = null;
+  _cachedOrgId = null;
+}
+

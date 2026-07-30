@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -125,22 +124,28 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: 'admin-detail',
-          builder: (context, state) => AdminDetailScreen(admin: state.extra as Map<String, dynamic>),
+          builder: (context, state) => AdminDetailScreen(admin: (state.extra as Map<String, dynamic>?) ?? {}),
         ),
         GoRoute(
           path: 'office-detail',
-          builder: (context, state) => OfficeDetailScreen(office: state.extra as Map<String, dynamic>),
+          builder: (context, state) => OfficeDetailScreen(office: (state.extra as Map<String, dynamic>?) ?? {}),
         ),
         GoRoute(
           path: 'client-detail',
           builder: (context, state) {
-            final extra = state.extra as ClientRouteArgs;
+            final extra = (state.extra as ClientRouteArgs?) ?? const ClientRouteArgs(clientName: '—');
             return ClientDetailScreen(clientName: extra.clientName, clientPhone: extra.clientPhone);
           },
         ),
         GoRoute(
           path: 'edit-profile',
-          builder: (context, state) => EditProfileScreen(profile: state.extra as model.Profile),
+          builder: (context, state) {
+            final profile = state.extra as model.Profile?;
+            if (profile == null) {
+              return const Scaffold(body: Center(child: Text('No profile data provided')));
+            }
+            return EditProfileScreen(profile: profile);
+          },
         ),
         GoRoute(path: 'change-password', builder: (context, state) => const ChangePasswordScreen()),
         GoRoute(path: 'trend', builder: (context, state) => const DetailTrendScreen()),
@@ -149,7 +154,11 @@ final appRouter = GoRouter(
         GoRoute(
           path: 'system-detail',
           builder: (context, state) {
-            final extra = state.extra as SystemDetailRouteArgs;
+            final extra = (state.extra as SystemDetailRouteArgs?) ?? const SystemDetailRouteArgs(
+              title: 'System Details',
+              subtitle: 'N/A',
+              icon: Icons.computer,
+            );
             return SystemDetailScreen(
               title: extra.title,
               subtitle: extra.subtitle,
@@ -164,14 +173,28 @@ final appRouter = GoRouter(
         GoRoute(path: 'enquiries/add', builder: (context, state) => const AddEnquiryScreen()),
         GoRoute(
           path: 'enquiries/detail',
-          builder: (context, state) => DashboardSidebarShell(
-            child: EnquiryDetailScreen(enquiry: state.extra as Enquiry),
-          ),
+          builder: (context, state) {
+            final enquiry = state.extra as Enquiry?;
+            if (enquiry == null) {
+              return const DashboardSidebarShell(
+                child: Scaffold(body: Center(child: Text('No enquiry selected'))),
+              );
+            }
+            return DashboardSidebarShell(
+              child: EnquiryDetailScreen(enquiry: enquiry),
+            );
+          },
         ),
         GoRoute(path: 'reports/export', builder: (context, state) => const ReportExportScreen()),
         GoRoute(
           path: 'org-detail',
-          builder: (context, state) => OrganizationDetailScreen(org: state.extra as Organization),
+          builder: (context, state) {
+            final org = state.extra as Organization?;
+            if (org == null) {
+              return const Scaffold(body: Center(child: Text('No organization details available')));
+            }
+            return OrganizationDetailScreen(org: org);
+          },
         ),
         GoRoute(path: 'search', builder: (context, state) => const GlobalSearchScreen()),
         GoRoute(path: 'activity-log', builder: (context, state) => const ActivityLogScreen()),

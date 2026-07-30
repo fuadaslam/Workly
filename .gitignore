@@ -44,5 +44,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Android Signing
+key.properties
+*.jks
+*.keystore
+
 # MCP Configuration
 .mcp.json
